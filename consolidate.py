@@ -91,3 +91,12 @@ for idx, source in enumerate(sources):
 
 run_sql("DELETE FROM {} WHERE LOWER(PTYPE) IN ('h2o', 'water')".format(work_table_name))
 run_sql("CREATE TABLE {} AS SELECT PTYPE, ST_Union(geom) AS geom FROM {} GROUP BY PTYPE".format(final_table_name, work_table_name))
+
+for idx, source in enumerate(sources):
+  print(source['url'])
+  download_path = download(source)
+  for path in source['paths']:
+    if source['extract']:
+      extracted_path = extract_e00(path)
+    if source['polygonize']:
+      poly_path = polygonize(path)
