@@ -7,6 +7,7 @@ from subprocess import call, run, Popen, PIPE
 import os
 import re
 import shutil
+import glob
 
 WEB_MERCATOR_PROJ4="+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +over +no_defs"
 
@@ -14,18 +15,22 @@ def extless_basename(path):
   if os.path.isfile(path):
     return os.path.splitext(os.path.basename(path))[0]
   return os.path.split(path)[-1]
+
 def call_cmd(*args, **kwargs):
   # print("Calling `{}` with kwargs: {}".format(args[0], kwargs))
   run(*args, **kwargs)
+
 def run_sql(sql, dbname="underfoot"):
   call_cmd([
     "psql", dbname, "-c", sql
   ])
+
 def make_work_dir(path):
   work_path = os.path.join(os.path.dirname(os.path.realpath(path)), "work-{}".format(extless_basename(path)))
   if not os.path.isdir(work_path):
     os.makedirs(work_path)
   return work_path
+
 def extract_e00(path):
   dirpath = os.path.join(os.path.realpath(os.path.dirname(path)), "{}-shapefiles".format(extless_basename(path)))
   if os.path.isfile(os.path.join(dirpath, "PAL.shp")):
@@ -34,7 +39,8 @@ def extract_e00(path):
   os.makedirs(dirpath)
   call(["ogr2ogr", "-f", "ESRI Shapefile", dirpath, path])
   return dirpath
-def polygonize_arcs(shapefiles_path, polygon_pattern=".+-ID?$"):
+
+def polygonize_arcs(shapefiles_path, polygon_pattern=".+-ID?$", force=False):
   """Convert shapefile arcs from an extracted ArcINFO coverage and convert them to polygons.
 
   More often than not ArcINFO coverages seem to include arcs but not polygons
@@ -49,7 +55,9 @@ def polygonize_arcs(shapefiles_path, polygon_pattern=".+-ID?$"):
   was the only explanation I could find for the datum shift.
   """
   polygons_path = os.path.join(shapefiles_path, "polygons.shp")
-  if os.path.isfile(polygons_path):
+  if force:
+    shutil.rmtree(polygons_path, ignore_errors=True)
+  elif os.path.isfile(polygons_path):
     return polygons_path
   pal_path = os.path.join(shapefiles_path, "PAL.shp")
   arc_path = os.path.join(shapefiles_path, "ARC.shp")

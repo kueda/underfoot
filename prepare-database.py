@@ -13,7 +13,9 @@ sources = [
   "mf2342c",
   "mf2337c",
   "of94-622",
-  "of97-489"
+  "of97-489",
+  "of98-354",
+  "mf2403c"
 ]
 
 util.call_cmd(["createdb", dbname])
@@ -56,6 +58,8 @@ for idx, source_identifier in enumerate(sources):
   p1.stdout.close()
   print("Loading {} into {} table...".format(units_path, source_table_name))
   output = p2.communicate()[0]
+  print("Repairing invalid geometries...")
+  util.run_sql("UPDATE {} SET geom = ST_MakeValid(geom) WHERE NOT ST_IsValid(geom)".format(source_table_name))
   print("Inserting into {}...".format(work_table_name))
   if idx == 0:
     util.run_sql("INSERT INTO {} (PTYPE, geom, source) SELECT PTYPE, geom, '{}' FROM {}".format(work_table_name, source_identifier, source_table_name))

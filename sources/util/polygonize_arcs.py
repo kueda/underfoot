@@ -38,7 +38,7 @@ with fiona.collection(args.output_path, "w", "ESRI Shapefile", schema) as output
           print(".", end="")
         lines = []
         # print( 'pf["properties"]: {}'.format(pf["properties"]))
-        polygon_column = next(x for x in pf["properties"].keys( ) if re.match(polygon_pattern, x))
+        polygon_column = next(x for x in pf["properties"].keys( ) if re.search(polygon_pattern, x))
         polygon_id = pf["properties"][polygon_column]
         ptype = pf["properties"]["PTYPE"]
         for af in arc:
