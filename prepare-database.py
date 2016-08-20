@@ -3,6 +3,7 @@ from subprocess import call, Popen, PIPE
 import glob
 import os
 import re
+import psycopg2
 
 work_table_name = "work"
 mask_table_name = "masks"
@@ -60,7 +61,28 @@ for idx, source_identifier in enumerate(sources):
   output = p2.communicate()[0]
   print("Repairing invalid geometries...")
   util.run_sql("UPDATE {} SET geom = ST_MakeValid(geom) WHERE NOT ST_IsValid(geom)".format(source_table_name))
-  print("Inserting into {}...".format(work_table_name))
+  print("Removing polygon overlaps...")
+  con = psycopg2.connect("dbname=underfoot")
+  cur1 = con.cursor()
+  cur1.execute("SELECT gid, ptype FROM {} ORDER BY ST_Area(geom) ASC".format(source_table_name))
+  for row in cur1:
+    gid = row[0]
+    ptype = row[1]
+    # print("Cutting out {} ({})...".format(gid, ptype))
+    cur2 = con.cursor()
+    sql = """
+      UPDATE {}
+      SET geom = ST_Multi(ST_Difference(geom, (SELECT geom FROM {} WHERE gid = {})))
+      WHERE ST_Intersects(geom, (SELECT geom FROM {} WHERE gid = {})) AND gid != {}
+    """.format(
+      source_table_name,
+      source_table_name, gid,
+      source_table_name, gid, gid
+    )
+    # print(sql)
+    cur2.execute(sql)
+    cur2.close()
+  con.commit()
   if idx == 0:
     util.run_sql("INSERT INTO {} (PTYPE, geom, source) SELECT PTYPE, geom, '{}' FROM {}".format(work_table_name, source_identifier, source_table_name))
   else:
