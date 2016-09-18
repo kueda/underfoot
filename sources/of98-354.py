@@ -2,6 +2,7 @@ import util
 import os
 import glob
 import subprocess
+import csv
 
 work_path = util.make_work_dir(__file__)
 os.chdir(work_path)
@@ -30,14 +31,24 @@ if not os.path.isfile(polygons_path):
 
 # dissolve all the shapes by PTYPE and project them into Google Mercator
 print("\nDissolving shapes and reprojecting...\n")
+final_polygons_path = "polygons.shp"
 util.call_cmd([
   "ogr2ogr",
     "-s_srs", "+proj=lcc +lat_1=37.066667 +lat_2=38.433333 +lat_0=36.5 +lon_0=-120.5 +x_0=609601.21920 +y_0=-6 +datum=NAD27 +units=m +no_defs",
     "-t_srs", util.WEB_MERCATOR_PROJ4,
-    "units.shp", polygons_path,
+    final_polygons_path, polygons_path,
     "-overwrite",
     "-dialect", "sqlite",
     "-sql", "SELECT PTYPE,ST_Union(geometry) as geometry FROM 'polygons' GROUP BY PTYPE"
 ])
 
-# TODO generate  units.csv... or load that into the db?
+print("EXTRACTING METADATA...")
+metadata_path = "data.csv"
+data = [util.METADATA_COLUMN_NAMES]
+# TODO this is going to be all custom processing
+with open(metadata_path, 'w') as f:
+  csv.writer(f).writerows(data)
+
+print("JOINING METADATA...")
+util.join_polygons_and_metadata(final_polygons_path, metadata_path)
+
