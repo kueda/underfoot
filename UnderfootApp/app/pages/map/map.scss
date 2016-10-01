@@ -1,0 +1,116 @@
+@import "../../theme/extlibs/leaflet";
+
+.map-page scroll-content {
+  margin-top: 0 !important;
+}
+
+.map-page .map {
+  background-color: deeppink;
+}
+.map-page ion-header .toolbar-background {
+  display: none;
+}
+.map-page ion-header {
+  width: 50%;
+}
+.map-page ion-header::after {
+  background-image: none;
+}
+.map-page ion-footer {
+  text-align: center;
+}
+
+#map {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.map-buttons {
+  z-index: 9999;
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+$crossHairWidth: 50px;
+.crosshairs {
+  position: absolute;
+  top: 50%;
+  margin-top: $crossHairWidth / 2 * -1;
+  left: 50%;
+  margin-left: $crossHairWidth / 2 * -1;
+  border: 1px solid black;
+  border-radius: 200px;
+  width: $crossHairWidth;
+  height: $crossHairWidth;
+  margin-top: $crossHairWidth / 2 * -1;
+  z-index: 9999;
+}
+.crosshairs:after,
+.crosshairs:before {
+  content: "";
+  display: block;
+  border-top: 1px solid black;
+  width: $crossHairWidth * 2;
+}
+.crosshairs:before {
+  margin-top: $crossHairWidth / 2 - 1;
+  margin-left: $crossHairWidth / 2 * -1 + 1;
+}
+.crosshairs:after {
+  margin-left: $crossHairWidth / 2 * -1 - 1;
+  border-color: black;
+  transform: rotate(90deg);
+}
+
+.unit-modal .map-modal-back {
+  order: 0;
+}
+
+// Many thanks to http://stackoverflow.com/a/4911441/720268 for this pulsating effect
+$currentLocationMarkerWidth: 10px;
+.current-location {
+  position: relative;
+  width: $currentLocationMarkerWidth;
+  height: $currentLocationMarkerWidth;
+}
+.current-location:after {
+  content: ' ';
+  display: block;
+  position: absolute;
+  border-radius: $currentLocationMarkerWidth * 2;
+  width: $currentLocationMarkerWidth;
+  height: $currentLocationMarkerWidth;
+  border: 2px solid white;
+  top: 50%;
+  left: 50%;
+  margin-top: -1 * $currentLocationMarkerWidth / 2;
+  margin-left: -1 * $currentLocationMarkerWidth / 2;
+  background-color: color($colors, primary);
+}
+.current-location:before {
+  content: ' ';
+  display: block;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin-top: ($currentLocationMarkerWidth + 4) / -2;
+  margin-left: ($currentLocationMarkerWidth + 4) / -2;
+  border-radius: ($currentLocationMarkerWidth + 4) * 2;
+  background-color: #999;
+  border: 2px solid #999;
+  height: $currentLocationMarkerWidth + 4;
+  width: $currentLocationMarkerWidth + 4;
+  animation: pulsate 2s ease-out;
+  animation-iteration-count: infinite;
+}
+@keyframes pulsate {
+    0% {transform: scale(0.1, 0.1); opacity: 0.0;}
+    50% {opacity: 1.0;}
+    100% {transform: scale(1.2, 1.2); opacity: 0.0;}
+}

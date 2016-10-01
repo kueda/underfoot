@@ -19,7 +19,21 @@ source venv/bin/activate
 python prepare-database.py
 
 # Run the tileserver, generate tiles, remove empty dirs
+npm install
 node tileserver.js
 node cachetiles.js
-find tiles/ -type d -empty -delete
+
+# Set up the mobile app
+cd UnderfootApp
+npm install -g cordova
+npm install
+
+# Test the mobile app in the browser
+ionic serve
+
+# Run the mobile app on a connected Android device (requires the Android SDK, see Ionic docs)
+ionic run android
+
+# Run the mobile app in the iOS simulator (requires the Xcode, see Ionic docs)
+ionic emulate ios
 ```

@@ -1,0 +1,48 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons start class="map-modal-back">
+      <button (click)="dismiss()" ion-button icon-only>
+        <ion-icon name="arrow-back" alt="Close"></ion-icon>
+      </button>
+    </ion-buttons>
+
+    <ion-title>
+      {{ unitProperties.label_text }}
+    </ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <ion-list>
+    <ion-list-header>Unit Name</ion-list-header>
+    <ion-item text-wrap no-lines>
+      {{ unitProperties.label_text }} ({{ unitProperties.label_code }})
+    </ion-item>
+
+    <ion-list-header>Description</ion-list-header>
+    <ion-item text-wrap no-lines>
+      {{ unitProperties.label_desc || "None" }}
+    </ion-item>
+
+    <ion-list-header>Rock Name</ion-list-header>
+    <ion-item text-wrap no-lines>
+      {{ unitProperties.rock_name || "Unknown" }}
+      <span *ngIf="unitProperties.rock_type">
+        ({{ unitProperties.rock_type }})
+      </span>
+    </ion-item>
+
+    <ion-list-header>Time Period</ion-list-header>
+    <ion-item text-wrap no-lines>
+      {{ unitProperties.span || "Unknown" }}
+      <span *ngIf="unitProperties.min_age">
+        ({{yearsAgo( unitProperties.min_age, unitProperties.max_age )}})
+      </span>
+    </ion-item>
+
+    <ion-list-header>Source</ion-list-header>
+    <ion-item text-wrap no-lines>
+      {{ unitProperties.source || "Unknown" }}
+    </ion-item>    
+  </ion-list>
+</ion-content>

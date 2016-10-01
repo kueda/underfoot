@@ -4,3 +4,7 @@ sources/work-*
 venv/
 *.pyc
 bin/
+node_modules/
+UnderfootApp/node_modules/
+UnderfootApp/www/build/
+UnderfootApp/www/tiles/

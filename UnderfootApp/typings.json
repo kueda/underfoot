@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "lodash": "registry:npm/lodash#4.0.0+20160723033700"
+  },
+  "devDependencies": {},
+  "globalDependencies": {
+    "es6-shim": "registry:dt/es6-shim#0.31.2+20160602141504",
+    "leaflet": "registry:dt/leaflet#1.0.0-rc3+20160923173226"
+  }
+}
