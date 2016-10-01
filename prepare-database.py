@@ -9,7 +9,7 @@ work_table_name = "units"
 mask_table_name = "masks"
 final_table_name = "units"
 dbname = "underfoot"
-srid = "900913"
+srid = "3857"
 sources = [
   "mf2342c",
   "mf2337c",
