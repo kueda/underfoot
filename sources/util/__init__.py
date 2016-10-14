@@ -11,6 +11,7 @@ import glob
 import xml.etree.ElementTree as ET
 
 WEB_MERCATOR_PROJ4 = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +over +no_defs"
+NAD27_UTM10_PROJ4 = "+proj=utm +zone=10 +datum=NAD27 +units=m +no_defs"
 METADATA_COLUMN_NAMES = [
   'label_code',
   'label_text',
@@ -136,8 +137,17 @@ def run_sql(sql, dbname="underfoot"):
     "psql", dbname, "-c", sql
   ])
 
+def basename_for_path(path):
+  basename = extless_basename(path)
+  if basename == "__init__":
+    dirpath = os.path.dirname(os.path.realpath(path))
+    basename = extless_basename(dirpath)
+  return basename
+
 def make_work_dir(path):
-  work_path = os.path.join(os.path.dirname(os.path.realpath(path)), "work-{}".format(extless_basename(path)))
+  dirpath = os.path.dirname(os.path.realpath(__file__))
+  basename = basename_for_path(path)
+  work_path = os.path.join(dirpath, "..", "work-{}".format(basename))
   if not os.path.isdir(work_path):
     os.makedirs(work_path)
   return work_path
@@ -183,6 +193,8 @@ def met2xml(path):
   return output_path
 
 def rock_name_from_text(text):
+  if not text:
+    return
   rock_name_matches = ROCK_NAME_PATTERN.search(text)
   return (rock_name_matches.group(1) if rock_name_matches else '').lower()
 
@@ -237,48 +249,39 @@ def metadata_from_usgs_met(path):
   a perfect job for every such document, but it will get you part of the way
   there.
   """
-  data = [METADATA_COLUMN_NAMES]
+  data = [[col for col in METADATA_COLUMN_NAMES]]
   xml_path = met2xml(path)
   tree = ET.parse(xml_path)
   for ed in tree.iterfind('.//Attribute[Attribute_Label="PTYPE"]//Enumerated_Domain'):
+    row = dict([[col, None] for col in METADATA_COLUMN_NAMES])
     edv = ed.find('Enumerated_Domain_Value')
     edvd = ed.find('Enumerated_Domain_Value_Definition')
     if edv == None or edvd == None:
       continue
-    label_code = edv.text
-    label_text = edvd.text
-    if label_code == None or label_text == None:
+    row['label_code'] = edv.text
+    row['label_text'] = edvd.text
+    if row['label_code'] == None or row['label_text'] == None:
       continue
-    label_text = re.sub(r"\n", " ", label_text)
-    rock_name = rock_name_from_text(label_text)
-    unit = unit_from_text(label_text)
-    rock_type = rock_type_from_rock_name(rock_name)
-    span = span_from_text(label_text)
-    min_age, max_age, est_age = ages_from_span(span)
-    label_desc = ''
-    data.append([
-      label_code,
-      label_text,
-      label_desc,
-      rock_name,
-      rock_type,
-      unit,
-      span.title(),
-      min_age,
-      max_age,
-      est_age
-    ])
+    row['label_text'] = re.sub(r"\n", " ", row['label_text'])
+    row['rock_name'] = rock_name_from_text(row['label_text'])
+    row['unit'] = unit_from_text(row['label_text'])
+    row['rock_type'] = rock_type_from_rock_name(row['rock_name'])
+    row['span'] = span_from_text(row['label_text'])
+    row['min_age'], row['max_age'], row['est_age'] = ages_from_span(row['span'])
+    data.append([row[col] for col in METADATA_COLUMN_NAMES])
   return data
 
 # def join_polygons_and_metadata(polygons_path, metadata_path, output_path="units.geojson"):
 def join_polygons_and_metadata(polygons_path, metadata_path, output_path="units.shp"):
   polygons_table_name = extless_basename(polygons_path)
+  column_names = [col for col in METADATA_COLUMN_NAMES]
+  column_names[column_names.index('label_code')] = "PTYPE AS label_code"
   sql = """
     SELECT
-      PTYPE AS label_code, label_text, label_desc, rock_name, rock_type, unit, span, min_age, max_age, est_age
+      {}
     FROM {}
       LEFT JOIN '{}'.data ON {}.PTYPE = data.label_code
-  """.format(polygons_table_name, metadata_path, polygons_table_name)
+  """.format(", ".join(column_names), polygons_table_name, metadata_path, polygons_table_name)
   call_cmd(["rm", output_path])
   call_cmd([
     "ogr2ogr",

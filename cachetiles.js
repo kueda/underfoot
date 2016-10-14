@@ -14,6 +14,7 @@ const SphericalMercator = require( "sphericalmercator" );
 const sleep = require( "sleep" ).sleep;
 // const sys = require( "sys" );
 const exec = require( "child_process" ).exec;
+const _progress = require('cli-progress');
 
 // psql underfoot -c "COPY ( select ST_AsGeoJSON(ST_Extent(geom)) from units_original_4326 ) TO STDOUT" > underfoot_units-extent.json 
 // const geojson = JSON.parse( fs.readFileSync( "./underfoot_units-extent.json" ) );
@@ -22,8 +23,8 @@ const exec = require( "child_process" ).exec;
 //   max_zoom: 15
 // };
 const minZoom = 7;
-// const maxZoom = 15;
-const maxZoom = 9;
+const maxZoom = 15;
+// const maxZoom = 9;
 const swlat = 36.9192;
 const swlon = -123.1238;
 const nelat = 38.634;
@@ -48,7 +49,7 @@ const cacheTile = ( x, y, z ) => {
       // console.log( "Fetching ", url );
       const req = http.get( url, ( response ) => {
         if ( response.headers['content-length'] != '0') {
-          console.log( filePath );
+          // console.log( `Wrote ${filePath}` );
           const file = fs.createWriteStream( filePath, { flags: "w" } );
           response.pipe( file );
           file.on( "finish", ( ) => file.close() );
@@ -79,14 +80,26 @@ for ( let zoom = maxZoom; zoom >= minZoom; zoom-- ) {
 }
 console.log( "\nCaching", tiles.length, "tiles...\n" );
 
+var progressBar = new _progress.Bar( {
+  format: "Caching {value}/{total} tiles [{bar}] {percentage}% | ETA: {eta_formatted}",
+  etaBuffer: 100
+} );
+progressBar.start( tiles.length, 0 );
+
 // Javascript: making simple things hard since forever
 let sequence = Promise.resolve( );
+let counter = 0;
 tiles.forEach( tile => {
   let [x,y,z] = tile;
-  sequence = sequence.then( ( ) => cacheTile( x, y, z ) );
+  sequence = sequence.then( ( ) => {
+    let promise = cacheTile( x, y, z ).then( filePath => progressBar.update( counter ) );
+    counter += 1;
+    return promise;
+  } );
 } );
+sequence.then( ( ) => progressBar.stop( ) );
 
-// 
+// Remove empty directories
 sequence = sequence.then( ( ) => {
   function puts( error, stdout, stderr ) { console.log( stdout ) }
   exec( `find ${cacheDir} -type d -empty -delete`, puts );

@@ -11,7 +11,7 @@ var app = new Tilesplash('postgres://kueda@localhost/underfoot');
 app.server.use(cors());
 
 // request logging
-app.server.use(morgan('dev'));
+// app.server.use(morgan('dev'));
 
 app.layer('underfoot-units', function(tile, render){
   // console.log( "[DEBUG] tile: ", tile );
