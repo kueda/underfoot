@@ -1,4 +1,4 @@
-label_code,grouping,label_text,label_desc
+code,grouping,title,description
 af,,Artificial fill (Historic),"Man-made deposit of various materials and ages. Some are compacted and quite firm, but fills made before 1965 are nearly everywhere not compacted and consist simply of dumped materials"
 alf,,Artificial levee fill (Historic),"Man-made deposit of various materials and ages, forming artificial levees as much as 20 feet (6.5 meters) high. Some are compacted and quite firm, but fills made before 1965 are almost everywhere not compacted and consist simply of dumped materials. The distribution of levee fill conforms to levees shown on the most recent U.S. Geological Survey 7.5 minute quadrangles"
 Qhasc,,Artificial stream channels (Historic),"Modified stream channels, usually where streams have been straightened and realigned, but also including those channels that are confined within artificial dikes and levees"
@@ -93,7 +93,9 @@ Kcv,Great Valley Sequence,"Unnamed sandstone, conglomerate, and shale of the Cas
 Ko,Great Valley Sequence,"Oakland Conglomerate (Late Cretaceous, Turonian and/or Cenomanian)","Massive, medium- to coarse-grained, biotite and quartz-rich wacke and prominent interbedded lenses of pebble to cobble conglomerate. Conglomerate clasts are distinguished by a large amount of silicic volcanic detritus, including quartz porphyry rhyolite. Conglomerate composes as much as fifty percent of the unit in the Oakland hills, but it becomes a progressively smaller portion of the unit to the south. In areas of little conglomerate, this unit is distinguished from other Great Valley complex sandstones by its stratigraphic position, the presence of minor conglomerate, and its massive character."
 Kcg,Great Valley Sequence,"Oakland Conglomerate (Late Cretaceous, Turonian and/or Cenomanian), conglomerate",
 Kslt,Great Valley Sequence,"Oakland Conglomerate (Late Cretaceous, Turonian and/or Cenomanian), siltstone",
-Kjm,Great Valley Sequence,"Joaquin Miller Formation (Late Cretaceous, Cenomanian)","Thinly bedded shale with minor sandstone.The shale grades into thinly bedded, fine-grained sandstone near the top of the formation. The contact with theoverlying Oakland Sandstone is gradational"
+Kjm,Great Valley Sequence,"Joaquin Miller Formation (Late Cretaceous, Cenomanian)","Thinly bedded shale with minor sandstone.
+The shale grades into thinly bedded, fine-grained sandstone near the top of the formation. The contact with the
+overlying Oakland Sandstone is gradational"
 KJk,Great Valley Sequence,Knoxville Formation (Early Cretaceous and Late Jurassic),"Mainly dark, greenish-gray silt or clay
 shale with thin sandstone interbeds. The depositional contact of Knoxville Formation on ophiolite and silicic volcanic rocks can be observed at several locations in the region, including outcrops in the Hayward quadrangle. The Knoxville Formation is distinguished from the structurally overlying Joaquin Miller Formation by the
 greenish color, more poorly developed bedding, the presence of Ammonite and Buchia fossils."

@@ -7,7 +7,7 @@
     </ion-buttons>
 
     <ion-title>
-      {{ unitProperties.label_text }}
+      {{ unitProperties.title }}
     </ion-title>
   </ion-toolbar>
 </ion-header>
@@ -16,17 +16,17 @@
   <ion-list>
     <ion-list-header>Unit Name</ion-list-header>
     <ion-item text-wrap no-lines>
-      {{ unitProperties.label_text }} ({{ unitProperties.label_code }})
+      {{ unitProperties.title }} ({{ unitProperties.code }})
     </ion-item>
 
     <ion-list-header>Description</ion-list-header>
     <ion-item text-wrap no-lines>
-      {{ unitProperties.label_desc || "None" }}
+      {{ unitProperties.desc || "None" }}
     </ion-item>
 
     <ion-list-header>Rock Name</ion-list-header>
     <ion-item text-wrap no-lines>
-      {{ unitProperties.rock_name || "Unknown" }}
+      {{ unitProperties.lithology || "Unknown" }}
       <span *ngIf="unitProperties.rock_type">
         ({{ unitProperties.rock_type }})
       </span>

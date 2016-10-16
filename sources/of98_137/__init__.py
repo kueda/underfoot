@@ -47,12 +47,12 @@ def run():
       writer = csv.DictWriter(outfile, fieldnames=util.METADATA_COLUMN_NAMES, extrasaction='ignore')
       writer.writeheader()
       for row in reader:
-        print(row)
-        row['span'] = util.span_from_text(row['label_text'])
-        row['rock_name'] = util.rock_name_from_text(row['label_text'])
-        row['unit'] = util.unit_from_text(row['label_text'])
-        if row['rock_name']:
-          row['rock_type'] = util.rock_type_from_rock_name(row['rock_name'])
+        # print(row)
+        row['span'] = util.span_from_text(row['title'])
+        row['lithology'] = util.lithology_from_text(row['title'])
+        row['formation'] = util.formation_from_text(row['title'])
+        if row['lithology']:
+          row['rock_type'] = util.rock_type_from_lithology(row['lithology'])
         if row['span']:
           min_age, max_age, est_age = util.ages_from_span(row['span'])
           row['min_age'] = min_age

@@ -533,21 +533,24 @@ map_unit_data = [
 
 data = [util.METADATA_COLUMN_NAMES]
 for row in map_unit_data:
-  label_code, label_text, label_desc = row
-  rock_name = util.rock_name_from_text(label_text)
-  if len(rock_name) == 0:
-    rock_name = util.rock_name_from_text(label_desc)
-  rock_type = util.rock_type_from_rock_name(rock_name)
-  unit = util.unit_from_text(label_text)
-  span = util.span_from_text(label_text)
+  code, title, desc = row
+  lithology = util.lithology_from_text(title)
+  if len(lithology) == 0:
+    lithology = util.lithology_from_text(desc)
+  rock_type = util.rock_type_from_lithology(lithology)
+  formation = util.formation_from_text(title)
+  span = util.span_from_text(title)
   min_age, max_age, est_age = util.ages_from_span(span)
+  description = re.sub(r"\s+", " ", desc).strip()
+  grouping = ""
   data.append([
-    label_code,
-    label_text,
-    re.sub(r"\s+", " ", label_desc).strip(),
-    rock_name,
+    code,
+    title,
+    description,
+    lithology,
     rock_type,
-    unit,
+    formation,
+    grouping,
     span,
     min_age,
     max_age,

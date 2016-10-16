@@ -9,23 +9,25 @@ import re
 import shutil
 import glob
 import xml.etree.ElementTree as ET
+from collections import OrderedDict
 
 WEB_MERCATOR_PROJ4 = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +over +no_defs"
 NAD27_UTM10_PROJ4 = "+proj=utm +zone=10 +datum=NAD27 +units=m +no_defs"
 METADATA_COLUMN_NAMES = [
-  'label_code',
-  'label_text',
-  'label_desc',
-  'rock_name',
+  'code',
+  'title',
+  'description',
+  'lithology',
   'rock_type',
-  'unit',
+  'formation',
+  'grouping',
   'span',
   'min_age',
   'max_age',
   'est_age'
 ]
 
-ROCK_NAME_PATTERN = re.compile(r'''(
+lithology_PATTERN = re.compile(r'''(
   basalt|
   chert|
   conglomerate|
@@ -79,7 +81,8 @@ SEDIMENTARY_ROCKS = [
   'siltstone'
 ]
 
-UNIT_PATTERN = re.compile(r'(Franciscan complex|([A-Z]\w+ )+[A-Z]\w+)')
+GROUP_PATTERN = re.compile(r'(Franciscan complex|Great Valley Sequence)')
+FORMATION_PATTERN = re.compile(r'(Franciscan complex|([A-Z]\w+ )+[A-Z]\w+)')
 
 spans = {
   'precambrian': [4600e6, 570e6],
@@ -192,23 +195,23 @@ def met2xml(path):
   call_cmd(["python", met2xml_path, path, output_path])
   return output_path
 
-def rock_name_from_text(text):
+def lithology_from_text(text):
   if not text:
     return
-  rock_name_matches = ROCK_NAME_PATTERN.search(text)
-  return (rock_name_matches.group(1) if rock_name_matches else '').lower()
+  lithology_matches = lithology_PATTERN.search(text)
+  return (lithology_matches.group(1) if lithology_matches else '').lower()
 
-def unit_from_text(text):
-  unit_matches = UNIT_PATTERN.search(text) # basically any proper nouns
-  return unit_matches.group(1) if unit_matches else ''
+def formation_from_text(text):
+  formation_matches = FORMATION_PATTERN.search(text) # basically any proper nouns
+  return formation_matches.group(1) if formation_matches else ''
 
-def rock_type_from_rock_name(rock_name):
+def rock_type_from_lithology(lithology):
   rock_type = ''
-  if rock_name in IGNEUS_ROCKS:
+  if lithology in IGNEUS_ROCKS:
     rock_type = 'igneus'
-  elif rock_name in METAMORPHIC_ROCKS:
+  elif lithology in METAMORPHIC_ROCKS:
     rock_type = 'metamorphic'
-  elif rock_name in SEDIMENTARY_ROCKS:
+  elif lithology in SEDIMENTARY_ROCKS:
     rock_type = 'sedimentary'
   return rock_type
 
@@ -258,35 +261,35 @@ def metadata_from_usgs_met(path):
     edvd = ed.find('Enumerated_Domain_Value_Definition')
     if edv == None or edvd == None:
       continue
-    row['label_code'] = edv.text
-    row['label_text'] = edvd.text
-    if row['label_code'] == None or row['label_text'] == None:
+    row['code'] = edv.text
+    row['title'] = edvd.text
+    if row['code'] == None or row['title'] == None:
       continue
-    row['label_text'] = re.sub(r"\n", " ", row['label_text'])
-    row['rock_name'] = rock_name_from_text(row['label_text'])
-    row['unit'] = unit_from_text(row['label_text'])
-    row['rock_type'] = rock_type_from_rock_name(row['rock_name'])
-    row['span'] = span_from_text(row['label_text'])
+    row['title'] = re.sub(r"\n", " ", row['title'])
+    row['lithology'] = lithology_from_text(row['title'])
+    row['formation'] = formation_from_text(row['title'])
+    row['rock_type'] = rock_type_from_lithology(row['lithology'])
+    row['span'] = span_from_text(row['title'])
     row['min_age'], row['max_age'], row['est_age'] = ages_from_span(row['span'])
     data.append([row[col] for col in METADATA_COLUMN_NAMES])
   return data
 
-# def join_polygons_and_metadata(polygons_path, metadata_path, output_path="units.geojson"):
-def join_polygons_and_metadata(polygons_path, metadata_path, output_path="units.shp"):
+def join_polygons_and_metadata(polygons_path, metadata_path, output_path="units.geojson"):
+  # def join_polygons_and_metadata(polygons_path, metadata_path, output_path="units.shp"):
   polygons_table_name = extless_basename(polygons_path)
   column_names = [col for col in METADATA_COLUMN_NAMES]
-  column_names[column_names.index('label_code')] = "PTYPE AS label_code"
+  column_names[column_names.index('code')] = "PTYPE AS code"
   sql = """
     SELECT
       {}
     FROM {}
-      LEFT JOIN '{}'.data ON {}.PTYPE = data.label_code
+      LEFT JOIN '{}'.data ON {}.PTYPE = data.code
   """.format(", ".join(column_names), polygons_table_name, metadata_path, polygons_table_name)
   call_cmd(["rm", output_path])
   call_cmd([
     "ogr2ogr",
     "-sql", sql.replace("\n", " "),
-    # "-f", "GeoJSON",
+    "-f", "GeoJSON",
     output_path,
     polygons_path
   ])

@@ -18,7 +18,36 @@ app.layer('underfoot-units', function(tile, render){
   // render('SELECT ptype, ST_AsGeoJSON(geom) as the_geom_geojson FROM units_original_4326 WHERE ST_Intersects(geom, !bbox_4326!)');
   // render('SELECT *, ST_AsGeoJSON(geom) as the_geom_geojson FROM units WHERE ST_Intersects(geom, !bbox_4326!)');
   // render('SELECT label_code, ST_AsGeoJSON(geom) as the_geom_geojson FROM units WHERE ST_Intersects(geom, !bbox!)');
-  render('SELECT label_code, label_text, label_desc, rock_name, rock_type, unit, span, min_age, max_age, est_age, source, ST_AsGeoJSON( ST_Transform( geom, 4326 ) ) as the_geom_geojson FROM units WHERE ST_Intersects(geom, !bbox!)');
+  render(`
+    SELECT
+      code,
+      title,
+      description,
+      lithology,
+      rock_type,
+      formation,
+      span,
+      min_age,
+      max_age,
+      est_age,
+      source,
+      ST_AsGeoJSON( ST_Transform( geom, 4326 ) ) AS the_geom_geojson
+    FROM
+      units
+    WHERE
+      ST_Intersects(geom, !bbox!)
+  `);
+
+  // just render code and geom
+  // render(`
+  //   SELECT
+  //     code,
+  //     ST_AsGeoJSON( ST_Transform( geom, 4326 ) ) AS the_geom_geojson
+  //   FROM
+  //     units
+  //   WHERE
+  //     ST_Intersects(geom, !bbox!)
+  // `);
 });
 
 app.server.listen(8080, function() { console.log( "listening on 8080" ) });

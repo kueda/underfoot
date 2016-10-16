@@ -62,30 +62,30 @@ def run():
   }
   data = util.metadata_from_usgs_met("oakdb/mf2342e.met")
   span_i        = util.METADATA_COLUMN_NAMES.index('span')
-  unit_i        = util.METADATA_COLUMN_NAMES.index('unit')
+  formation_i   = util.METADATA_COLUMN_NAMES.index('formation')
   min_age_i     = util.METADATA_COLUMN_NAMES.index('min_age')
   max_age_i     = util.METADATA_COLUMN_NAMES.index('max_age')
   est_age_i     = util.METADATA_COLUMN_NAMES.index('est_age')
-  label_code_i  = util.METADATA_COLUMN_NAMES.index('label_code')
-  label_text_i  = util.METADATA_COLUMN_NAMES.index('label_text')
-  label_desc_i  = util.METADATA_COLUMN_NAMES.index('label_desc')
-  rock_name_i   = util.METADATA_COLUMN_NAMES.index('rock_name')
+  code_i  = util.METADATA_COLUMN_NAMES.index('code')
+  title_i  = util.METADATA_COLUMN_NAMES.index('title')
+  desc_i  = util.METADATA_COLUMN_NAMES.index('description')
+  lithology_i   = util.METADATA_COLUMN_NAMES.index('lithology')
   rock_type_i   = util.METADATA_COLUMN_NAMES.index('rock_type')
   curated_data = {}
   with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "units.csv")) as infile:
     reader = csv.DictReader(infile)
     for row in reader:
-      curated_data[row['label_code']] = row
+      curated_data[row['code']] = row
   for idx, row in enumerate(data):
     if idx == 0:
       continue
-    curated_row = curated_data.get(row[label_code_i], None)
+    curated_row = curated_data.get(row[code_i], None)
     if curated_row:
-      data[idx][label_text_i] = curated_row['label_text']
-      data[idx][label_desc_i] = curated_row['label_desc']
+      data[idx][title_i] = curated_row['title']
+      data[idx][desc_i] = curated_row['description']
     span = formation_spans.get(
-      row[unit_i].lower(),
-      util.span_from_text(data[idx][label_text_i])
+      row[formation_i].lower(),
+      util.span_from_text(data[idx][title_i])
     )
     if span:
       min_age, max_age, est_age = util.ages_from_span(span)
@@ -93,10 +93,10 @@ def run():
       data[idx][min_age_i] = min_age
       data[idx][max_age_i] = max_age
       data[idx][est_age_i] = est_age
-    data[idx][rock_name_i] = util.rock_name_from_text(data[idx][label_text_i])
-    if not data[idx][rock_name_i]:
-      data[idx][rock_name_i] = util.rock_name_from_text(data[idx][label_desc_i])
-    data[idx][rock_type_i] = util.rock_type_from_rock_name(data[idx][rock_name_i])
+    data[idx][lithology_i] = util.lithology_from_text(data[idx][title_i])
+    if not data[idx][lithology_i]:
+      data[idx][lithology_i] = util.lithology_from_text(data[idx][desc_i])
+    data[idx][rock_type_i] = util.rock_type_from_lithology(data[idx][lithology_i])
   with open(metadata_path, 'w') as outfile:
     writer = csv.writer(outfile)
     writer.writerows(data)

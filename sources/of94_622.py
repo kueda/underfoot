@@ -61,38 +61,7 @@ util.call_cmd([
 
 print("EXTRACTING METADATA...")
 metadata_path = "data.csv"
-# data = util.metadata_from_usgs_met("nesfgeo/mf2403d.met")
 data = [util.METADATA_COLUMN_NAMES]
-# f = open("ccgeo/ccgeo.txt")
-# try:
-#   lines = f.readlines()
-# except UnicodeDecodeError:
-#   f.close()
-#   f = open(argv[1], encoding="latin-1")
-#   lines = f.readlines()
-# f.close()
-# unit_pattern = re.compile("^([A-z]{1,4}\??)\t\s+(.+)")
-# current_row = None
-# for line in lines:
-#   unit_matches = unit_pattern.search(line)
-#   if unit_matches:
-#     if current_row:
-#       data.append(current_row)
-#       current_row = None
-#     label_code = unit_matches.group(1)
-#     other = unit_matches.group(2)
-#     pieces = re.split(r"\-\-|\.", other, maxsplit=1)
-#     label_text, label_desc = "", ""
-#     if len(pieces) == 1:
-#       label_text = pieces[0]
-#     else:
-#       label_text, label_desc = pieces
-#     current_row = [label_code.strip(), label_text.strip(), label_desc.strip()]
-#   elif current_row and re.match("^\t", line):
-#     current_row[2] = re.sub(r"\s+", " ", "{} {}".format(current_row[2], line)).strip()
-#   elif current_row:
-#     data.append(current_row)
-#     current_row = None
 
 map_unit_data = [
   [
@@ -737,21 +706,24 @@ map_unit_data = [
   ["sc", "Coast Range Ophiolite (Jurassic) Silica carbonate rocks", "Altered serpentinite."]
 ]
 for row in map_unit_data:
-  label_code, label_text, label_desc = row
-  rock_name = util.rock_name_from_text(label_text)
-  if len(rock_name) == 0:
-    rock_name = util.rock_name_from_text(label_desc)
-  rock_type = util.rock_type_from_rock_name(rock_name)
-  unit = util.unit_from_text(label_text)
-  span = util.span_from_text(label_text)
+  code, title, desc = row
+  lithology = util.lithology_from_text(title)
+  if len(lithology) == 0:
+    lithology = util.lithology_from_text(desc)
+  rock_type = util.rock_type_from_lithology(lithology)
+  formation = util.formation_from_text(title)
+  span = util.span_from_text(title)
   min_age, max_age, est_age = util.ages_from_span(span)
+  description = re.sub(r"\s+", " ", desc).strip()
+  grouping = ""
   data.append([
-    label_code,
-    label_text,
-    re.sub(r"\s+", " ", label_desc).strip(),
-    rock_name,
+    code,
+    title,
+    description,
+    lithology,
     rock_type,
-    unit,
+    formation,
+    grouping,
     span,
     min_age,
     max_age,

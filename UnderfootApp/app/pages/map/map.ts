@@ -122,17 +122,18 @@ export class MapPage {
     var mapHeight = this.map.getContainer( ).offsetHeight;
     var px = { x: mapWidth / 2, y: mapHeight / 2 };
     this.unitLayer.scene.getFeatureAt( px ).then( selection => {
+      console.log("selection: ", selection);
       if (
         !selection || 
         !selection.feature ||
         !selection.feature.properties ||
-        !selection.feature.properties.label_code
+        !selection.feature.properties.code
        ) {
         this.unit = "No unit found";
         return;
       }
       this.unitProperties = selection.feature.properties;
-      this.unit = `${selection.feature.properties.label_text} (${selection.feature.properties.label_code})`;
+      this.unit = `${selection.feature.properties.title} (${selection.feature.properties.code})`;
     } );
   }
 

@@ -24,9 +24,9 @@ layers:
                 color:
                     function() {
                         return [
-                            ( feature.label_code || "zzz" ).charCodeAt(2) / 150,
-                            ( feature.label_code || "zzz" ).charCodeAt(1) / 150,
-                            ( feature.label_code || "zzz" ).charCodeAt(0) / 150,
+                            ( feature.code || "zzz" ).charCodeAt(2) / 150,
+                            ( feature.code || "zzz" ).charCodeAt(1) / 150,
+                            ( feature.code || "zzz" ).charCodeAt(0) / 150,
                             0.9
                         ]
                     }
