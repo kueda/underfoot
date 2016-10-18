@@ -1,0 +1,42 @@
+[
+	{
+		"id": "http://zotero.org/users/2632539/items/8QSABA7K",
+		"type": "webpage",
+		"title": "Geology of the onshore part of San Mateo County, California: A digital database",
+		"container-title": "United States Geological Survey",
+		"URL": "http://pubs.usgs.gov/of/1998/of98-137/",
+		"language": "English",
+		"author": [
+			{
+				"family": "Brabb",
+				"given": "E.E."
+			},
+			{
+				"family": "Graymer",
+				"given": "R.W."
+			},
+			{
+				"family": "Jones, D.L.",
+				"given": ""
+			}
+		],
+		"issued": {
+			"date-parts": [
+				[
+					"1998",
+					10,
+					1
+				]
+			]
+		},
+		"accessed": {
+			"date-parts": [
+				[
+					"2016",
+					10,
+					17
+				]
+			]
+		}
+	}
+]

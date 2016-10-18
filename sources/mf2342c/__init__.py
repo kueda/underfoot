@@ -104,3 +104,10 @@ def run():
 
   print("JOINING METADATA...")
   util.join_polygons_and_metadata(final_polygons_path, metadata_path)
+
+  print("COPYING CITATION")
+  util.call_cmd([
+    "cp",
+    os.path.join(os.path.dirname(os.path.realpath(__file__)), "citation.json"),
+    os.path.join(work_path, "citation.json")
+  ])

@@ -23,8 +23,8 @@ const _progress = require('cli-progress');
 //   max_zoom: 15
 // };
 const minZoom = 7;
-// const maxZoom = 15;
-const maxZoom = 11;
+const maxZoom = 15;
+// const maxZoom = 11;
 const swlat = 36.9192;
 const swlon = -123.1238;
 const nelat = 38.634;

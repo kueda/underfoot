@@ -1,0 +1,32 @@
+[
+  {
+    "id": "http://zotero.org/users/2632539/items/9DUGDIFG",
+    "type": "webpage",
+    "title": "Geologic Map and Map Database of the Oakland Metropolitan Area, Alameda, Contra Costa, and San Francisco Counties, California",
+    "abstract": "This report contains a new geologic map at 1:50,000 scale, derived from a set of geologic map databases containing information at a resolution associated with 1:24,000 scale, and a new description of geologic map units and structural relationships in the mapped area. The map database represents the integration of previously published reports and new geologic mapping and field checking by the author (see Sources of Data index map on the map sheet or the Arc-Info coverage pi-so and the textfile pi-so.txt). The descriptive text (below) contains new ideas about the Hayward fault and other faults in the East Bay fault system, as well as new ideas about the geologic units and their relations. These new data are released in digital form in conjunction with the Federal Emergency Management Agency Project Impact in Oakland.\n\nThe goal of Project Impact is to use geologic information in land-use and emergency services planning to reduce the losses occurring during earthquakes, landslides, and other hazardous geologic events. The USGS, California Division of Mines and Geology, FEMA, California Office of Emergency Services, and City of Oakland participated in the cooperative project. The geologic data in this report were provided in pre-release form to other Project Impact scientists, and served as one of the basic data layers for the analysis of hazard related to earthquake shaking, liquifaction, earthquake induced landsliding, and rainfall induced landsliding. The publication of these data provides an opportunity for regional planners, local, state, and federal agencies, teachers, consultants, and others outside Project Impact who are interested in geologic data to have the new data long before a traditional paper map could be published. Because the database contains information about both the bedrock and surficial deposits, it has practical applications in the study of groundwater and engineering of hillside materials, as well as the study of geologic hazards and the academic research on the geologic history and development of the region.",
+    "URL": "http://pubs.usgs.gov/mf/2000/2342/",
+    "language": "English",
+    "author": [
+      {
+        "family": "Graymer",
+        "given": "R.W."
+      }
+    ],
+    "issued": {
+      "date-parts": [
+        [
+          "2000"
+        ]
+      ]
+    },
+    "accessed": {
+      "date-parts": [
+        [
+          "2016",
+          10,
+          17
+        ]
+      ]
+    }
+  }
+]
