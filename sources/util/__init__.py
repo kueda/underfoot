@@ -136,6 +136,7 @@ def call_cmd(*args, **kwargs):
   run(*args, **kwargs)
 
 def run_sql(sql, dbname="underfoot"):
+  # print("running {}".format(sql))
   call_cmd([
     "psql", dbname, "-c", sql
   ])

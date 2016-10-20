@@ -4,6 +4,7 @@ import glob
 import os
 import re
 import psycopg2
+import time
 
 final_table_name = "units"
 mask_table_name = "masks"
@@ -50,6 +51,52 @@ util.run_sql("""
   )
 """.format(mask_table_name, srid))
 
+def remove_polygon_overlaps(source_table_name):
+  temp_source_table_name = "temp_{}".format(source_table_name)
+  util.run_sql("DROP TABLE IF EXISTS \"{}\"".format(temp_source_table_name), dbname=dbname)
+  util.run_sql("ALTER TABLE {} RENAME TO {}".format(source_table_name, temp_source_table_name))
+  # First we need to split the table into its constituent polygons so we can
+  # sort them by size and use them to cut holes out of the larger polygons
+  dumped_source_table_name = "dumped_{}".format(source_table_name)
+  util.run_sql("DROP TABLE IF EXISTS \"{}\"".format(dumped_source_table_name), dbname=dbname)
+  util.run_sql("""
+    CREATE TABLE {} AS SELECT {}, (ST_Dump(geom)).geom AS geom FROM {}
+  """.format(
+    dumped_source_table_name,
+    ", ".join(util.METADATA_COLUMN_NAMES),
+    temp_source_table_name
+  ))
+  util.run_sql("ALTER TABLE {} ADD COLUMN id SERIAL PRIMARY KEY".format(dumped_source_table_name))
+  # Now we iterate over each polygon order by size, and use it to cut a hole
+  # out of all the other polygons that intersect it
+  con = psycopg2.connect("dbname=underfoot")
+  cur1 = con.cursor()
+  cur1.execute("SELECT id FROM {} ORDER BY ST_Area(geom) ASC".format(dumped_source_table_name))
+  for row in cur1:
+    print('.', end="", flush=True)
+    id = row[0]
+    cur2 = con.cursor()
+    sql = """
+      UPDATE {}
+      SET geom = ST_Multi(ST_Difference(geom, (SELECT geom FROM {} WHERE id = {})))
+      WHERE ST_Intersects(geom, (SELECT geom FROM {} WHERE id = {})) AND id != {}
+    """.format(
+      dumped_source_table_name,
+      dumped_source_table_name, id,
+      dumped_source_table_name, id, id
+    )
+    cur2.execute(sql)
+    cur2.close()
+  con.commit()
+  util.run_sql("CREATE TABLE {} AS SELECT {}, ST_Union(geom) AS geom FROM {} GROUP BY {}".format(
+    source_table_name,
+    ", ".join(util.METADATA_COLUMN_NAMES),
+    dumped_source_table_name,
+    ", ".join(util.METADATA_COLUMN_NAMES)
+  ))
+  util.run_sql("DROP TABLE IF EXISTS \"{}\"".format(temp_source_table_name), dbname=dbname)
+  util.run_sql("DROP TABLE IF EXISTS \"{}\"".format(dumped_source_table_name), dbname=dbname)
+
 for idx, source_identifier in enumerate(sources):
   path = os.path.join("sources", "{}.py".format(source_identifier))
   work_path = util.make_work_dir(path)
@@ -57,6 +104,7 @@ for idx, source_identifier in enumerate(sources):
   units_path = os.path.join(work_path, "units.geojson")
   source_table_name = re.sub(r"\W", "_", source_identifier)
   util.run_sql("DROP TABLE IF EXISTS \"{}\"".format(source_table_name), dbname=dbname)
+  time.sleep(5) # stupid hack to make sure the table is dropped before we start loading into it
   print("Loading {} into {} table...".format(units_path, source_table_name))
   util.call_cmd([
     "ogr2ogr",
@@ -66,31 +114,13 @@ for idx, source_identifier in enumerate(sources):
       "-nln", source_table_name,
       "-nlt", "MULTIPOLYGON",
       "-lco", "GEOMETRY_NAME=geom",
-      "-lco", "FID=gid",
+      "-skipfailures",
       "-a_srs", "EPSG:{}".format(srid)
   ])
   print("Repairing invalid geometries...")
   util.run_sql("UPDATE {} SET geom = ST_MakeValid(geom) WHERE NOT ST_IsValid(geom)".format(source_table_name))
   print("Removing polygon overlaps...")
-  con = psycopg2.connect("dbname=underfoot")
-  cur1 = con.cursor()
-  cur1.execute("SELECT gid FROM {} ORDER BY ST_Area(geom) ASC".format(source_table_name))
-  for row in cur1:
-    print('.', end="", flush=True)
-    gid = row[0]
-    cur2 = con.cursor()
-    sql = """
-      UPDATE {}
-      SET geom = ST_Multi(ST_Difference(geom, (SELECT geom FROM {} WHERE gid = {})))
-      WHERE ST_Intersects(geom, (SELECT geom FROM {} WHERE gid = {})) AND gid != {}
-    """.format(
-      source_table_name,
-      source_table_name, gid,
-      source_table_name, gid, gid
-    )
-    cur2.execute(sql)
-    cur2.close()
-  con.commit()
+  remove_polygon_overlaps(source_table_name)
   print()
   if idx == 0:
     print("Creating {} and inserting...".format(final_table_name))
