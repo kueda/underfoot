@@ -10,6 +10,7 @@ import shutil
 import glob
 import xml.etree.ElementTree as ET
 from collections import OrderedDict
+import csv
 
 WEB_MERCATOR_PROJ4 = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +over +no_defs"
 NAD27_UTM10_PROJ4 = "+proj=utm +zone=10 +datum=NAD27 +units=m +no_defs"
@@ -295,3 +296,27 @@ def join_polygons_and_metadata(polygons_path, metadata_path, output_path="units.
     polygons_path
   ])
   return output_path
+
+def infer_metadata_from_csv(infile_path):
+  outfile_path = "data.csv"
+  with open(infile_path) as infile:
+    reader = csv.DictReader(infile)
+    with open(outfile_path, 'w') as outfile:
+      writer = csv.DictWriter(outfile, fieldnames=METADATA_COLUMN_NAMES, extrasaction='ignore')
+      writer.writeheader()
+      for row in reader:
+        row['span'] = span_from_text(row['title'])
+        row['lithology'] = lithology_from_text(row['title'])
+        if not row['lithology'] or len(row['lithology']) == 0:
+          row['lithology'] = lithology_from_text(row['description'])
+        row['formation'] = formation_from_text(row['title'])
+        if row['lithology']:
+          row['rock_type'] = rock_type_from_lithology(row['lithology'])
+        if row['span']:
+          min_age, max_age, est_age = ages_from_span(row['span'])
+          row['min_age'] = min_age
+          row['max_age'] = max_age
+          row['est_age'] = est_age
+        writer.writerow(row)
+  return outfile_path
+

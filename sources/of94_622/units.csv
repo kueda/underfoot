@@ -1,0 +1,137 @@
+code,title,description
+Qu,"Surficial deposits, undivided (Pleistocene and Holocene)","For more detailed reports of surficial deposits, see Helley and others (1979), Atwater (1982), Herd (1978 a, b), and Borchardt and Seelig (1991)."
+Qls,Landslide deposits (Pleistocene and Holocene),"Landslides are intentionally omitted from most of this map because they are so numerous they would conceal much of the information on bedrock geology. Only a few of the large landslide areas are shown. For more comprehensive reports of landslides in the area, see Nilsen and others (1979) and Ellen and Wieczorek (1988). In addition, a list of pertinent literature on landslides in Contra Costa County is provided by White (1990)."
+Tb,Basaltic intrusive rocks (Pliocene),Hypabyssal basalt dikes and sills.
+Tsv,Silicic intrusive rocks (Miocene),"Rhyolite to andesite porphyry stocks, dikes and sills."
+KJf,Franciscan Complex (Jurassic to Upper Cretaceous),"Sheared sedimentary and metamorphic rock with zones and blocks of chert (fc), hard graywacke and shale (fss), greenstone (fg), basalt and chert (fbc), melange of metamorphic rocks including glaucophane and other schistose rocks in sheared sandstone and shale matrix (fm), and sandstone (graywacke) (fs); also includes small bodies of serpentinite, silica carbonate rocks, and silicic volcanic rocks (keratophyre)."
+fc,Franciscan Complex (Jurassic to Upper Cretaceous) chert,
+fss,Franciscan Complex (Jurassic to Upper Cretaceous) hard graywacke and shale,
+fg,Franciscan Complex (Jurassic to Upper Cretaceous) greenstone,
+fbc,Franciscan Complex (Jurassic to Upper Cretaceous) basalt and chert,
+fm,Franciscan Complex (Jurassic to Upper Cretaceous) melange,Melange of metamorphic rocks including glaucophane and other schistose rocks in sheared sandstone and shale matrix
+fs,Franciscan Complex (Jurassic to Upper Cretaceous) sandstone (graywacke),
+Tbp,Bald Peak Basalt (Miocene),"Massive basalt flows. Ar/Ar ages 8.37+0.2 and 8.46+0.2 Ma (Curtis, 1989)."
+Tst,Siesta Formation (Miocene),"Non-marine siltstone, claystone, sandstone, and minor limestone."
+Tm,Moraga Formation (Miocene),"Basalt and andesite flows, minor rhyolite tuff. Ar/Ar ages range from 9.0+0.3 to 10.2+0.5 Ma (Curtis, 1989). Interflow sedimentary rocks (Tms) mapped locally."
+Tor,Orinda Formation (Miocene),"Conglomerate, sandstone, siltstone. Nonmarine with abundant clasts of rocks from the Franciscan Complex."
+Tcc,Claremont Chert (Miocene),"Laminated and bedded diatomaceous chert, minor brown shale and white sandstone. Interbedded sandstone (Tccs) mapped locally."
+Tgs,"Unnamed sandstone and siltstone (Eocene, Oligocene, and Miocene)",Glauconitic sandstone and brown massive siltstone.
+Tsh,Greenish gray shale (Eocene),
+Kph,Pinehurst Shale (Late Cretaceous),"Siliceous shale with interbedded sandstone and siltstone. Includes maroon, concretionary shale at base. This formation was originally considered to be Paleocene, but it contains foraminifers and radiolarians of Late Cretaceous age in its type area and throughout its outcrop extent."
+Kr,Redwood Canyon Formation (Late Cretaceous),"Massive, distinctly bedded sandstone with minor interbedded siltstone"
+Ksc,Shephard Creek Formation (Late Cretaceous),Mainly shale with minor sandstone.
+Ko,Oakland Conglomerate (Late Cretaceous),Conglomerate containing mainly silicic volcanic clasts and massive biotite-rich quartz sandstone.
+Kjm,Joaquin Miller Formation (Late Cretaceous),Shale with minor sandstone.
+JKk,Knoxville Formation (Late Jurassic to Early Cretaceous),"Mainly dark, greenish-gray shale with sandstone interbeds; also, locally includes conglomerate and sandstone in its lower part. Locally contains abundant specimens of bivalve fossil Buchia."
+Jsv,Coast Range Ophiolite (Jurassic) Keratophyre,Altered silicic volcanic rocks including keratophyre and quartz keratophyre.
+Qmz,Montezuma Formation (Pleistocene),"Poorly consolidated sand, with minor gravel, silt, and clay."
+Tmlu,"Mullholland Formation of Ham (1952) (Pliocene) Upper member; conglomerate, sandstone, and mudstone.",
+Tmll,Mullholland Formation of Ham (1952) (Pliocene) Lower member; sandstone and mudstone,
+Tus,Unnamed sedimentary and volcanic rocks (Miocene and Pliocene),"Includes marine and nonmarine conglomerate, sandstone, and siltstone, as well as basalt (Tub) and limestone (Tul) mapped locally."
+Tub,basalt (Miocene and Pliocene),
+Tul,limestone (Miocene and Pliocene),
+Tpt,Pinole Tuff (Miocene),"Tuffaceous sandstone containing pumice fragments. Tuff dated by K/Ar about 5.2 Ma (Sarna-Wojcicki, 1976)."
+Tlt,Lafayette Tuff (Miocene),"K/Ar age of 8.2 + 2.0 Ma (Sarna-Wojcicki, 1976)."
+Tn,Neroly Sandstone (Miocene),"Blue, volcanic - rich, shallow marine sandstone, with minor shale, siltstone, tuff, and andesitic conglomerate."
+Tc,Cierbo Sandstone (Miocene),"Blue, brown, gray, and white marine sandstone, minor conglomerate, tuff, and shale."
+Tbr,Briones Formation (Miocene),"Sandstone, siltstone, conglomerate and shell breccia. The Briones Formation in this assemblage contains a tuffaceous layer with a K/Ar age of 14.5+0.4 Ma (Lindquist and Morganthaler, 1991)."
+Tbg,Briones Formation (Miocene) G member of Wagner (1978),"Massive sandstone, pebble conglomerate, and shell breccia."
+Tbf,Briones Formation (Miocene) F member of Wagner (1978),Fine-grained feldspathic sandstone and locally prominent brown shale.
+Tbe,Briones Formation (Miocene) E member of Wagner (1978),Medium-grained sandstone with abundant shell breccia beds; lithologically similar to unit Tbg.
+Tbd,Briones Formation (Miocene) D member of Wagner (1978),"Massive, medium-grained sandstone with local conglomerate layers."
+Tbu,Briones Formation (Miocene) Upper sandstone and shale member,
+Tbh,Briones Formation (Miocene) Hercules Shale Member; gray shale and siltstone,
+Tbl,Briones Formation (Miocene) Lower sandstone and siltstone member,
+Tro,"Rodeo Shale, Hambre Sandstone, Tice Shale, and Oursan Sandstone, undivided (Miocene)",
+Tr,Rodeo Shale (Miocene),Brown siliceous shale with yellow carbonate concretions.
+Th,Hambre Sandstone (Miocene),"Massive, medium - grained sandstone, weathers brown."
+Tt,Tice Shale (Miocene),Brown siliceous shale
+To,Oursan Sandstone (Miocene),"Greenish gray, medium-grained sandstone with calcareous concretions."
+Tcs,Claremont Shale (Miocene),Brown siliceous shale with yellow carbonate concretions and minor interbedded chert.
+Ts,Sobrante Sandstone (Miocene),"Massive white, medium-grained calcareous sandstone."
+Tts,Tuffaceous sandstone (Oligocene or Miocene?),"Light-gray tuffaceous sandstone, minor conglomerate and siltstone, marine. May be equivalent to Kirker Tuff in Assemblage VI."
+Tsr,San Ramon Sandstone (Oligocene and/or Miocene),"Massive, medium to coarse-grained, fossiliferous, marine sandstone."
+Tshc,Shale and claystone (Eocene),Also contains minor sandstone.
+Tcgl,"Conglomerate, sandstone, siltstone (Miocene and Pliocene)","Contains abundant clasts of Claremont chert. Includes rhyolite tuff and tuff breccia (Tcglt), correlated with the 5.7 to 6.1 Ma Roblar tuff of Sonoma County (Sarna-Wojcicki, written communication,1990)."
+Tut,Tuff (Miocene),Tuffaceous sandstone containing pumice fragments.
+Tdi,Diatomite (Miocene),Light gray to white with minor brown shale.
+Tsa,Sandstone (Miocene),"Massive, light gray, fine to medium-grained."
+Tmu,"Mudstone, shale, and siltstone (Miocene)",
+Tbr,Briones Sandstone (Miocene),"Sandstone, siltstone, conglomerate and shell breccia."
+Ts,Sobrante Sandstone (Miocene),"Gray to brown, fine- to medium- grained sandstone and minor conglomerate."
+Tsr,San Ramon Sandstone (Oligocene and/or Miocene),"Bluish-gray to brown, medium-grained sandstone with conglomerate locally present in basal part."
+Tes,Escobar Sandstone of Weaver (1953) (Eocene),"Massive, medium- to coarse- grained, brown sandstone with shale in basal part."
+Tehs,Escobar Sandstone of Weaver (1953) (Eocene) Sandstone and shale member,
+Teh,Escobar Sandstone of Weaver (1953) (Eocene) Basal shale member,
+Tmr,Muir Sandstone of Weaver (1953) (Eocene),"Massive, yellow-weathering arkosic sandstone."
+Tmru,Muir Sandstone of Weaver (1953) (Eocene) Upper member,"Sandstone, lithologically similar to unit Tmr"
+Tmrl,Muir Sandstone of Weaver (1953) (Eocene) Lower member,Claystone with thin sandstone in basal part.
+Tlj,Las Juntas Shale of Weaver (1953) (Paleocene and Eocene),Gray shale with minor siltstone.
+Tlju,Las Juntas Shale of Weaver (1953) (Paleocene and Eocene) Upper member,Shale.
+Tljl,Las Juntas Shale of Weaver (1953) (Paleocene and Eocene) Lower member,Sandstone.
+Tvh,Vine Hill Sandstone of Weaver (1953) (Paleocene),Glauconitic sandstone.
+Tvhu,Vine Hill Sandstone of Weaver (1953) (Paleocene) Upper member,Sandstone and shale.
+Tvhl,Vine Hill Sandstone of Weaver (1953) (Paleocene) Lower member,Glauconitic sandstone.
+Ku,Great Valley sequence (Cretaceous),"Sandstone, siltstone, shale, and minor conglomerate."
+Kcs,"Great Valley sequence (Cretaceous) Gray, massive quartz arenite",
+Ksh,Great Valley sequence (Cretaceous) Siltstone and shale,
+Kus,"Great Valley sequence (Cretaceous) Sandstone, siltstone, and shale",
+Kuh,"Great Valley sequence (Cretaceous) Massive sandstone, minor siltstone",
+Tgvt,"Green Valley and Tassajara Formations of Conduit (1938), undivided (Miocene and Pliocene)","Non-marine sandstone, siltstone, and conglomerate. Locally includes a 5 meter thick tuff marker bed (Tgvtt). A tuff in this unit has a K/Ar age of 4.0+1.0 Ma, while tuff layers lower in the unit has been correlated with the Roblar tuff in Sonoma County which has K/Ar ages of 5.7+0.5 Ma and 6.1+0.1 Ma and the Pinole Tuff of Assemblage II which has a K/Ar age of 5.2+0.1 Ma (Sarna- Wojcicki, 1976)."
+Tgvtt,"Green Valley and Tassajara Formations of Conduit (1938), tuff (Miocene and Pliocene)",
+Tn,Neroly Sandstone (Miocene),"Brown, massive, marine sandstone with abundant volcanic clasts."
+Tc,Cierbo Sandstone (Miocene),"Light-gray, massive sandstone with marine fossils. Contains sandstone and conglomerate near the base (Tcsc)."
+Tdu,Domingene Formation (Eocene) Upper member,"Massive, pebbly, white sandstone."
+Tdl,Domingene Formation (Eocene) Lower member,Gray shale and minor sandstone.
+Tdls,Domingene Formation (Eocene) Sandstone,"Fine grained, white, quartz sandstone marker bed."
+Kslt,"Great Valley sequence siltstone with minor shale, claystone, and sandstone (Late Cretaceous)",
+Kus,Great Valley sequence sandstone and shale (Early Cretaceous),
+Ksh,Great Valley sequence (Cretaceous) shale with minor sandstone (Early Cretaceous),
+Ttu,Tulare Formation (Pliocene),"Poorly consolidated, non-marine, gray to maroon siltstone, sandstone, and conglomerate. This formation contains tuff correlated with the Putah Tuff which has a K/Ar age of 3.3+0.1 Ma (Sarna-Wojcicki, 1976)."
+Tl,Lawlor Tuff (Pliocene),"Non-marine, pumiceous, andesitic tuff. In this area the Lawlor tuff has a K/Ar age of 4.0+0.2 Ma. (Sarna-Wojcicki, 1976)."
+Tlu,Lawlor Tuff (Pliocene) Upper siltstone bed,
+Tll,Lawlor Tuff (Pliocene) Lower siltstone bed,
+Tn,Neroly Sandstone (Miocene),"Blue, volcanic- rich, cross-bedded sandstone and conglomerate; mainly nonmarine. The Neroly Sandstone in this assemblage contains tuffs with K/Ar ages of about 9.7 Ma (Black Diamond Park Tuff ) and 10-12 Ma (Alves Tuff) (Sarna-Wojcicki, written communication, 1990). Includes minor siltstone, locally mapped (Tns)."
+Tns,Neroly Sandstone (Miocene) siltstone,
+Tc,Cierbo Sandstone (Miocene),"Blue, volcanic - rich sandstone with abundant marine fossils."
+Tkt,Kirker Tuff (Oligocene),"Pumiceous, white tuff. Includes minor tuffaceous sandstone, conglomerate and siltstone, locally mapped (Tks)."
+Tks,"Kirker Tuff (Oligocene) tuffaceous sandstone, conglomerate and siltstone",
+Tmk,Markley Formation (Eocene),Sandstone and shale.
+Tmku,Markley Formation (Eocene) Upper member,"Thin-bedded sandstone, siltstone, and claystone."
+Tmkl,Markley Formation (Eocene) Lower member,Thin-bedded to massive sandstone with minor siltstone and mudstone.
+Tsu,Sidney Flat Shale Member Upper part,Black shale with minor siltstone and sandstone.
+Tsl,Sidney Flat Shale Member Lower part,Interbedded shale and sandstone.
+Tnv,Nortonville Shale (Eocene),Brown to grayish-green mudstone and claystone with minor siltstone and sandstone; marine rocks.
+Td,Domingene Formation (Eocene),
+Tdu,Domingene Formation (Eocene) Upper member,Brown sandstone with minor mudstone and conglomerate.
+Tdl,Domingene Formation (Eocene) Lower member,Siltstone and claystone with minor sandstone and basal conglomerate.
+Tm,Meganos Formation (Paleocene),"Sandstone, shale, and conglomerate."
+Tme,Meganos Formation (Paleocene) Upper member,"Greenish-gray to light gray, biotite-rich siltstone and silty mudstone, with abundant plant debris in places. Division E of Meganos Formation of Clark (1921)"
+Tmd,Meganos Formation (Paleocene) Sandstone member,"Medium grained, light gray to bluish-gray sandstone with carbonaceous laminations; pebble conglomerate present locally at base. Division D of Meganos Formation of Clark (1921)."
+Tmc,Meganos Formation (Paleocene) Shale member,Bluish - gray shale with sandstone interbeds. Division C of Meganos Formation of Clark (1921).
+Tmcss,Meganos Formation (Paleocene) Sandstone interbeds,
+Tma,Meganos Formation (Paleocene) Lower member,"Sandstone with basal conglomerate. Medium to coarse grained, clean, white, distinctly cross bedded, biotite bearing arkosic sandstone. Equivalent to Divisions A and B of Meganos Formation of Clark (1921)."
+Tmz,Unnamed sandstone and shale (Paleocene),
+Tmzu,Unnamed sandstone and shale (Paleocene) Upper member,Siltstone and shale.
+Tmzl,Unnamed sandstone and shale (Paleocene) Lower member,Glauconitic sandstone.
+Kdv,Deer Valley Sandstone of Colburn (1964) (Late Cretaceous),"Fine- to medium-grained, gray, distinctly bedded to massive, biotite-bearing arkosic sandstone and minor conglomerate."
+Keu,Great Valley Sequence Unit E - Siltstone and mudstone (Late Cretaceous) Upper member,"Light gray siltstone, interbedded with medium to coarse grained, clean, white and orange, lithic sandstone with many large (as much as 50 cm diameter) iron concretions. Weathers to light orange."
+Kel,Great Valley Sequence Unit E - Siltstone and mudstone (Late Cretaceous) Lower member,"Light gray to gray-brown, foraminifer bearing siltstone and mudstone. Reddish-brown weathering and iron concretions conspicuous."
+Kels,Great Valley Sequence Unit E - Siltstone and mudstone (Late Cretaceous) Sandstone interbeds,"Coarse grained, clean white, fossiliferous, lithic sandstone. Grains include quartz, feldspar, and black lithic grains. Mica is rare. Iron concretions common."
+Kd,Great Valley Sequence Unit D - Sandstone (Late Cretaceous),"Medium to coarse grained, light gray, clean sandstone. Grains include quartz, feldspar, and biotite. Spherical weathering common. In places interbedded with fine to medium grained, biotite and muscovite bearing wacke with mudstone rip-up clasts. Sandstone beds form packages up to 10 meters thick with 1 to 2 meters of interbedded siltstone and mudstone."
+Kds,Great Valley Sequence Unit D - Sandstone (Late Cretaceous) Shale member,"Brown to gray, micaceous mudstone and brown micaceous siltstone. One layer is dark gray-brown to dark gray, massive, foraminifer rich, siliceous mudstone."
+Kcu,Great Valley Sequence Unit C - Sandstone and shale (Late Cretaceous) Upper member,Shale and siltstone.
+Kcus,Great Valley Sequence Unit C - Sandstone and shale (Late Cretaceous) Upper member sandstone,Sandstone interbeds.
+Kcm,Great Valley Sequence Unit C - Sandstone and shale (Late Cretaceous) Middle member,"Medium grained, brown to gray, biotite rich wacke with some mudstone rip-up clasts. Contains interbeds of siltstone, shale, and conglomerate."
+Kcl,Great Valley Sequence Unit C - Sandstone and shale (Late Cretaceous) Lower member,Shale and siltstone with minor sandstone.
+Kcls,Great Valley Sequence Unit C - Sandstone and shale (Late Cretaceous) Lower member sandstone,Sandstone interbeds.
+Kb,Unit B - Sandstone and shale (Early Cretaceous),"Base marked by 1 m thick bed of cobble conglomerate overlain by 10 meters of conglomeratic sandstone. Includes at least one layer, 10 meters thick, of white rhyolite tuff."
+Kbsh,Unit B - Sandstone and shale (Early Cretaceous) Shale member,Olive-gray mudstone and micaceous siltstone. Forms reddish soil. Contains sandstone interbeds.
+Kbs,Unit B - Sandstone and shale (Early Cretaceous) Sandstone member,"Medium grained, olive-brown wacke with large biotite grains and many small (3 mm long) mudstone rip-up clasts. Interbedded with thin beds of siltstone and mudstone."
+Ka,"Unit A - Shale, with minor sandstone (Early Cretaceous)",Olive-brown to dark gray siltstone and mudstone. Spherical concretions common.
+Kas,"Unit A - Shale, with minor sandstone (Early Cretaceous) Sandstone member","Fine to medium grained, brown to olive, biotite-rich wacke with micaceous siltstone interbeds. In places grades into coarse grained, bluish-gray wacke with large (up to 3 cm long) mudstone rip-up clasts and phosphate nodules."
+JKk,Knoxville Formation (Late Jurassic to Early Cretaceous),"Mainly dark, greenish-gray shale with sandstone interbeds; also, locally includes conglomeratic sandstone in its lower part. Locally contains abundant specimens of bivalve fossil Buchia."
+Jpb,"Coast Range Ophiolite (Jurassic) Pillow basalt, basalt breccia, and minor diabase",
+Jdb,Coast Range Ophiolite (Jurassic) Diabase,Mainly sills and dikes; also includes screens of pillow basalt.
+sp,Coast Range Ophiolite (Jurassic) Serpentinite,"Mainly sheared serpentinite, but also includes massive harzburgite."
+sc,Coast Range Ophiolite (Jurassic) Silica carbonate rocks,Altered serpentinite.

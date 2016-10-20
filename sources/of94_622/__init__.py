@@ -2,41 +2,40 @@ import util
 import os
 import glob
 import subprocess
-import csv
-import sys
+import re
 
 def run():
-  debug = False
   work_path = util.make_work_dir(__file__)
   os.chdir(work_path)
 
   # download the file if necessary
-  if not os.path.isfile("sm_g1.tar.gz"):
-    url = "http://pubs.usgs.gov/of/1998/of98-137/sm_g1.tar.gz"
+  if not os.path.isfile("cc_g1.tar.Z"):
+    url = "http://pubs.usgs.gov/of/1994/of94-622/cc_g1.tar.Z"
     print("Downloading {}\n".format(url))
     util.call_cmd(["curl", "-OL", url])
 
   # extract the archive if necessary
-  if not os.path.isdir("smgeo"):
+  if not os.path.isdir("ccgeo/cc_utm/"):
     print("\nExtracting archive...\n")
-    util.call_cmd(["tar", "xzvf", "sm_g1.tar.gz"])
+    util.call_cmd(["tar", "xzvf", "cc_g1.tar.Z"])
 
   # convert the Arc Info coverages to shapefiles
-  print("CONVERTING E00 TO SHAPEFILES...")
-  shapefiles_path = util.extract_e00("smgeo/sm_um-py.e00")
-  polygons_path = util.polygonize_arcs(shapefiles_path, polygon_pattern="SM3_UM-PY")
+  polygons_path = "ccgeo/cc_utm-shapefiles/PAL.shp"
+  if not os.path.isfile(polygons_path):
+    print("\nConverting e00 to shapefiles...\n")
+    shapefiles_path = util.extract_e00("ccgeo/cc_utm")
 
   # dissolve all the shapes by PTYPE and project them into Google Mercator
-  print("DISSOLVING SHAPES AND REPROJECTING...")
-  final_polygons_path = "final_polygons.shp"
+  print("\nDissolving shapes and reprojecting...\n")
+  final_polygons_path = "polygons.shp"
   util.call_cmd([
     "ogr2ogr",
-      "-s_srs", util.NAD27_UTM10_PROJ4,
+      "-s_srs", "+proj=utm +zone=10 +datum=NAD27 +units=m +no_defs",
       "-t_srs", util.WEB_MERCATOR_PROJ4,
       final_polygons_path, polygons_path,
       "-overwrite",
       "-dialect", "sqlite",
-      "-sql", "SELECT PTYPE,ST_Union(geometry) AS geometry FROM 'polygons' GROUP BY PTYPE"
+      "-sql", "SELECT PTYPE,ST_Union(geometry) as geometry FROM 'PAL' GROUP BY PTYPE"
   ])
 
   print("EXTRACTING METADATA...")
@@ -51,4 +50,3 @@ def run():
     os.path.join(os.path.dirname(os.path.realpath(__file__)), "citation.json"),
     os.path.join(work_path, "citation.json")
   ])
-
