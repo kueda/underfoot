@@ -1,0 +1,39 @@
+[
+	{
+		"id": "http://zotero.org/users/2632539/items/248VWZWR",
+		"type": "webpage",
+		"title": "USGS Open-File Report 95-597: Geologic Map of the Hayward fault zone, Contra Costa, Alameda, and Santa Clara Counties, California: A digital database",
+		"container-title": "United States Geological Survey",
+		"URL": "http://pubs.usgs.gov/of/1995/of95-597/",
+		"author": [
+			{
+				"family": "Graymer",
+				"given": "R.W."
+			},
+			{
+				"family": "Jones",
+				"given": "D.L."
+			},
+			{
+				"family": "Brabb",
+				"given": "E.E."
+			}
+		],
+		"issued": {
+			"date-parts": [
+				[
+					"1995"
+				]
+			]
+		},
+		"accessed": {
+			"date-parts": [
+				[
+					"2016",
+					10,
+					21
+				]
+			]
+		}
+	}
+]

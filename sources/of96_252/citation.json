@@ -1,0 +1,39 @@
+[
+	{
+		"id": "http://zotero.org/users/2632539/items/XRJ2MEEB",
+		"type": "webpage",
+		"title": "Preliminary Geologic Map Emphasizing Bedrock Formations in Alameda County, California: A Digital Database",
+		"container-title": "United States Geological Survey",
+		"URL": "http://pubs.usgs.gov/of/1996/of96-252/",
+		"author": [
+			{
+				"family": "Graymer",
+				"given": "R.W."
+			},
+			{
+				"family": "Jones",
+				"given": "D.L."
+			},
+			{
+				"family": "Brabb",
+				"given": "E.E."
+			}
+		],
+		"issued": {
+			"date-parts": [
+				[
+					"1996"
+				]
+			]
+		},
+		"accessed": {
+			"date-parts": [
+				[
+					"2016",
+					10,
+					21
+				]
+			]
+		}
+	}
+]

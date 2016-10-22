@@ -17,7 +17,10 @@ sources = [
   "of97_489",
   "of98_354",
   "mf2403c",
-  "of98_137"
+  "of98_137",
+  "mf2402",
+  "sim2858",
+  "of96_252"
 ]
 
 util.call_cmd(["createdb", dbname])

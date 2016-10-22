@@ -1,0 +1,39 @@
+[
+	{
+		"id": "http://zotero.org/users/2632539/items/2TKURMJ6",
+		"type": "webpage",
+		"title": "Geologic Map and Map Database of Parts of Marin, San Francisco, Alameda, Contra Costa, and Sonoma Counties, California",
+		"container-title": "United States Geological Survey",
+		"URL": "http://pubs.usgs.gov/mf/2000/2337/",
+		"author": [
+			{
+				"family": "Blake, Jr.",
+				"given": "M.C."
+			},
+			{
+				"family": "Graymer",
+				"given": "R.W."
+			},
+			{
+				"family": "Jones, D.L.",
+				"given": ""
+			}
+		],
+		"issued": {
+			"date-parts": [
+				[
+					"2000"
+				]
+			]
+		},
+		"accessed": {
+			"date-parts": [
+				[
+					"2016",
+					10,
+					21
+				]
+			]
+		}
+	}
+]

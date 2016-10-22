@@ -1,0 +1,47 @@
+[
+	{
+		"id": "http://zotero.org/users/2632539/items/CBZ3HI89",
+		"type": "webpage",
+		"title": "Geologic Map of Santa Cruz County: A Digital Database",
+		"container-title": "United States Geological Survey",
+		"URL": "http://pubs.usgs.gov/of/1997/of97-489/",
+		"author": [
+			{
+				"family": "Graham",
+				"given": "S."
+			},
+			{
+				"family": "Wentworth",
+				"given": "C."
+			},
+			{
+				"family": "Knifong",
+				"given": "D."
+			},
+			{
+				"family": "Graymer",
+				"given": "R.W."
+			},
+			{
+				"family": "Blissenbach",
+				"given": "J."
+			}
+		],
+		"issued": {
+			"date-parts": [
+				[
+					"1997"
+				]
+			]
+		},
+		"accessed": {
+			"date-parts": [
+				[
+					"2016",
+					10,
+					21
+				]
+			]
+		}
+	}
+]

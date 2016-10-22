@@ -1,0 +1,39 @@
+[
+	{
+		"id": "http://zotero.org/users/2632539/items/RGT64D6R",
+		"type": "webpage",
+		"title": "Geologic Map and Map Database of Northeastern San Francisco Bay Region, California",
+		"container-title": "United States Geological Survey",
+		"URL": "http://pubs.usgs.gov/mf/2002/2403/",
+		"author": [
+			{
+				"family": "Graymer",
+				"given": "R.W."
+			},
+			{
+				"family": "Jones, D.L.",
+				"given": ""
+			},
+			{
+				"family": "Brabb",
+				"given": "E.E."
+			}
+		],
+		"issued": {
+			"date-parts": [
+				[
+					"2002"
+				]
+			]
+		},
+		"accessed": {
+			"date-parts": [
+				[
+					"2016",
+					10,
+					21
+				]
+			]
+		}
+	}
+]

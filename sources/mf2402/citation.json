@@ -1,0 +1,39 @@
+[
+	{
+		"id": "http://zotero.org/users/2632539/items/JSEWS3PC",
+		"type": "webpage",
+		"title": "Geologic Map and Map Database of Western Sonoma, Northernmost Marin, and Southernmost Mendocino Counties, California",
+		"container-title": "United States Geological Survey",
+		"URL": "http://pubs.usgs.gov/mf/2002/2402/",
+		"author": [
+			{
+				"family": "Blake, Jr.",
+				"given": "M.C."
+			},
+			{
+				"family": "Graymer",
+				"given": "R.W."
+			},
+			{
+				"family": "Stamski",
+				"given": "R.E."
+			}
+		],
+		"issued": {
+			"date-parts": [
+				[
+					"2002"
+				]
+			]
+		},
+		"accessed": {
+			"date-parts": [
+				[
+					"2016",
+					10,
+					20
+				]
+			]
+		}
+	}
+]

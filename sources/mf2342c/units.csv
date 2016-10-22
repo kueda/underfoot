@@ -26,48 +26,48 @@ Tmb,,Moraga Formation (late Miocene),"Basalt and andesite flows, minor rhyolite 
 Tms,,"Moraga Formation (late Miocene), interflow sedimentary rocks",
 Tor,,Orinda Formation (late Miocene),"Distinctly to indistinctly bedded, nonmarine, pebble to boulder conglomerate, conglomeratic sandstone, coarse- to medium-grained lithic sandstone, and green and red siltstone and mudstone. Conglomerate clasts are subangular to well rounded, and contain a high percentage of detritus derived from the Franciscan complex"
 Tcc,,Claremont chert (late to middle Miocene),"Laminated and bedded chert, minor brown shale, and white sandstone. Chert crops out as distinct, massive to laminated, gray or brown beds as much as 10 cm thick with thin shale partings. Distinctive black, laminated chert crops out locally in the Berkeley Hills. Lawson (1914) named rocks of this unit and coeval rocks elsewhere in and around the map area Claremont Shale, but within the area of Assemblage I, including Claremont Canyon, this unit is made up of much more chert than shale. Therefore, in this report I use the informal name Claremont chert for the rocks in Assemblage I and the formally accepted name Claremont Shale (Tcs) for coeval rocks in other assemblages where shale is the dominant lithology."
-Tccs,,"Claremont chert (late to middle Miocene), interbedded sandstone",
+Tccs,,"interbedded sandstone, Claremont chert (late to middle Miocene)",
 Tss,,Unnamed sandstone (Miocene(?)),
 Tush,,Unnamed gray mudstone (early Miocene),
 Tsm,,Unnamed glauconitic mudstone (Miocene and Oligocene(?)),Brown mudstone is interbedded with sandy mudstone containing prominent glauconite grains. Both rock types locally contain phosphate nodules up to one centimeter in diameter. The unit is bounded below and above by faults. It was mapped as Sobrante(?) Formation by Radbruch (1969).
-Tsms,,"Unnamed glauconitic mudstone (Miocene and Oligocene(?)), interbedded sandstone",Brown siltstone and fine-grained sandstone are locally interbedded
+Tsms,,"interbedded sandstone, Unnamed glauconitic mudstone (Miocene and Oligocene(?))",Brown siltstone and fine-grained sandstone are locally interbedded
 Tes,,Unnamed mudstone (Eocene),"Green and maroon, foraminifer-rich mudstone, locally interbedded with hard, distinctly bedded, mica-bearing, quartz sandstone. This unit is bounded above and below by faults"
 Ta,,Unnamed glauconitic sandstone (Paleocene),"Coarse-grained, green, glauconite-rich, lithic sandstone with well-preserved coral fossils. Locally interbedded with gray mudstone and hard, fine-grained, mica-bearing quartz sandstone. Outcrop of this unit is restricted to a small, fault-bounded area in the Oakland hills"
 Kss,Great Valley Complex,Unnamed lithic sandstone (Cretaceous),
-Tmlu,,"Mullholland Formation of Ham (1952) (Pliocene and late Miocene), upper member","Conglomerate, sandstone, and mudstone"
-Tmll,,"Mullholland Formation of Ham (1952) (Pliocene and late Miocene), lower member",Sandstone and mudstone
+Tmlu,,"upper member, Mullholland Formation of Ham (1952) (Pliocene and late Miocene)","Conglomerate, sandstone, and mudstone"
+Tmll,,"lower member, Mullholland Formation of Ham (1952) (Pliocene and late Miocene)",Sandstone and mudstone
 Tmls,,"Mullholland Formation of Ham (1952) (Pliocene and late Miocene), lower member sandstone marker beds",
 Tus,,Unnamed sedimentary and volcanic rocks (late Miocene),"Includes conglomerate, sandstone, siltstone."
-Tub,,"Unnamed sedimentary and volcanic rocks (late Miocene), interbedded basalt",
-Tul,,"Unnamed sedimentary and volcanic rocks (late Miocene), interbedded limestone",
+Tub,,"interbedded basalt, Unnamed sedimentary and volcanic rocks (late Miocene)",
+Tul,,"interbedded limestone, Unnamed sedimentary and volcanic rocks (late Miocene)",
 Tlt,,Lafayette Tuff (late Miocene),"K/Ar age of 8.2 + 2.0 Ma (Sarna-Wojcicki, 1976)"
 Tn,,Neroly Sandstone (late Miocene),"Blue, gray, and brown, volcanic-rich, shallow marine sandstone, with minor shale, siltstone, tuff, and andesitic conglomerate"
 Tc,,Cierbo Sandstone (late Miocene),
 Tbr,,Briones Sandstone (late and middle Miocene),"Sandstone, siltstone, conglomerate and shell breccia. The Briones Sandstone in this assemblage contains a tuffaceous layer with a K/Ar age of 14.5+0.4 Ma (Lindquist and Morganthaler, 1991)"
-Tbi,,"Briones Sandstone (late and middle Miocene), I member of Wagner (1978)",Massive feldspathic sandstone
-Tbg,,"Briones Sandstone (late and middle Miocene), G member of Wagner (1978)","Massive sandstone, pebble conglomerate, and shell breccia."
-Tbgc,,"Briones Sandstone (late and middle Miocene), G member of Wagner (1978), conglomerate",
-Tbgl,,"Briones Sandstone (late and middle Miocene), G member of Wagner (1978), limestone",
-Tbf,,"Briones Sandstone (late and middle Miocene), F member of Wagner (1978)",Fine-grained feldspathic sandstone and locally prominent brown shale.
-Tbe,,"Briones Sandstone (late and middle Miocene), E member of Wagner (1978)",Medium-grained sandstone with abundant shell breccia beds; lithologically similar to unit Tbg.
-Tbd,,"Briones Sandstone (late and middle Miocene), D member of Wagner (1978)","Massive, medium-grained sandstone with local conglomerate layers."
-Tbu,,"Briones Sandstone (late and middle Miocene), upper sandstone and shale member",
-Tbh,,"Briones Sandstone (late and middle Miocene), Hercules Shale member",Gray shale and siltstone
-Tbl,,"Briones Sandstone (late and middle Miocene), lower sandstone and siltstone member",
+Tbi,,"I member of Wagner (1978), Briones Sandstone (late and middle Miocene)",Massive feldspathic sandstone
+Tbg,,"G member of Wagner (1978), Briones Sandstone (late and middle Miocene)","Massive sandstone, pebble conglomerate, and shell breccia."
+Tbgc,,"conglomerate, G member of Wagner (1978), Briones Sandstone (late and middle Miocene)",
+Tbgl,,"limestone, G member of Wagner (1978), Briones Sandstone (late and middle Miocene)",
+Tbf,,"F member of Wagner (1978), Briones Sandstone (late and middle Miocene)",Fine-grained feldspathic sandstone and locally prominent brown shale.
+Tbe,,"E member of Wagner (1978), Briones Sandstone (late and middle Miocene)",Medium-grained sandstone with abundant shell breccia beds; lithologically similar to unit Tbg.
+Tbd,,"D member of Wagner (1978), Briones Sandstone (late and middle Miocene)","Massive, medium-grained sandstone with local conglomerate layers."
+Tbu,,"upper sandstone and shale member, Briones Sandstone (late and middle Miocene)",
+Tbh,,"Hercules Shale member, Briones Sandstone (late and middle Miocene)",Gray shale and siltstone
+Tbl,,"lower sandstone and siltstone member, Briones Sandstone (late and middle Miocene)",
 Tr,,Rodeo Shale (middle Miocene),Brown siliceous shale with yellow carbonate concretions
 Th,,Hambre Sandstone (middle Miocene),"Massive, medium-grained sandstone, weathers brown"
 Tt,,Tice Shale (middle Miocene),Brown siliceous shale
 To,,Oursan Sandstone (middle Miocene),"Greenish-gray, medium-grained sandstone with calcareous concretions"
 Tcs,,Claremont Shale (middle Miocene),Brown siliceous shale with yellow carbonate concretions and minor interbedded chert.
-Tccs,,"Claremont Shale (middle Miocene), sandstone interbeds","Interbeds of light gray and white quartz sandstone and siltstone, mapped locally"
+Tccs,,"sandstone interbeds, Claremont Shale (middle Miocene)","Interbeds of light gray and white quartz sandstone and siltstone, mapped locally"
 Ts,,Sobrante Sandstone (middle Miocene),"Massive white, medium-grained calcareous sandstone"
 Tts,,Tuffaceous sandstone (Miocene and/or Oligocene),"Light-gray tuffaceous sandstone and tuff, with minor conglomerate and siltstone, marine. Clark (1918) correlated this unit with the Kirker Tuff, which crops out north of Mount Diablo, east of the map area, based on similar lithology and the presence in both units of 11 fossil species, including Acila shumardi. Durham (1944) indicated that A. shumardi is indicative of a late Oligocene age, the accepted age for the Kirker Tuff, but the underlying San Ramon Sandstone is considered to be early Miocene. This apparent contradiction has caused me to use the less restricted age indicated"
 Tsr,,San Ramon Sandstone (Miocene and/or Oligocene),"Massive, medium- to coarse-grained, fossiliferous, marine sandstone. The accepted age for this unit is early Miocene, based on Addicott (1970) who noted that Weaver and others (1944) had reclassified the molluscan zone of the San Ramon Sandstone fauna (Echinophoria apta) from late Oligocene to early Miocene. However, Kleinpell (1938) reported early Zemorrian foraminifera from this unit. Weaver and others (1944) classified the Zemorrian as early Miocene (probably based on the relationships in this unit), but more recent work on foraminiferal zonation by McDougall (1983) has shown the Zemorrian zone to be entirely Oligocene. In addition, the San Ramon Sandstone underlies tuffaceous sandstone and tuff correlated with the Kirker Tuff, which is considered to be Oligocene. The contradiction in accepted ages of the two units and the contradiction of foraminiferal and molluscan zonation has caused me to use the less restricted age indicated"
 Tshc,,Shale and claystone (Eocene),Also contains minor sandstone
 Ku,Great Valley Sequence,"Unnamed sedimentary rocks (Late Cretaceous, Turonian and Cenomanian)","Massive to distinctly bedded, biotite-bearing, brown-weathering, coarse- to fine-grained graywacke and lithic wacke, siltstone, and mudstone."
-Kc,Great Valley Sequence,"Unnamed sedimentary rocks (Late Cretaceous, Turonian and Cenomanian), conglomerate","Lenses of pebble to boulder conglomerate, mapped locally"
+Kc,Great Valley Sequence,"conglomerate, Unnamed sedimentary rocks (Late Cretaceous, Turonian and Cenomanian)","Lenses of pebble to boulder conglomerate, mapped locally"
 Tcgl,,"Conglomerate, sandstone, siltstone (Pliocene and Miocene)",Contains abundant clasts of Claremont chert.
-Tcglt,,"Conglomerate, sandstone, siltstone (Pliocene and Miocene), rhyolite tuff and tuff breccia","Correlated with the 5.7 to 6.1 Ma Roblar tuff of Sarna-Wojcicki (1992) in Sonoma County (Sarna-Wojcicki, written commun.,1990)"
+Tcglt,,"rhyolite tuff and tuff breccia, Conglomerate, sandstone, siltstone (Pliocene and Miocene)","Correlated with the 5.7 to 6.1 Ma Roblar tuff of Sarna-Wojcicki (1992) in Sonoma County (Sarna-Wojcicki, written commun.,1990)"
 Tdi,,Diatomite (Miocene),Light-gray to white with minor brown shale
 Tsa,,Sandstone (Miocene),"Massive, light-gray, fine- to medium-grained"
 Tmu,,"Mudstone, shale, and siltstone (Miocene)",
@@ -79,11 +79,11 @@ Tes,,Escobar Sandstone of Weaver (1953) (Eocene),"Massive, medium- to coarse-gra
 Tmru,,"Muir Sandstone of Weaver (1953), upper member (Eocene)","Massive, yellow-weathering arkosic sandstone."
 Tmrl,,"Muir Sandstone of Weaver (1953), lower member (Eocene)",Claystone with thin sandstone in the basal part
 Tvh,,Vine Hill Sandstone of Weaver (1953) (Paleocene),Glauconitic sandstone.
-Tvhu,,"Vine Hill Sandstone of Weaver (1953) (Paleocene), upper member",Sandstone and shale
-Tvhl,,"Vine Hill Sandstone of Weaver (1953) (Paleocene), lower member",Glauconitic sandstone
-Kcs,Great Valley Sequence,"Undivided Great Valley complex rocks (Cretaceous), gray, massive quartz arenite",
-Ksh,Great Valley Sequence,"Undivided Great Valley complex rocks (Cretaceous), siltstone and shale",
-Kus,Great Valley Sequence,"Undivided Great Valley complex rocks (Cretaceous), sandstone, siltstone, and shale",
+Tvhu,,"upper member, Vine Hill Sandstone of Weaver (1953) (Paleocene)",Sandstone and shale
+Tvhl,,"lower member, Vine Hill Sandstone of Weaver (1953) (Paleocene)",Glauconitic sandstone
+Kcs,Great Valley Sequence,"gray, massive quartz arenite, Undivided Great Valley complex rocks (Cretaceous)",
+Ksh,Great Valley Sequence,"siltstone and shale, Undivided Great Valley complex rocks (Cretaceous)",
+Kus,Great Valley Sequence,"sandstone, siltstone, and shale, Undivided Great Valley complex rocks (Cretaceous)",
 Tgvt,,"Green Valley and Tassajara Formations of Conduit (1938), undivided (Pliocene and Miocene)","Nonmarine sandstone, siltstone, and conglomerate. South of the map area, includes a 5-meter-thick tuff marker bed. A tuff in this unit has a K/Ar age of 4.0+1.0 Ma, while tuff layers lower in the unit have been correlated with the Roblar tuff of Sarna-Wojcicki (1992) in Sonoma County, which has K/Ar ages of 5.7+0.5 Ma and 6.1+0.1 Ma, and the Pinole Tuff of Assemblage II, which has a K/Ar age of 5.2+0.1 Ma (Sarna-Wojcicki, 1976)"
 Tn,,Neroly Sandstone (Miocene),"Brown, massive, marine sandstone with abundant volcanic clasts"
 Kp,Great Valley Sequence,"Pinehurst Shale (Late Cretaceous, Campanian)","Siliceous shale with interbedded sandstone and siltstone. This unit also includes maroon, concretionary shale at base. This formation was originally considered to be Paleocene, but it contains foraminifers and radiolarians of Campanian age in its type area and throughout its outcrop extent"
@@ -91,23 +91,21 @@ Kr,Great Valley Sequence,"Redwood Canyon Formation (Late Cretaceous, Campanian)"
 Ksc,Great Valley Sequence,"Shephard Creek Formation (Late Cretaceous, Campanian)","Distinctly bedded mudstone and shale, mica- rich siltstone, and thin beds of fine-grained, mica-rich wacke. This formation is conformably overlain by the Redwood Canyon Formation"
 Kcv,Great Valley Sequence,"Unnamed sandstone, conglomerate, and shale of the Castro Valley area (Late Cretaceous, Turonian and younger(?))","The lower part of the unit is composed of distinctly bedded, mica-bearing siltstone, fine-grained mica-bearing wacke, shale, and, locally, one thin pebble conglomerate layer. The middle part of the unit is composed of distinct, thick beds of medium- to coarse-grained, mica-rich wacke and pebble to cobble conglomerate. The middle part grades upward into the upper part, which is composed of distinctly to indistinctly bedded, medium- to fine-grained, mica-rich wacke and siltstone. This unit is bounded above and below by faults"
 Ko,Great Valley Sequence,"Oakland Conglomerate (Late Cretaceous, Turonian and/or Cenomanian)","Massive, medium- to coarse-grained, biotite and quartz-rich wacke and prominent interbedded lenses of pebble to cobble conglomerate. Conglomerate clasts are distinguished by a large amount of silicic volcanic detritus, including quartz porphyry rhyolite. Conglomerate composes as much as fifty percent of the unit in the Oakland hills, but it becomes a progressively smaller portion of the unit to the south. In areas of little conglomerate, this unit is distinguished from other Great Valley complex sandstones by its stratigraphic position, the presence of minor conglomerate, and its massive character."
-Kcg,Great Valley Sequence,"Oakland Conglomerate (Late Cretaceous, Turonian and/or Cenomanian), conglomerate",
-Kslt,Great Valley Sequence,"Oakland Conglomerate (Late Cretaceous, Turonian and/or Cenomanian), siltstone",
-Kjm,Great Valley Sequence,"Joaquin Miller Formation (Late Cretaceous, Cenomanian)","Thinly bedded shale with minor sandstone.
-The shale grades into thinly bedded, fine-grained sandstone near the top of the formation. The contact with the
-overlying Oakland Sandstone is gradational"
+Kcg,Great Valley Sequence,"conglomerate, Oakland Conglomerate (Late Cretaceous, Turonian and/or Cenomanian)",
+Kslt,Great Valley Sequence,"siltstone, Oakland Conglomerate (Late Cretaceous, Turonian and/or Cenomanian)",
+Kjm,Great Valley Sequence,"Joaquin Miller Formation (Late Cretaceous, Cenomanian)","Thinly bedded shale with minor sandstone.The shale grades into thinly bedded, fine-grained sandstone near the top of the formation. The contact with theoverlying Oakland Sandstone is gradational"
 KJk,Great Valley Sequence,Knoxville Formation (Early Cretaceous and Late Jurassic),"Mainly dark, greenish-gray silt or clay
 shale with thin sandstone interbeds. The depositional contact of Knoxville Formation on ophiolite and silicic volcanic rocks can be observed at several locations in the region, including outcrops in the Hayward quadrangle. The Knoxville Formation is distinguished from the structurally overlying Joaquin Miller Formation by the
 greenish color, more poorly developed bedding, the presence of Ammonite and Buchia fossils."
-KJkc,Great Valley Sequence,"Knoxville Formation (Early Cretaceous and Late Jurassic), conglomerate",
-KJkv,Great Valley Sequence,"Knoxville Formation (Early Cretaceous and Late Jurassic), volcanoclastic breccia",
+KJkc,Great Valley Sequence,"conglomerate, Knoxville Formation (Early Cretaceous and Late Jurassic)",
+KJkv,Great Valley Sequence,"volcanoclastic breccia, Knoxville Formation (Early Cretaceous and Late Jurassic)",
 Jsv,Great Valley Sequence,Keratophyre and quartz keratophyre (Late Jurassic),"Highly altered intermediate and silicic volcanic and hypabyssal rocks. Feldspars are almost all replaced by albite. In some places, closely associated with (intruded into?) basalt. This unit includes rocks previously mapped as Leona and Northbrae rhyolite, erroneously considered to be Tertiary (Dibblee, 1980b,d; Radbruch and Case, 1967; Robinson, 1956). Recent biostratigraphic and isotopic analyses have revealed the Jurassic age of these rocks (Jones and Curtis, 1991). These rocks are probably the altered remnants of a volcanic arc deposited on ophiolite during the Jurassic Period"
-Jpb,Great Valley Sequence,"Coast Range ophiolite (Jurassic), pillow basalt, basalt breccia, and minor diabase",
-Jb,Great Valley Sequence,"Coast Range ophiolite (Jurassic), massive basalt and diabase",
-Jgb,Great Valley Sequence,"Coast Range ophiolite (Jurassic), gabbro",
-sp,Great Valley Sequence,"Coast Range ophiolite (Jurassic), serpentinite","Mainly sheared serpentinite, but also includes massive serpentinized harzburgite"
-sc,Great Valley Sequence,"Coast Range ophiolite (Jurassic), serpentinite altered to silica carbonate rock",
-spm,Great Valley Sequence,"Coast Range ophiolite (Jurassic), serpentinite matrix mélange","Sheared serpentinite with large blocks (up to 10 meters or more in diameter)
+Jpb,Great Valley Sequence,"pillow basalt, basalt breccia, and minor diabase, Coast Range ophiolite (Jurassic)",
+Jb,Great Valley Sequence,"massive basalt and diabase, Coast Range ophiolite (Jurassic)",
+Jgb,Great Valley Sequence,"gabbro, Coast Range ophiolite (Jurassic)",
+sp,Great Valley Sequence,"serpentinite, Coast Range ophiolite (Jurassic)","Mainly sheared serpentinite, but also includes massive serpentinized harzburgite"
+sc,Great Valley Sequence,"serpentinite altered to silica carbonate rock, Coast Range ophiolite (Jurassic)",
+spm,Great Valley Sequence,"serpentinite matrix mélange, Coast Range ophiolite (Jurassic)","Sheared serpentinite with large blocks (up to 10 meters or more in diameter)
 of high-grade metamorphic rocks such as amphibolite and actinolite schist"
 KJf,Franciscan Complex,Undivided Franciscan complex rocks (Cretaceous and Jurassic),"More or less sheared and metamorphosed graywacke, shale, mafic volcanic rock, chert, ultramafic rock, limestone, and conglomerate. Highly sheared sandstone and shale forms the matrix of a mélange containing blocks of many rock types, including sandstone, chert, greenstone, blueschist, serpentinite, eclogite, and limestone."
 Kfn,Franciscan Complex,Sandstone of the Novato Quarry terrane of Blake and others (1984) (Late Cretaceous),"Distinctly bedded to massive, fine- to coarse-grained, mica-bearing, lithic wacke. Where distinctly bedded, sandstone beds are about 1 m thick, and siltstone interbeds are a few centimeters thick. Sedimentary structures are well preserved. At the type area in Marin County, fossils of Campanian age have been discovered, but none have yet been collected in Alameda County."

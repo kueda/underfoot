@@ -1,0 +1,31 @@
+[
+	{
+		"id": "http://zotero.org/users/2632539/items/ST8XBCW3",
+		"type": "webpage",
+		"title": "USGS Open-File Report 98-354",
+		"container-title": "United States Geological Survey",
+		"URL": "http://pubs.usgs.gov/of/1998/of98-354/",
+		"author": [
+			{
+				"family": "Bonilla",
+				"given": "M.G."
+			}
+		],
+		"issued": {
+			"date-parts": [
+				[
+					"1998"
+				]
+			]
+		},
+		"accessed": {
+			"date-parts": [
+				[
+					"2016",
+					10,
+					21
+				]
+			]
+		}
+	}
+]

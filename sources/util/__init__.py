@@ -7,7 +7,7 @@ from subprocess import call, run, Popen, PIPE
 import os
 import re
 import shutil
-import glob
+from glob import glob
 import xml.etree.ElementTree as ET
 from collections import OrderedDict
 import csv
@@ -29,19 +29,25 @@ METADATA_COLUMN_NAMES = [
 ]
 
 lithology_PATTERN = re.compile(r'''(
+  andesite|
+  artificial|
   basalt|
   chert|
   conglomerate|
   diabase|
   gabbro|
   granite|
+  graywacke|
   greenstone|
   keratophyre|
   limestone|
+  mud|
   mudstone|
   quartz\sarenite|
   quartz\sdiorite|
   quartz\skeratophyre|
+  rhyodacite|
+  rhyolite|
   sandstone|
   sand|
   schist|
@@ -83,7 +89,7 @@ SEDIMENTARY_ROCKS = [
 ]
 
 GROUP_PATTERN = re.compile(r'(Franciscan complex|Great Valley Sequence)')
-FORMATION_PATTERN = re.compile(r'(Franciscan complex|([A-Z]\w+ )+[A-Z]\w+)')
+FORMATION_PATTERN = re.compile(r'([A-Z]\w+ )+\s?([Ff]ormation|[Tt]errane)')
 
 spans = {
   'precambrian': [4600e6, 570e6],
@@ -166,7 +172,7 @@ def extract_e00(path):
   call(["ogr2ogr", "-f", "ESRI Shapefile", dirpath, path])
   return dirpath
 
-def polygonize_arcs(shapefiles_path, polygon_pattern=".+-ID?$", force=False):
+def polygonize_arcs(shapefiles_path, polygon_pattern=".+-ID?$", force=False, outfile_path=None):
   """Convert shapefile arcs from an extracted ArcINFO coverage and convert them to polygons.
 
   More often than not ArcINFO coverages seem to include arcs but not polygons
@@ -180,16 +186,17 @@ def polygonize_arcs(shapefiles_path, polygon_pattern=".+-ID?$", force=False):
   mercator. Yes, seriously. I have no idea why or how it does this, but that
   was the only explanation I could find for the datum shift.
   """
-  polygons_path = os.path.join(shapefiles_path, "polygons.shp")
+  if not outfile_path:
+    outfile_path = os.path.join(shapefiles_path, "polygons.shp")
   if force:
-    shutil.rmtree(polygons_path, ignore_errors=True)
-  elif os.path.isfile(polygons_path):
-    return polygons_path
+    shutil.rmtree(outfile_path, ignore_errors=True)
+  elif os.path.isfile(outfile_path):
+    return outfile_path
   pal_path = os.path.join(shapefiles_path, "PAL.shp")
   arc_path = os.path.join(shapefiles_path, "ARC.shp")
   polygonize_arcs_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "polygonize_arcs.py")
-  call_cmd(["python", polygonize_arcs_path, polygons_path, pal_path, arc_path, "--polygon-column-pattern", polygon_pattern])
-  return polygons_path
+  call_cmd(["python", polygonize_arcs_path, outfile_path, pal_path, arc_path, "--polygon-column-pattern", polygon_pattern])
+  return outfile_path
 
 def met2xml(path):
   output_path = os.path.join(os.path.realpath(os.path.dirname(path)), "{}.xml".format(extless_basename(path)))
@@ -205,7 +212,7 @@ def lithology_from_text(text):
 
 def formation_from_text(text):
   formation_matches = FORMATION_PATTERN.search(text) # basically any proper nouns
-  return formation_matches.group(1) if formation_matches else ''
+  return formation_matches.group(0) if formation_matches else ''
 
 def rock_type_from_lithology(lithology):
   rock_type = ''
@@ -277,7 +284,6 @@ def metadata_from_usgs_met(path):
   return data
 
 def join_polygons_and_metadata(polygons_path, metadata_path, output_path="units.geojson"):
-  # def join_polygons_and_metadata(polygons_path, metadata_path, output_path="units.shp"):
   polygons_table_name = extless_basename(polygons_path)
   column_names = [col for col in METADATA_COLUMN_NAMES]
   column_names[column_names.index('code')] = "PTYPE AS code"
@@ -320,3 +326,130 @@ def infer_metadata_from_csv(infile_path):
         writer.writerow(row)
   return outfile_path
 
+def process_usgs_source(base_path, url, extract_path, e00_path, polygon_pattern=None,
+    srs=NAD27_UTM10_PROJ4, metadata_csv_path=None, skip_polygonize_arcs=False,
+    uncompress_e00=False):
+  """Process units from a USGS Arc Info archive given a couple configurations.
+
+  Most USGS map databases seem to be in the form of a gzipped tarbal
+  containing Arc Info coverages, so this method just wraps up some of the code
+  I keep repeating.
+
+  Args:
+    base_path: path to the source module's __init__.py
+    url: URL of the gzipped tarball
+    extract_path: relative path of the dir that comes out of the tarball, e.g.
+      if you unzip and untar it and you get a dir named "mageo", then this value
+      should be "mageo"
+    e00_path: Relative path to the e00 to extract
+    polygon_pattern (optional): Pattern to use when finding the polygon ID column
+      in the e00 arcs
+    srs (optional): Proj4 coordinate reference string for the geodata. Default is
+      NAD27 UTM Zone 10
+    metadata_csv_path: Full path to a CSV containing transcribed metadata for the
+      map units. Default behavior is to try and import unit titles
+    skip_polygonize_arcs: If ogr2ogr successfully creates a useable polygon
+      shapefile in PAL.shp, then we don't need to polygonize arcs, but this
+      usually isn't the case. Default value is false.
+    uncompress_e00: If the e00 is itself compressed, unconpress it with e00conv.
+      Default is false.
+  """
+  work_path = make_work_dir(base_path)
+  os.chdir(work_path)
+  download_path = os.path.basename(url)
+  # download the file if necessary
+  if not os.path.isfile(download_path):
+    print("DOWNLOADING {}".format(url))
+    call_cmd(["curl", "-OL", url])
+
+  # extract the archive if necessary
+  if not os.path.isdir(extract_path):
+    print("EXTRACTING ARCHIVE...")
+    call_cmd(["tar", "xzvf", download_path])
+
+  # convert the Arc Info coverages to shapefiles
+  polygons_path = "e00_polygons.shp"
+  if not os.path.isfile(polygons_path):
+    print("CONVERTING E00 TO SHAPEFILES...")
+    polygon_paths = []
+    for path in glob(e00_path):
+      if uncompress_e00:
+        uncompressed_e00_path = "uncompressed.e00"
+        if not os.path.isfile(uncompressed_e00_path):
+          print("\tUncompressing e00")
+          call_cmd(["../../bin/e00compr/e00conv", path, uncompressed_e00_path])
+          path = uncompressed_e00_path
+      print("\tExtracting e00...")
+      shapefiles_path = extract_e00(path)
+      print("\tshapefiles_path: {}".format(shapefiles_path))
+      print("\tPolygonizing arcs...")
+      if skip_polygonize_arcs:
+        polygon_paths.append(os.path.join(shapefiles_path, "PAL.shp"))
+      elif polygon_pattern:
+        polygon_paths.append(polygonize_arcs(shapefiles_path, polygon_pattern=polygon_pattern))
+      else:
+        polygon_paths.append(polygonize_arcs(shapefiles_path))
+    print("MERGING SHAPEFILES...")
+    call_cmd(["ogr2ogr", "-overwrite", polygons_path, polygon_paths.pop()])
+    for path in polygon_paths:
+      call_cmd(["ogr2ogr", "-update", "-append", polygons_path, path])
+
+  # dissolve all the shapes by PTYPE and project them into Google Mercator
+  print("DISSOLVING SHAPES AND REPROJECTING...")
+  final_polygons_path = "polygons.shp"
+  call_cmd([
+    "ogr2ogr",
+      "-s_srs", srs,
+      "-t_srs", WEB_MERCATOR_PROJ4,
+      final_polygons_path, polygons_path,
+      "-overwrite",
+      "-dialect", "sqlite",
+      "-sql", "SELECT PTYPE,ST_Union(geometry) as geometry FROM 'e00_polygons' GROUP BY PTYPE"
+  ])
+
+  print("EXTRACTING METADATA...")
+  metadata_path = "data.csv"
+  globs = glob(os.path.join(extract_path, "*.met"))
+  met_path = globs[0] if globs else None
+  if metadata_csv_path:
+    metadata_path = infer_metadata_from_csv(metadata_csv_path)
+    if met_path:
+      fill_in_custom_metadata_from_met(met_path, metadata_path)
+  elif met_path:
+    data = metadata_from_usgs_met(met_path)
+    with open(metadata_path, 'w') as f:
+      csv.writer(f).writerows(data)
+  else:
+    # write an empty metadata csv file
+    data = [METADATA_COLUMN_NAMES]
+    with open(metadata_path, 'w') as f:
+      csv.writer(f).writerows(data)
+
+  print("JOINING METADATA...")
+  join_polygons_and_metadata(final_polygons_path, metadata_path)
+
+  print("COPYING CITATION")
+  call_cmd([
+    "cp",
+    os.path.join(os.path.dirname(base_path), "citation.json"),
+    os.path.join(work_path, "citation.json")
+  ])
+
+def fill_in_custom_metadata_from_met(met_path, metadata_path):
+  met_data = metadata_from_usgs_met(met_path)
+  hashed_met_data = {}
+  for row in met_data:
+    hashed_met_data[row[0]] = dict(zip(METADATA_COLUMN_NAMES, row))
+  with open(metadata_path, 'r') as infile:
+    reader = csv.DictReader(infile)
+    outfile_path = "temp.csv"
+    with open(outfile_path, 'w') as outfile:
+      writer = csv.DictWriter(outfile, fieldnames=METADATA_COLUMN_NAMES, extrasaction='ignore')
+      writer.writeheader()
+      for row in reader:
+        met_row = hashed_met_data.get(row['code'], None)
+        for col in METADATA_COLUMN_NAMES:
+          if (not row[col] or len(row[col]) == 0) and met_row and met_row[col]:
+            row[col] = met_row[col]
+          writer.writerow(row)
+    os.rename(outfile_path, metadata_path)
