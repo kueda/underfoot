@@ -1,0 +1,35 @@
+[
+	{
+		"id": "http://zotero.org/users/2632539/items/2GZ4JVSK",
+		"type": "webpage",
+		"title": "Geology of Point Reyes National Seashore and Vicinity, California: A Digital Database",
+		"container-title": "United States Geological Survey",
+		"URL": "http://pubs.usgs.gov/of/1997/of97-456/",
+		"author": [
+			{
+				"family": "Clark",
+				"given": "Joseph C."
+			},
+			{
+				"family": "Brabb",
+				"given": "E.E."
+			}
+		],
+		"issued": {
+			"date-parts": [
+				[
+					"1997"
+				]
+			]
+		},
+		"accessed": {
+			"date-parts": [
+				[
+					"2016",
+					10,
+					22
+				]
+			]
+		}
+	}
+]

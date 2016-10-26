@@ -20,7 +20,8 @@ sources = [
   "of98_137",
   "mf2402",
   "sim2858",
-  "of96_252"
+  "of96_252",
+  "of97_456"
 ]
 
 util.call_cmd(["createdb", dbname])
@@ -120,6 +121,10 @@ for idx, source_identifier in enumerate(sources):
       "-skipfailures",
       "-a_srs", "EPSG:{}".format(srid)
   ])
+  print("Deleting water units...")
+  util.run_sql("DELETE FROM {} WHERE LOWER(code) IN ('h2o', 'water')".format(source_table_name), dbname=dbname)
+  print("Deleting empty units...")
+  util.run_sql("DELETE FROM {} WHERE code IS NULL OR code = ''".format(source_table_name), dbname=dbname)
   print("Repairing invalid geometries...")
   util.run_sql("UPDATE {} SET geom = ST_MakeValid(geom) WHERE NOT ST_IsValid(geom)".format(source_table_name))
   print("Removing polygon overlaps...")
@@ -150,6 +155,4 @@ for idx, source_identifier in enumerate(sources):
   print("Updating {}...".format(mask_table_name))
   util.run_sql("INSERT INTO {} (source, geom) SELECT '{}', ST_Multi(ST_Union(geom)) FROM {}".format(mask_table_name, source_identifier, source_table_name))
 
-print("Deleting water units...")
-util.run_sql("DELETE FROM {} WHERE LOWER(code) IN ('h2o', 'water')".format(final_table_name), dbname=dbname)
 print("Database {} created with table {}".format(dbname, final_table_name))
