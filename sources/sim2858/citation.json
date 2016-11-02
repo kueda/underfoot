@@ -1,0 +1,51 @@
+[
+	{
+		"id": "http://zotero.org/users/2632539/items/VNSMDZKP",
+		"type": "webpage",
+		"title": "Geology, Tephrochronology, Radiometric Ages, and Cross Sections of the Mark West Springs 7.5' Quadrangle, Sonoma and Napa Counties, California",
+		"container-title": "United States Geological Survey",
+		"URL": "http://pubs.usgs.gov/sim/2004/2858/",
+		"author": [
+			{
+				"family": "McLaughlin",
+				"given": "R.J."
+			},
+			{
+				"family": "Sarna-Wojcicki",
+				"given": "A.M."
+			},
+			{
+				"family": "Fleck",
+				"given": "R.J."
+			},
+			{
+				"family": "Wright",
+				"given": "W.H."
+			},
+			{
+				"family": "Levin",
+				"given": "V.R.G."
+			},
+			{
+				"family": "Valin",
+				"given": "Z.C."
+			}
+		],
+		"issued": {
+			"date-parts": [
+				[
+					"2004"
+				]
+			]
+		},
+		"accessed": {
+			"date-parts": [
+				[
+					"2016",
+					10,
+					21
+				]
+			]
+		}
+	}
+]

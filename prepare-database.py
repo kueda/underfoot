@@ -11,17 +11,18 @@ mask_table_name = "masks"
 dbname = "underfoot"
 srid = "3857"
 sources = [
-  "mf2342c",
-  "mf2337c",
-  "of94_622",
-  "of97_489",
-  "of98_354",
-  "mf2403c",
-  "of98_137",
-  "mf2402",
-  "sim2858",
-  "of96_252",
-  "of97_456"
+  "mf2342c", # Oakland, CA
+  "mf2337c", # SF, parts of Marin County, CA
+  "of94_622", # Contra Costa County, CA
+  "of97_489", # Santa Cruz County, CA
+  "of98_354", # South SF
+  "mf2403c", # Napa and Lake Counties, in part
+  "of98_137", # San Mateo County, CA
+  "mf2402", # Western Sonoma County
+  "sim2858", # Mark West Springs, Sonoma County (Pepperwood)
+  "of96_252", # Alameda County, CA
+  "of97_456", # Point Reyes, Marin County, CA
+  "of2005_1305", # all of California, coarse
 ]
 
 util.call_cmd(["createdb", dbname])
@@ -55,12 +56,13 @@ util.run_sql("""
   )
 """.format(mask_table_name, srid))
 
-def remove_polygon_overlaps(source_table_name):
+def remove_polygon_overlaps(source_table_name, skip_mask=False):
   temp_source_table_name = "temp_{}".format(source_table_name)
   util.run_sql("DROP TABLE IF EXISTS \"{}\"".format(temp_source_table_name), dbname=dbname)
   util.run_sql("ALTER TABLE {} RENAME TO {}".format(source_table_name, temp_source_table_name))
   # First we need to split the table into its constituent polygons so we can
   # sort them by size and use them to cut holes out of the larger polygons
+  print("\tDumping into constituent polygons...")
   dumped_source_table_name = "dumped_{}".format(source_table_name)
   util.run_sql("DROP TABLE IF EXISTS \"{}\"".format(dumped_source_table_name), dbname=dbname)
   util.run_sql("""
@@ -70,36 +72,60 @@ def remove_polygon_overlaps(source_table_name):
     ", ".join(util.METADATA_COLUMN_NAMES),
     temp_source_table_name
   ))
+  # Next we'll cut all the polygons that intersect the existing mask
+  if not skip_mask:
+    print("\tCutting out polygons that overlap previous sources...")
+    util.run_sql("""
+      UPDATE {}
+      SET geom = ST_Difference({}.geom, {}.geom)
+      FROM {}
+      WHERE ST_Intersects({}.geom, {}.geom)
+    """.format(
+        dumped_source_table_name,
+        dumped_source_table_name, mask_table_name,
+        mask_table_name,
+        dumped_source_table_name, mask_table_name
+      ))
   util.run_sql("ALTER TABLE {} ADD COLUMN id SERIAL PRIMARY KEY".format(dumped_source_table_name))
   # Now we iterate over each polygon order by size, and use it to cut a hole
   # out of all the other polygons that intersect it
+  print("\tCutting larger polygons by smaller polygons...")
   con = psycopg2.connect("dbname=underfoot")
   cur1 = con.cursor()
-  cur1.execute("SELECT id FROM {} ORDER BY ST_Area(geom) ASC".format(dumped_source_table_name))
+  cur1.execute("SELECT id, ST_Area(geom) FROM {} ORDER BY ST_Area(geom) ASC".format(dumped_source_table_name))
   for row in cur1:
     print('.', end="", flush=True)
     id = row[0]
+    area = row[1]
     cur2 = con.cursor()
     sql = """
       UPDATE {}
       SET geom = ST_Multi(ST_Difference(geom, (SELECT geom FROM {} WHERE id = {})))
-      WHERE ST_Intersects(geom, (SELECT geom FROM {} WHERE id = {})) AND id != {}
+      WHERE
+        ST_Intersects(geom, (SELECT geom FROM {} WHERE id = {}))
+        AND id != {}
+        AND ST_Area(geom) >= {}
     """.format(
       dumped_source_table_name,
       dumped_source_table_name, id,
-      dumped_source_table_name, id, id
+      dumped_source_table_name, id, id,
+      area
     )
     cur2.execute(sql)
     cur2.close()
+  cur1.close()
   con.commit()
-  util.run_sql("CREATE TABLE {} AS SELECT {}, ST_Union(geom) AS geom FROM {} GROUP BY {}".format(
+  print()
+  print("\tRecreating multipolygons...")
+  util.run_sql("CREATE TABLE {} AS SELECT {}, ST_Multi(ST_Union(geom)) AS geom FROM {} GROUP BY {}".format(
     source_table_name,
     ", ".join(util.METADATA_COLUMN_NAMES),
     dumped_source_table_name,
     ", ".join(util.METADATA_COLUMN_NAMES)
   ))
-  util.run_sql("DROP TABLE IF EXISTS \"{}\"".format(temp_source_table_name), dbname=dbname)
-  util.run_sql("DROP TABLE IF EXISTS \"{}\"".format(dumped_source_table_name), dbname=dbname)
+  util.run_sql("DELETE FROM {} WHERE ST_GeometryType(geom) = 'ST_GeometryCollection'".format(source_table_name))
+  # util.run_sql("DROP TABLE IF EXISTS \"{}\"".format(temp_source_table_name), dbname=dbname)
+  # util.run_sql("DROP TABLE IF EXISTS \"{}\"".format(dumped_source_table_name), dbname=dbname)
 
 for idx, source_identifier in enumerate(sources):
   path = os.path.join("sources", "{}.py".format(source_identifier))
@@ -121,14 +147,17 @@ for idx, source_identifier in enumerate(sources):
       "-skipfailures",
       "-a_srs", "EPSG:{}".format(srid)
   ])
+  work_source_table_name = "work_{}".format(source_table_name)
+  util.run_sql("DROP TABLE IF EXISTS \"{}\"".format(work_source_table_name), dbname=dbname)
+  util.run_sql("CREATE TABLE {} AS SELECT * FROM {}".format(work_source_table_name, source_table_name), dbname=dbname)
   print("Deleting water units...")
-  util.run_sql("DELETE FROM {} WHERE LOWER(code) IN ('h2o', 'water')".format(source_table_name), dbname=dbname)
+  util.run_sql("DELETE FROM {} WHERE LOWER(code) IN ('h2o', 'water')".format(work_source_table_name), dbname=dbname)
   print("Deleting empty units...")
-  util.run_sql("DELETE FROM {} WHERE code IS NULL OR code = ''".format(source_table_name), dbname=dbname)
+  util.run_sql("DELETE FROM {} WHERE code IS NULL OR code = ''".format(work_source_table_name), dbname=dbname)
   print("Repairing invalid geometries...")
-  util.run_sql("UPDATE {} SET geom = ST_MakeValid(geom) WHERE NOT ST_IsValid(geom)".format(source_table_name))
+  util.run_sql("UPDATE {} SET geom = ST_MakeValid(geom) WHERE NOT ST_IsValid(geom)".format(work_source_table_name))
   print("Removing polygon overlaps...")
-  remove_polygon_overlaps(source_table_name)
+  remove_polygon_overlaps(work_source_table_name, skip_mask=(idx == 0))
   print()
   if idx == 0:
     print("Creating {} and inserting...".format(final_table_name))
@@ -137,22 +166,37 @@ for idx, source_identifier in enumerate(sources):
       ", ".join(util.METADATA_COLUMN_NAMES),
       ", ".join(util.METADATA_COLUMN_NAMES),
       source_identifier,
-      source_table_name
+      work_source_table_name
     ))
   else:
     print("Inserting into {}...".format(final_table_name))
     util.run_sql("""
       INSERT INTO {} ({})
-      SELECT {}, '{}', ST_Multi(ST_Difference(s.geom, (SELECT ST_Union(m.geom) FROM {} m)))
+      SELECT {}, '{}', s.geom
       FROM {} s
-      WHERE ST_GeometryType(ST_Difference(s.geom, (SELECT ST_Union(m.geom) FROM {} m))) != 'ST_GeometryCollection'
     """.format(
       final_table_name, ", ".join(column_names[1:]),
-      ", ".join(util.METADATA_COLUMN_NAMES), source_identifier, mask_table_name,
-      source_table_name,
-      mask_table_name
+      ", ".join(util.METADATA_COLUMN_NAMES), source_identifier,
+      work_source_table_name
     ))
   print("Updating {}...".format(mask_table_name))
-  util.run_sql("INSERT INTO {} (source, geom) SELECT '{}', ST_Multi(ST_Union(geom)) FROM {}".format(mask_table_name, source_identifier, source_table_name))
+  if idx == 0:
+    util.run_sql("INSERT INTO {} (source, geom) SELECT '{}', ST_Multi(ST_Union(geom)) FROM {}".format(
+      mask_table_name, source_identifier, source_table_name))
+  else:
+    util.run_sql("""
+      UPDATE {} m SET geom = ST_Multi(
+        ST_MakePolygon(
+          ST_ExteriorRing(
+            ST_Union(
+              m.geom,
+              (SELECT ST_Union(s.geom) FROM {} s)
+            )
+          )
+        )
+      )
+    """.format(
+      mask_table_name, source_table_name
+    ))
 
 print("Database {} created with table {}".format(dbname, final_table_name))

@@ -33,10 +33,12 @@ lithology_PATTERN = re.compile(r'''(
   artificial|
   basalt|
   chert|
+  clay|
   conglomerate|
   diabase|
   gabbro|
   granite|
+  granodiorite|
   graywacke|
   greenstone|
   keratophyre|
@@ -46,6 +48,7 @@ lithology_PATTERN = re.compile(r'''(
   quartz\sarenite|
   quartz\sdiorite|
   quartz\skeratophyre|
+  quartz\smonzonite|
   rhyodacite|
   rhyolite|
   sandstone|
@@ -283,21 +286,31 @@ def metadata_from_usgs_met(path):
     data.append([row[col] for col in METADATA_COLUMN_NAMES])
   return data
 
-def join_polygons_and_metadata(polygons_path, metadata_path, output_path="units.geojson"):
+def join_polygons_and_metadata(polygons_path, metadata_path,
+    output_path="units.geojson", polygons_join_col="PTYPE", metadata_join_col="code",
+    output_format="GeoJSON"):
+  # print("polygons_path: {}".format(polygons_path))
   polygons_table_name = extless_basename(polygons_path)
   column_names = [col for col in METADATA_COLUMN_NAMES]
-  column_names[column_names.index('code')] = "PTYPE AS code"
+  # column_names[column_names.index('code')] = "{} AS code".format(join_col)
+  metadata_layer_name = extless_basename(metadata_path)
   sql = """
     SELECT
       {}
     FROM {}
-      LEFT JOIN '{}'.data ON {}.PTYPE = data.code
-  """.format(", ".join(column_names), polygons_table_name, metadata_path, polygons_table_name)
+      LEFT JOIN '{}'.{} ON {}.{} = {}.{}
+  """.format(
+    ", ".join(column_names),
+    polygons_table_name,
+    metadata_path, metadata_layer_name, polygons_table_name, polygons_join_col, metadata_layer_name,
+    metadata_join_col
+  )
+  # print("sql: {}".format(sql))
   call_cmd(["rm", output_path])
   call_cmd([
     "ogr2ogr",
     "-sql", sql.replace("\n", " "),
-    "-f", "GeoJSON",
+    "-f", output_format,
     output_path,
     polygons_path
   ])
@@ -324,6 +337,11 @@ def infer_metadata_from_csv(infile_path):
           row['max_age'] = max_age
           row['est_age'] = est_age
         writer.writerow(row)
+        uncertain_row = row.copy()
+        uncertain_row['code'] = "{}?".format(row['code'])
+        uncertain_row['title'] = "[?] {}".format(row['title'])
+        uncertain_row['description'] = "[UNCERTAIN] {}".format(row['description'])
+        writer.writerow(uncertain_row)
   return outfile_path
 
 def process_usgs_source(base_path, url, extract_path, e00_path, polygon_pattern=None,

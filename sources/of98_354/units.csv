@@ -1,0 +1,22 @@
+code,title,span,grouping,description
+Qaf,Artificial fill,Holocene,,"Clay, silt, sand, rock fragments, organic matter, and man−made debris."
+Qaf/tf,Artificial fill over tidal flat,Holocene,,"Clay, silt, sand, rock fragments, organic matter, and man−made debris, placed over tidal flats."
+Qafs,"Artificial fill, Native American shellmound.",Holocene,,Dark silty to sandy soil containing shell fragments and rare intact shells.
+Ql,Landslide deposits,Holocene,,Composition and structure depend on the geologic formation involved and type of landslide.
+Qal,Alluvium,Holocene,,"Mostly sand and silt but locally contains clay, gravel, or boulders; generally gray to brown."
+Qb,Beach Deposits,Holocene,,"Predominantly well sorted medium−grained loose gray sand; locally consists of sand, gravel and cobbles."
+Qm,Bay mud,Holocene,,"Soft (moist) to firm (dry) clay and silt; locally contains shell fragments, plant remains, and thin beds of sand."
+Qd,Dune sand,Pleistocene to Holocene,,"Well sorted fine−grained sand, gray and loose in most places, grayish orange to reddish brown and firm in a few places. Age extends into Pleistocene."
+Qt,Marine terrace deposits,Pleistocene,,Predominantly friable well sorted fine−grained yellowish−orange to gray sand; includes alluvial gravel and colluvial clay.
+Qsr,Slope debris and ravine fill,Pleistocene,,"Stony silty to sandy clay; locally silty to clayey sand or gravel; yellowish−orange to medium gray, unstratified or poorly stratified. Where it overlies the Merced or Colma Formation it is commonly a silty to clayey sand, or gravel."
+Qc,Colma Formation,Pleistocene,,"In northwest and central parts of area, friable well sorted fine to medium sand containing a few beds of sandy silt, clay, and gravel. In southeast part of area, mostly sandy clay and silty sand; yellowish orange to gray."
+Qu,"Sedimentary deposits, undifferentiated",Pleistocene,,
+fr,Fault rocks,Pleistocene to Holocene,,"Zone of gouge, breccia, fractured and sheared rock along the San Andreas fault. Gradational contact with surrounding rocks. Limits poorly known. Age extends into Holocene"
+QTm,Merced Formation,Pliocene to Pleistocene,,"Friable to firm sand, silt, and clay; minor amounts of gravel, lignite, and volcanic ash, medium gray to yellowish orange."
+KJs,Sandstone and shale,Jurassic to Cretaceous,Franciscan Complex,"Interbedded sandstone and shale, hard where fresh and intact, soft where weathered or sheared. Commonly medium dark gray where fresh, olive gray to yellowish brown where moderately weathered, and yellowish orange to yellowish gray where highly weathered."
+KJsk,Sandstone and shale,Jurassic to Cretaceous,Franciscan Complex,Sandstone generally containing more than two percent potassium feldspar.
+KJc,Chert,Jurassic to Cretaceous,Franciscan Complex,"Hard chert interbedded with firm shale; chert layers generally two or three inches thick, shale layers less than one inch thick; generally grayish red."
+KJg,Greenstone,Jurassic to Cretaceous,Franciscan Complex,"Altered volcanic rocks, fine grained, mostly basalt; hard where fresh, but weathered and firm to soft in most exposures; commonly grayish olive to moderate olive gray where moderately weathered, dark yellowish orange to light brown where highly weathered."
+KJm,Metamorphic rocks,Jurassic to Cretaceous,Franciscan Complex,"Hard to firm, fine− to coarse−grained schistose, gneissose, or granulose metamorphic rocks; dark gray, dark greenish gray, or dark bluish gray."
+sp,Serpentine,Jurassic to Cretaceous,Franciscan Complex,"Hard to soft, generally greenish gray; contains small bodies of grabbro and diabase."
+KJu,Sheared rocks,Jurassic to Cretaceous,Franciscan Complex,"Small to large fragments of hard rock in matrix of sheared rock. Matrix generally coherent and firm, but soft in places, especially where weathered. Dark gray where fresh, yellowish brown where weathered. Derived mostly from shale and sandstone of Franciscan Complex and serpentine."
