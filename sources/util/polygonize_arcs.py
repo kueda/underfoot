@@ -41,10 +41,17 @@ with fiona.collection(args.output_path, "w", "ESRI Shapefile", schema) as output
         polygon_column = next(x for x in pf["properties"].keys( ) if re.search(polygon_pattern, x))
         polygon_id = pf["properties"][polygon_column]
         ptype = pf["properties"]["PTYPE"]
+        if args.debug:
+          print("polygon_column: ", polygon_column)
+          print("polygon_id: ", polygon_id)
+          print("ptype: ", ptype)
         for af in arc:
           if (af["properties"]["LPOLY_"] == polygon_id or af["properties"]["RPOLY_"] == polygon_id):
+            if args.debug:
+              print("adding line for polygon ", polygon_id)
             lines.append(shape(af['geometry']))
         for polygon in polygonize(lines):
+          print("mapping(polygon): ", mapping(polygon))
           output.write({
             'properties': {
               'POLY_ID': polygon_id,

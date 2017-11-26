@@ -39,10 +39,12 @@ lithology_PATTERN = re.compile(r'''(
   gabbro|
   granite|
   granodiorite|
+  gravel|
   graywacke|
   greenstone|
   keratophyre|
   limestone|
+  marble|
   mud|
   mudstone|
   quartz\sarenite|
@@ -142,7 +144,7 @@ def extless_basename(path):
   return os.path.split(path)[-1]
 
 def call_cmd(*args, **kwargs):
-  # print("Calling `{}` with kwargs: {}".format(" ".join(args[0]), kwargs))
+  print("Calling `{}` with kwargs: {}".format(" ".join(args[0]), kwargs))
   run(*args, **kwargs)
 
 def run_sql(sql, dbname="underfoot"):
@@ -383,7 +385,14 @@ def process_usgs_source(base_path, url, extract_path, e00_path, polygon_pattern=
   # extract the archive if necessary
   if not os.path.isdir(extract_path):
     print("EXTRACTING ARCHIVE...")
-    call_cmd(["tar", "xzvf", download_path])
+    if ".gz" in download_path:
+      copy_path = download_path + "-copy"
+      call_cmd(["cp", download_path, copy_path])
+      call_cmd(["gunzip", download_path])
+      call_cmd(["cp", copy_path, download_path])
+      call_cmd(["rm", copy_path])
+    else:
+      call_cmd(["tar", "xzvf", download_path])
 
   # convert the Arc Info coverages to shapefiles
   polygons_path = "e00_polygons.shp"

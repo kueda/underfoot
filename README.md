@@ -5,7 +5,8 @@ App for revealing the hydrological and geological world beneath your feet.
 
 ```
 ## Instal GDAL for GIS data processing and PostGIS / PostgreSQL for data storage
-brew install gdal postgis nodejs pyenv-virtualenv
+brew install gdal --with-postgres
+brew install postgis nodejs pyenv-virtualenv
 
 ## Set up a python virtual environment
 unset PYTHONPATH
