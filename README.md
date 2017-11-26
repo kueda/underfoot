@@ -1,42 +1,30 @@
 # underfoot
-App for revealing the hydrological and geological world beneath your feet.
+Underfoot is a mobile app for revealing the hydrological and geological world beneath your feet. Well, sort of. It's mostly just something I tinker with in my spare time. It'll probably never be done. If you're interested in a more fully-functional app for geological exploration, check out [rockd](https://rockd.org).
 
-## Setup
+Still reading? This repo is mostly for data prep. I used to have some Ionic-based mobile app stuff here but I've given up on Ionic and am currently just tinkering with a native Android app.
+
+## OS X Setup
 
 ```
-## Instal GDAL for GIS data processing and PostGIS / PostgreSQL for data storage
+# Instal GDAL for GIS data processing and PostGIS / PostgreSQL for data storage
 brew install gdal --with-postgres
 brew install postgis nodejs pyenv-virtualenv
 
-## Set up a python virtual environment
+# Set up a python virtual environment
 unset PYTHONPATH
 virtualenv venv -p python3 --no-site-packages
 source venv/bin/activate
 
-## Install python deps and some stuff for working with ESRI Arc/Info coverages
+# Install python deps and some stuff for working with ESRI Arc/Info coverages
 ./setup
 
-## Create the database
+# Create the database
 python prepare-database.py
 
 # Run the tileserver, generate tiles, remove empty dirs
 npm install
 node tileserver.js
 node cachetiles.js
-
-# Set up the mobile app
-cd UnderfootApp
-npm install -g cordova
-npm install
-
-# Test the mobile app in the browser
-ionic serve
-
-# Run the mobile app on a connected Android device (requires the Android SDK, see Ionic docs)
-ionic run android
-
-# Run the mobile app in the iOS simulator (requires the Xcode, see Ionic docs)
-ionic emulate ios
 ```
 
 # Adding Sources

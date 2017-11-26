@@ -51,7 +51,7 @@ with fiona.collection(args.output_path, "w", "ESRI Shapefile", schema) as output
               print("adding line for polygon ", polygon_id)
             lines.append(shape(af['geometry']))
         for polygon in polygonize(lines):
-          print("mapping(polygon): ", mapping(polygon))
+          # print("mapping(polygon): ", mapping(polygon))
           output.write({
             'properties': {
               'POLY_ID': polygon_id,

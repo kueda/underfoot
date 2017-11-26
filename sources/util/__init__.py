@@ -346,7 +346,7 @@ def infer_metadata_from_csv(infile_path):
         writer.writerow(uncertain_row)
   return outfile_path
 
-def process_usgs_source(base_path, url, extract_path, e00_path, polygon_pattern=None,
+def process_usgs_source(base_path, url, e00_path, polygon_pattern=None,
     srs=NAD27_UTM10_PROJ4, metadata_csv_path=None, skip_polygonize_arcs=False,
     uncompress_e00=False):
   """Process units from a USGS Arc Info archive given a couple configurations.
@@ -358,9 +358,6 @@ def process_usgs_source(base_path, url, extract_path, e00_path, polygon_pattern=
   Args:
     base_path: path to the source module's __init__.py
     url: URL of the gzipped tarball
-    extract_path: relative path of the dir that comes out of the tarball, e.g.
-      if you unzip and untar it and you get a dir named "mageo", then this value
-      should be "mageo"
     e00_path: Relative path to the e00 to extract
     polygon_pattern (optional): Pattern to use when finding the polygon ID column
       in the e00 arcs
@@ -383,16 +380,16 @@ def process_usgs_source(base_path, url, extract_path, e00_path, polygon_pattern=
     call_cmd(["curl", "-OL", url])
 
   # extract the archive if necessary
-  if not os.path.isdir(extract_path):
+  if len(glob(e00_path)) == 0:
     print("EXTRACTING ARCHIVE...")
-    if ".gz" in download_path:
+    if ".tar.gz" in download_path or ".tgz" in download_path or ".tar.Z" in download_path:
+      call_cmd(["tar", "xzvf", download_path])
+    else:
       copy_path = download_path + "-copy"
       call_cmd(["cp", download_path, copy_path])
       call_cmd(["gunzip", download_path])
       call_cmd(["cp", copy_path, download_path])
       call_cmd(["rm", copy_path])
-    else:
-      call_cmd(["tar", "xzvf", download_path])
 
   # convert the Arc Info coverages to shapefiles
   polygons_path = "e00_polygons.shp"
