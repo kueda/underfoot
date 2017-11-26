@@ -433,7 +433,7 @@ def process_usgs_source(base_path, url, e00_path, polygon_pattern=None,
 
   print("EXTRACTING METADATA...")
   metadata_path = "data.csv"
-  globs = glob(os.path.join(extract_path, "*.met"))
+  globs = glob(os.path.join(os.path.dirname(e00_path), "*.met"))
   met_path = globs[0] if globs else None
   if metadata_csv_path:
     metadata_path = infer_metadata_from_csv(metadata_csv_path)
