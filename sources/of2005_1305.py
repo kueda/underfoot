@@ -18,7 +18,7 @@ def download_shapes(state):
   shp_path = "{}geol_poly_dd.shp".format(state.lower())
   if not os.path.isfile(shp_path):
     print("EXTRACTING ARCHIVE...")
-    util.call_cmd(["tar", "xzvf", download_path])
+    util.call_cmd(["unzip", download_path])
   return os.path.realpath(shp_path)
 
 def download_attributes(state):
@@ -31,7 +31,7 @@ def download_attributes(state):
   csv_path = "{}units.csv".format(state)
   if not os.path.isfile(csv_path):
     print("EXTRACTING ARCHIVE...")
-    util.call_cmd(["tar", "xzvf", download_path])
+    util.call_cmd(["unzip", download_path])
   return os.path.realpath(csv_path)
 
 def schemify_attributes(attributes_path):

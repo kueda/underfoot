@@ -34,8 +34,7 @@ with fiona.collection(args.output_path, "w", "ESRI Shapefile", schema) as output
   with fiona.open(args.pal_path) as pal:
     with fiona.open(args.arc_path) as arc:
       for pf in pal:
-        if args.debug:
-          print(".", end="")
+        print(".", end="")
         lines = []
         # print( 'pf["properties"]: {}'.format(pf["properties"]))
         polygon_column = next(x for x in pf["properties"].keys( ) if re.search(polygon_pattern, x))

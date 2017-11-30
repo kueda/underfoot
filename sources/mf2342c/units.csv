@@ -93,7 +93,9 @@ Kcv,Great Valley Sequence,"Unnamed sandstone, conglomerate, and shale of the Cas
 Ko,Great Valley Sequence,"Oakland Conglomerate (Late Cretaceous, Turonian and/or Cenomanian)","Massive, medium- to coarse-grained, biotite and quartz-rich wacke and prominent interbedded lenses of pebble to cobble conglomerate. Conglomerate clasts are distinguished by a large amount of silicic volcanic detritus, including quartz porphyry rhyolite. Conglomerate composes as much as fifty percent of the unit in the Oakland hills, but it becomes a progressively smaller portion of the unit to the south. In areas of little conglomerate, this unit is distinguished from other Great Valley complex sandstones by its stratigraphic position, the presence of minor conglomerate, and its massive character."
 Kcg,Great Valley Sequence,"conglomerate, Oakland Conglomerate (Late Cretaceous, Turonian and/or Cenomanian)",
 Kslt,Great Valley Sequence,"siltstone, Oakland Conglomerate (Late Cretaceous, Turonian and/or Cenomanian)",
-Kjm,Great Valley Sequence,"Joaquin Miller Formation (Late Cretaceous, Cenomanian)","Thinly bedded shale with minor sandstone.The shale grades into thinly bedded, fine-grained sandstone near the top of the formation. The contact with theoverlying Oakland Sandstone is gradational"
+Kjm,Great Valley Sequence,"Joaquin Miller Formation (Late Cretaceous, Cenomanian)","Thinly bedded shale with minor sandstone.
+The shale grades into thinly bedded, fine-grained sandstone near the top of the formation. The contact with the
+overlying Oakland Sandstone is gradational"
 KJk,Great Valley Sequence,Knoxville Formation (Early Cretaceous and Late Jurassic),"Mainly dark, greenish-gray silt or clay
 shale with thin sandstone interbeds. The depositional contact of Knoxville Formation on ophiolite and silicic volcanic rocks can be observed at several locations in the region, including outcrops in the Hayward quadrangle. The Knoxville Formation is distinguished from the structurally overlying Joaquin Miller Formation by the
 greenish color, more poorly developed bedding, the presence of Ammonite and Buchia fossils."
@@ -114,3 +116,7 @@ Kfa,Franciscan Complex,Sandstone of the Alcatraz terrane of Blake and others (19
 KJfy,Franciscan Complex,Metasandstone of the Yolla Bolly terrane of Blake and others (1982) (Cretaceous(?) and Late Jurassic),"Strongly foliated, coarse-grained, shale-chip-bearing lithic wacke. Jadeite is visible under the hand lens, and prominent in thin-section"
 KJfs,Franciscan Complex,"Franciscan complex sandstone, undivided (Late Cretaceous to Late Jurassic)",Graywacke and meta-graywacke not assigned to any terrane
 KJfm,Franciscan Complex,Franciscan complex mélange (Cretaceous and/or Late Jurassic),"Sheared black argillite, graywacke, and minor green tuff, containing blocks and lenses of graywacke and meta-graywacke (fs ), chert (fc), shale, metachert, serpentinite (sp), greenstone (fg), amphibolite, tuff, eclogite, quartz schist, greenschist, basalt, marble, conglomerate, and glaucophane schist (fm ). Blocks range in size from pebbles to several hundred meters in length. Only some of the largest blocks are shown on the map"
+fs,Franciscan Complex,"Meta-graywacke, Franciscan complex mélange (Cretaceous and/or Late Jurassic)",
+fc,Franciscan Complex,"Chert, Franciscan complex mélange (Cretaceous and/or Late Jurassic)",
+fg,Franciscan Complex,"Greenstone, Franciscan complex mélange (Cretaceous and/or Late Jurassic)",
+fm,Franciscan Complex,"Glaucophane schist, Franciscan complex mélange (Cretaceous and/or Late Jurassic)",
