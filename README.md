@@ -3,6 +3,33 @@ Underfoot is a mobile app for revealing the hydrological and geological world be
 
 Still reading? This repo is mostly for data prep. I used to have some Ionic-based mobile app stuff here but I've given up on Ionic and am currently just tinkering with a native Android app.
 
+## Vagrant setup
+You'll need to install [Vagrant](https://www.vagrantup.com/) and [VirtualBox](https://www.virtualbox.org/).
+```
+git clone https://github.com/kueda/underfoot.git
+cd underfoot
+vagrant up
+vagrant ssh
+
+# Subsequent commands in the Vagrant VM
+cd /vagrant # This is the mount of your underfoot dir on the host machine, i.e. the underfoot repo you just cloned.
+
+# Set up a python virtual environment
+virtualenv venv -p python3 --no-site-packages
+source venv/bin/activate
+
+# Install python deps and some stuff for working with ESRI Arc/Info coverages
+./setup
+
+# Create the database
+python prepare-database.py
+
+# Run the tileserver, generate tiles, remove empty dirs
+npm install
+node tileserver.js
+node cachetiles.js
+```
+
 ## OS X Setup
 
 ```
