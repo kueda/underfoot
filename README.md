@@ -8,11 +8,23 @@ You'll need to install [Vagrant](https://www.vagrantup.com/) and [VirtualBox](ht
 ```
 git clone https://github.com/kueda/underfoot.git
 cd underfoot
-vagrant up
+vagrant up # This will take a while
 vagrant ssh
 
 # Subsequent commands in the Vagrant VM
-cd /vagrant # This is the mount of your underfoot dir on the host machine, i.e. the underfoot repo you just cloned.
+
+# Now you need to clone within the VM. You *could* use the mounted repo at
+# /vagrant, which will give you easy filesystem access from the host, but npm
+# does not seem to build things like mapnik there (lots of ENOENT errors due to
+# symlink problems with shared folders, see
+# https://github.com/npm/npm/issues/9479), and I haven't figured out a fix, so
+# to get *every* part of the process to work you need this separate checkout. If
+# you need access to the files you generate from the host you can just move them
+# to /vagrant or set up another synced folder a la
+# https://www.vagrantup.com/docs/synced-folders/basic_usage.html
+
+git clone https://github.com/kueda/underfoot.git
+cd underfoot
 
 # Set up a python virtual environment
 virtualenv venv -p python3 --no-site-packages
@@ -21,7 +33,7 @@ source venv/bin/activate
 # Install python deps and some stuff for working with ESRI Arc/Info coverages
 ./setup
 
-# Create the database
+# Create the database and prepare all the data. Takes a good long while.
 python prepare-database.py
 
 # Run the tileserver, generate tiles, remove empty dirs
