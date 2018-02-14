@@ -13,6 +13,7 @@ fs,Franciscan Complex (Jurassic to Upper Cretaceous) sandstone (graywacke),
 Tbp,Bald Peak Basalt (Miocene),"Massive basalt flows. Ar/Ar ages 8.37+0.2 and 8.46+0.2 Ma (Curtis, 1989)."
 Tst,Siesta Formation (Miocene),"Non-marine siltstone, claystone, sandstone, and minor limestone."
 Tm,Moraga Formation (Miocene),"Basalt and andesite flows, minor rhyolite tuff. Ar/Ar ages range from 9.0+0.3 to 10.2+0.5 Ma (Curtis, 1989). Interflow sedimentary rocks (Tms) mapped locally."
+Tms,"Moraga Formation (Miocene), interflow sedimentary rocks",Interflow sedimentary rocks of the Moraga Formation
 Tor,Orinda Formation (Miocene),"Conglomerate, sandstone, siltstone. Nonmarine with abundant clasts of rocks from the Franciscan Complex."
 Tcc,Claremont Chert (Miocene),"Laminated and bedded diatomaceous chert, minor brown shale and white sandstone. Interbedded sandstone (Tccs) mapped locally."
 Tgs,"Unnamed sandstone and siltstone (Eocene, Oligocene, and Miocene)",Glauconitic sandstone and brown massive siltstone.
@@ -33,7 +34,8 @@ Tul,limestone (Miocene and Pliocene),
 Tpt,Pinole Tuff (Miocene),"Tuffaceous sandstone containing pumice fragments. Tuff dated by K/Ar about 5.2 Ma (Sarna-Wojcicki, 1976)."
 Tlt,Lafayette Tuff (Miocene),"K/Ar age of 8.2 + 2.0 Ma (Sarna-Wojcicki, 1976)."
 Tn,Neroly Sandstone (Miocene),"Blue, volcanic - rich, shallow marine sandstone, with minor shale, siltstone, tuff, and andesitic conglomerate."
-Tc,Cierbo Sandstone (Miocene),"Blue, brown, gray, and white marine sandstone, minor conglomerate, tuff, and shale."
+Tc,Cierbo Sandstone (Miocene),"Blue, brown, gray, and white marine sandstone, minor conglomerate, tuff, and shale. In some areas blue, volcanic-rich with abundant marine fossils."
+Tcsc,Cierbo Sandstone (Miocene),Sandstone and conglomerate at the base of the Cierbo Sandstone
 Tbr,Briones Formation (Miocene),"Sandstone, siltstone, conglomerate and shell breccia. The Briones Formation in this assemblage contains a tuffaceous layer with a K/Ar age of 14.5+0.4 Ma (Lindquist and Morganthaler, 1991)."
 Tbg,Briones Formation (Miocene) G member of Wagner (1978),"Massive sandstone, pebble conglomerate, and shell breccia."
 Tbf,Briones Formation (Miocene) F member of Wagner (1978),Fine-grained feldspathic sandstone and locally prominent brown shale.
