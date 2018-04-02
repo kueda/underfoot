@@ -36,10 +36,14 @@ source venv/bin/activate
 # Create the database and prepare all the data. Takes a good long while.
 python prepare-database.py
 
-# Run the tileserver, generate tiles, remove empty dirs
+# Install node deps for generating MBTiles
 npm install
-node tileserver.js
-node cachetiles.js
+npm install -g tl tilelive-postgis tilelive-mbtiles
+
+# Generate MBtiles in the shared Vagrant synced folder
+tl copy -z 7 -Z 14 \
+  'postgis://ubuntu:ubuntu@localhost:5432/underfoot?table=units' \
+  mbtiles:///vagrant/underfoot.mbtiles
 ```
 
 ## OS X Setup
@@ -60,10 +64,14 @@ source venv/bin/activate
 # Create the database
 python prepare-database.py
 
-# Run the tileserver, generate tiles, remove empty dirs
+# Install node deps for generating MBTiles
 npm install
-node tileserver.js
-node cachetiles.js
+npm install -g tl tilelive-postgis tilelive-mbtiles
+
+# Generate MBtiles in the shared Vagrant synced folder
+tl copy -z 7 -Z 14 \
+  'postgis://ubuntu:ubuntu@localhost:5432/underfoot?table=units' \
+  mbtiles:///vagrant/underfoot.mbtiles
 ```
 
 # Adding Sources

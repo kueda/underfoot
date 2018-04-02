@@ -9,20 +9,20 @@ import time
 final_table_name = "units"
 mask_table_name = "masks"
 dbname = "underfoot"
-srid = "3857"
+srid = "4326"
 sources = [
-  "mf2342c", # Oakland, CA
-  "mf2337c", # SF, parts of Marin County, CA
-  "of94_622", # Contra Costa County, CA
-  "of97_489", # Santa Cruz County, CA
-  "of98_354", # South SF
-  "mf2403c", # Napa and Lake Counties, in part
-  "of98_137", # San Mateo County, CA
-  "mf2402", # Western Sonoma County
-  "sim2858", # Mark West Springs, Sonoma County (Pepperwood)
-  "of96_252", # Alameda County, CA
-  "of97_456", # Point Reyes, Marin County, CA
-  "of2005_1305", # all of California, coarse
+  "mf2342c",      # Oakland, CA
+  "mf2337c",      # SF, parts of Marin County, CA
+  "of94_622",     # Contra Costa County, CA
+  "of97_489",     # Santa Cruz County, CA
+  "of98_354",     # South SF
+  "mf2403c",      # Napa and Lake Counties, in part
+  "of98_137",     # San Mateo County, CA
+  "mf2402",       # Western Sonoma County
+  "sim2858",      # Mark West Springs, Sonoma County (Pepperwood)
+  "of96_252",     # Alameda County, CA
+  "of97_456",     # Point Reyes, Marin County, CA
+  "of2005_1305",  # all of California, coarse
 ]
 
 util.call_cmd(["createdb", dbname])
@@ -158,6 +158,7 @@ for idx, source_identifier in enumerate(sources):
   util.run_sql("UPDATE {} SET geom = ST_MakeValid(geom) WHERE NOT ST_IsValid(geom)".format(work_source_table_name))
   print("Removing polygon overlaps...")
   remove_polygon_overlaps(work_source_table_name, skip_mask=(idx == 0))
+  util.run_sql("UPDATE {} SET geom = ST_MakeValid(geom) WHERE NOT ST_IsValid(geom)".format(source_table_name))
   print()
   if idx == 0:
     print("Creating {} and inserting...".format(final_table_name))
@@ -180,17 +181,51 @@ for idx, source_identifier in enumerate(sources):
       work_source_table_name
     ))
   print("Updating {}...".format(mask_table_name))
+  # Remove slivers and make it valid
   if idx == 0:
-    util.run_sql("INSERT INTO {} (source, geom) SELECT '{}', ST_Multi(ST_Union(geom)) FROM {}".format(
-      mask_table_name, source_identifier, source_table_name))
+    util.run_sql("""
+      INSERT INTO {} (source, geom)
+      SELECT
+        '{}',
+        ST_Multi(
+          ST_Buffer(
+            ST_Buffer(
+              ST_MakeValid(
+                ST_Union(geom)
+              ),
+              1,
+              'join=mitre'
+            ),
+            -1,
+            'join=mitre'
+          )
+        )
+      FROM {}
+    """.format(
+      mask_table_name, source_identifier, source_table_name
+    ))
   else:
     util.run_sql("""
       UPDATE {} m SET geom = ST_Multi(
-        ST_MakePolygon(
-          ST_ExteriorRing(
-            ST_Union(
-              m.geom,
-              (SELECT ST_Union(s.geom) FROM {} s)
+        ST_Union(
+          m.geom,
+          ST_MakePolygon(
+            ST_ExteriorRing(
+              (
+                SELECT
+                  ST_Buffer(
+                    ST_Buffer(
+                      ST_MakeValid(
+                        ST_Union(s.geom)
+                      ),
+                      1,
+                      'join=mitre'
+                    ),
+                    -1,
+                    'join=mitre'
+                  )
+                FROM {} s
+              )
             )
           )
         )

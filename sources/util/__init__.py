@@ -14,6 +14,8 @@ import csv
 
 WEB_MERCATOR_PROJ4 = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +over +no_defs"
 NAD27_UTM10_PROJ4 = "+proj=utm +zone=10 +datum=NAD27 +units=m +no_defs"
+EPSG_4326_PROJ4 = "+proj=longlat +datum=WGS84 +no_defs"
+SRS = EPSG_4326_PROJ4
 METADATA_COLUMN_NAMES = [
   'code',
   'title',
@@ -63,7 +65,7 @@ lithology_PATTERN = re.compile(r'''(
   volcanoclastic\sbreccia
 )(?:\W|$)''', re.VERBOSE|re.I)
 
-IGNEUS_ROCKS = [
+IGNEOUS_ROCKS = [
   'basalt',
   'diabase',
   'gabbro',
@@ -221,8 +223,8 @@ def formation_from_text(text):
 
 def rock_type_from_lithology(lithology):
   rock_type = ''
-  if lithology in IGNEUS_ROCKS:
-    rock_type = 'igneus'
+  if lithology in IGNEOUS_ROCKS:
+    rock_type = 'igneous'
   elif lithology in METAMORPHIC_ROCKS:
     rock_type = 'metamorphic'
   elif lithology in SEDIMENTARY_ROCKS:
@@ -424,7 +426,7 @@ def process_usgs_source(base_path, url, e00_path, polygon_pattern=None,
   call_cmd([
     "ogr2ogr",
       "-s_srs", srs,
-      "-t_srs", WEB_MERCATOR_PROJ4,
+      "-t_srs", SRS,
       final_polygons_path, polygons_path,
       "-overwrite",
       "-dialect", "sqlite",

@@ -65,7 +65,7 @@ def merge_shapes(paths):
   util.call_cmd([
     "ogr2ogr",
       "-s_srs", srs,
-      "-t_srs", util.WEB_MERCATOR_PROJ4,
+      "-t_srs", util.SRS,
       dissolved_path, merged_path,
       "-overwrite",
       "-dialect", "sqlite",
