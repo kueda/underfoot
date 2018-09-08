@@ -3,7 +3,7 @@ Underfoot is a mobile app for revealing the hydrological and geological world be
 
 Still reading? This repo is mostly for data prep. I used to have some Ionic-based mobile app stuff here but I've given up on Ionic and am currently just tinkering with a native Android app.
 
-## Vagrant setup
+## Vagrant Setup
 You'll need to install [Vagrant](https://www.vagrantup.com/) and [VirtualBox](https://www.virtualbox.org/).
 ```
 git clone https://github.com/kueda/underfoot.git
@@ -38,40 +38,11 @@ python prepare-database.py
 
 # Install node deps for generating MBTiles
 npm install
-npm install -g tl tilelive-postgis tilelive-mbtiles
 
 # Generate MBtiles in the shared Vagrant synced folder
-tl copy -z 7 -Z 14 \
-  'postgis://ubuntu:ubuntu@localhost:5432/underfoot?table=units' \
-  mbtiles:///vagrant/underfoot.mbtiles
-```
-
-## OS X Setup
-
-```
-# Instal GDAL for GIS data processing and PostGIS / PostgreSQL for data storage
-brew install gdal --with-postgres
-brew install postgis nodejs pyenv-virtualenv
-
-# Set up a python virtual environment
-unset PYTHONPATH
-virtualenv venv -p python3 --no-site-packages
-source venv/bin/activate
-
-# Install python deps and some stuff for working with ESRI Arc/Info coverages
-./setup
-
-# Create the database
-python prepare-database.py
-
-# Install node deps for generating MBTiles
-npm install
-npm install -g tl tilelive-postgis tilelive-mbtiles
-
-# Generate MBtiles in the shared Vagrant synced folder
-tl copy -z 7 -Z 14 \
-  'postgis://ubuntu:ubuntu@localhost:5432/underfoot?table=units' \
-  mbtiles:///vagrant/underfoot.mbtiles
+./node_modules/tl/bin/tl.js copy -z 7 -Z 14 \
+  'postgis://vagrant:vagrant@localhost:5432/underfoot?table=units' \
+  mbtiles:///vagrant/underfoot-units.mbtiles
 ```
 
 # Adding Sources

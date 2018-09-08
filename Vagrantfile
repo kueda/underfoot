@@ -1,7 +1,7 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 Vagrant.configure("2") do |config|
-  config.vm.box = "bento/ubuntu-16.04"
+  config.vm.box = "bento/ubuntu-18.04"
 
   config.vm.provider "virtualbox" do |v|
     v.memory = 2048
@@ -14,18 +14,24 @@ Vagrant.configure("2") do |config|
 
   # Modifications to postgres security to allow port forwarding to the host.
   # Obviously this is insecure and only meant to be used in a local setting
-  pg_hba_access_for_host = "host all all 10.0.2.2/32 trust # Support connections from the vagrant host"
   postgresql_conf_access_for_host = "listen_addresses='*'"
+  pgsql_mods = "grep -q -F \"#{postgresql_conf_access_for_host}\" /etc/postgresql/10/main/postgresql.conf  || echo \"#{postgresql_conf_access_for_host}\" >> /etc/postgresql/10/main/postgresql.conf\n"
+  %w(vagrant ubuntu).each do |user|
+    pgsql_mods << "sudo -u postgres psql -c \"DROP ROLE IF EXISTS #{user}; CREATE ROLE #{user} INHERIT LOGIN SUPERUSER PASSWORD '#{user}'\"\n"
+    pg_hba_access_for_local_ipv4 =   "host all #{user} 127.0.0.1/32 trust # Trust all local connections"
+    pg_hba_access_for_host =         "host all #{user} 10.0.2.2/32 trust # Support connections from the vagrant host"
+    [pg_hba_access_for_local_ipv4, pg_hba_access_for_host].each do |pattern|
+      pgsql_mods << "grep -q -F '#{pattern}' /etc/postgresql/10/main/pg_hba.conf || echo '#{pattern}' >> /etc/postgresql/10/main/pg_hba.conf\n"
+    end
+  end
 
   # Provision the vm with the relevant dependencies, modify postgres settings
   # and create an ubuntu superuser
   config.vm.provision "shell", inline: <<-SHELL
     add-apt-repository ppa:ubuntugis/ppa
     apt-get update
-    apt-get install -y git virtualenv nodejs python3 postgis gdal-bin libgdal1-dev unzip
-    sudo -u postgres psql -c "DROP ROLE IF EXISTS ubuntu; CREATE ROLE ubuntu LOGIN SUPERUSER"
-    grep -q -F '#{pg_hba_access_for_host}' /etc/postgresql/9.5/main/pg_hba.conf  || echo '#{pg_hba_access_for_host}' >> /etc/postgresql/9.5/main/pg_hba.conf
-    grep -q -F "#{postgresql_conf_access_for_host}" /etc/postgresql/9.5/main/postgresql.conf  || echo "#{postgresql_conf_access_for_host}" >> /etc/postgresql/9.5/main/postgresql.conf
+    apt-get install -y git virtualenv npm python3 postgis gdal-bin libgdal-dev unzip osmosis
+    #{pgsql_mods}
     service postgresql restart
   SHELL
 end

@@ -1,0 +1,17 @@
+{
+    "vector_layers": [
+        {
+            "description": "Roads, paths, and other ways from Open Street Map",
+            "fields": {
+                "highway": "String",
+                "id": "Number",
+                "name": "String",
+                "version": "Number"
+            },
+            "id": "underfoot_ways",
+            "maxzoom": 14,
+            "minzoom": 0
+        }
+    ],
+    "attribution": "<a href='http://openstreetmap.org'>OSM contributors</a>"
+}
