@@ -16,7 +16,7 @@ Vagrant.configure("2") do |config|
   # Obviously this is insecure and only meant to be used in a local setting
   postgresql_conf_access_for_host = "listen_addresses='*'"
   pgsql_mods = "grep -q -F \"#{postgresql_conf_access_for_host}\" /etc/postgresql/10/main/postgresql.conf  || echo \"#{postgresql_conf_access_for_host}\" >> /etc/postgresql/10/main/postgresql.conf\n"
-  %w(vagrant ubuntu).each do |user|
+  %w(vagrant ubuntu underfoot).each do |user|
     pgsql_mods << "sudo -u postgres psql -c \"DROP ROLE IF EXISTS #{user}; CREATE ROLE #{user} INHERIT LOGIN SUPERUSER PASSWORD '#{user}'\"\n"
     pg_hba_access_for_local_ipv4 =   "host all #{user} 127.0.0.1/32 trust # Trust all local connections"
     pg_hba_access_for_host =         "host all #{user} 10.0.2.2/32 trust # Support connections from the vagrant host"

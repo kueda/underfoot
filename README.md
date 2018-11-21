@@ -40,9 +40,13 @@ python prepare-database.py
 npm install
 
 # Generate MBtiles in the shared Vagrant synced folder
-./node_modules/tl/bin/tl.js copy -z 7 -Z 14 \
+./node_modules/tl/bin/tl.js copy -i underfoot_units.json -z 7 -Z 14 \
   'postgis://vagrant:vagrant@localhost:5432/underfoot?table=units' \
-  mbtiles:///vagrant/underfoot-units.mbtiles
+  mbtiles:///vagrant/underfoot_units.mbtiles
+
+# Generate roads mbtiles from OSM data (currently hard-coded for California)
+# Makes underfoot_ways.mbtiles. It takes a long time and takes a lot of disk.
+./osm.sh
 ```
 
 # Adding Sources

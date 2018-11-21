@@ -22,14 +22,28 @@ psql -d underfoot_ways < /usr/share/doc/osmosis/examples/pgsnapshot_schema_0.6_l
 # Load ways from the PBF into the database
 echo ""
 echo "Loading data from the PBF into the database"
+# osmosis \
+#   --read-pbf california-latest.osm.pbf \
+#   --tf accept-ways highway=* \
+#   --tf reject-ways service=* \
+#   --tf reject-ways footway=sidewalk \
+#   --tf reject-ways highway=proposed \
+#   --tf reject-ways highway=footway \
+#   --tf reject-ways highway=pedestrian \
+#   --tf reject-ways highway=steps \
+#   --bounding-box left=-123 top=38 right=-122 bottom=37 \
+#   --write-pgsql database="underfoot_ways" user="underfoot" password="underfoot"
+
 osmosis \
   --read-pbf california-latest.osm.pbf \
   --tf accept-ways highway=* \
   --tf reject-ways service=* \
   --tf reject-ways footway=sidewalk \
   --tf reject-ways highway=proposed \
-  --bounding-box left=-123 top=38 right=-122 bottom=37 \
-  --write-pgsql database="underfoot_ways" user="vagrant" password="vagrant"
+  --tf reject-ways highway=footway \
+  --tf reject-ways highway=pedestrian \
+  --tf reject-ways highway=steps \
+  --write-pgsql database="underfoot_ways" user="underfoot" password="underfoot"
 
 # Create a table for ways with just names and highway tags
 echo ""
@@ -40,12 +54,15 @@ psql underfoot_ways -c "CREATE TABLE underfoot_ways AS SELECT id, version, tags 
 # Export ways into the MBTiles using different zoom levels for different types
 echo ""
 echo "Exporting into MBTiles"
-./node_modules/tl/bin/tl.js copy -i underfoot_ways.json -z 7 -Z 14 \
-  "postgis://ubuntu:ubuntu@localhost:5432/underfoot_ways?table=underfoot_ways&query=(SELECT%20*%20from%20underfoot_ways%20WHERE%20highway%20in%20('motorway','motorway_link','primary','trunk'))%20AS%20foo" \
-  mbtiles:///vagrant/underfoot.mbtiles
-./node_modules/tl/bin/tl.js copy -i underfoot_ways.json -z 11 -Z 14 \
-  "postgis://ubuntu:ubuntu@localhost:5432/underfoot_ways?table=underfoot_ways&query=(SELECT%20*%20from%20underfoot_ways%20WHERE%20highway%20in%20('motorway','primary','secondary','motorway_link','trunk'))%20AS%20foo" \
-  mbtiles:///vagrant/underfoot.mbtiles
-./node_modules/tl/bin/tl.js copy -i underfoot_ways.json -z 13 -Z 14 \
-  "postgis://ubuntu:ubuntu@localhost:5432/underfoot_ways?table=underfoot_ways" \
-  mbtiles:///vagrant/underfoot.mbtiles
+./node_modules/tl/bin/tl.js copy -i underfoot_ways.json -z 3 -Z 13 \
+  "postgis://underfoot:underfoot@localhost:5432/underfoot_ways?table=underfoot_ways&query=(SELECT%20*%20from%20underfoot_ways%20WHERE%20highway%20in%20('motorway'))%20AS%20foo" \
+  mbtiles:///home/underfoot/underfoot_ways.mbtiles
+./node_modules/tl/bin/tl.js copy -i underfoot_ways.json -z 7 -Z 13 \
+  "postgis://underfoot:underfoot@localhost:5432/underfoot_ways?table=underfoot_ways&query=(SELECT%20*%20from%20underfoot_ways%20WHERE%20highway%20in%20('motorway','primary','trunk'))%20AS%20foo" \
+  mbtiles:///home/underfoot/underfoot_ways.mbtiles
+./node_modules/tl/bin/tl.js copy -i underfoot_ways.json -z 11 -Z 13 \
+  "postgis://underfoot:underfoot@localhost:5432/underfoot_ways?table=underfoot_ways&query=(SELECT%20*%20from%20underfoot_ways%20WHERE%20highway%20in%20('motorway','primary','trunk','secondary','tertiary','motorway_link'))%20AS%20foo" \
+  mbtiles:///home/underfoot/underfoot_ways.mbtiles
+./node_modules/tl/bin/tl.js copy -i underfoot_ways.json -z 13 -Z 13 \
+  "postgis://underfoot:underfoot@localhost:5432/underfoot_ways?table=underfoot_ways" \
+  mbtiles:///home/underfoot/underfoot_ways.mbtiles
