@@ -18,6 +18,8 @@
   "homepage": "https://github.com/kueda/underfoot#readme",
   "dependencies": {
     "@mapbox/mbtiles": "^0.10.0",
+    "@mapbox/sphericalmercator": "^1.1.0",
+    "@mapbox/tilelive-omnivore": "^4.1.0",
     "cli-progress": "^1.2.0",
     "cors": "^2.8.1",
     "lodash": "^4.16.4",

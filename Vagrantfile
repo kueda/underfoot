@@ -30,7 +30,7 @@ Vagrant.configure("2") do |config|
   config.vm.provision "shell", inline: <<-SHELL
     add-apt-repository ppa:ubuntugis/ppa
     apt-get update
-    apt-get install -y git virtualenv npm python3 postgis gdal-bin libgdal-dev unzip osmosis
+    apt-get install -y git virtualenv npm python3 python-gdal gdal-bin libgdal-dev postgis unzip osmosis
     #{pgsql_mods}
     service postgresql restart
   SHELL

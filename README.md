@@ -47,6 +47,10 @@ npm install
 # Generate roads mbtiles from OSM data (currently hard-coded for California)
 # Makes underfoot_ways.mbtiles. It takes a long time and takes a lot of disk.
 ./osm.sh
+
+# Generate elevation contours from Mapzen / Amazon elevation tiles
+(https://registry.opendata.aws/terrain-tiles/). Makes elevation-tiles.mbtiles
+node elevation.js
 ```
 
 # Adding Sources
