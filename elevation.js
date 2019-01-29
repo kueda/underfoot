@@ -22,10 +22,10 @@ const _progress = require('cli-progress');
 const pg = require( "pg" );
 const tilelive = require( "@mapbox/tilelive" );
 const MBTiles = require( "@mapbox/mbtiles" );
-const Omnivore = require( "@mapbox/tilelive-omnivore" );
+const tlfile = require( "tilelive-file" );
 
-Omnivore.registerProtocols( tilelive );
 MBTiles.registerProtocols( tilelive );
+tlfile.registerProtocols( tilelive );
 
 const minZoom = process.argv[2] ? parseInt( process.argv[2] ) : 10;
 const maxZoom = process.argv[3] ? parseInt( process.argv[3] ) : 13;
@@ -35,11 +35,13 @@ var merc = new SphericalMercator( {
 } );
 const puts = ( error, stdout, stderr ) => { console.log( stdout ) }
 
+const tileFilePath = ( x, y, z, ext = "tif" ) => `${cacheDir}/${z}/${x}/${y}.${ext}`;
+
 const cacheTile = ( x, y, z ) => {
   const tilePath = `${z}/${x}/${y}.tif`;
   const url = `https://s3.amazonaws.com/elevation-tiles-prod/geotiff/${tilePath}`;
-  const dirPath = `./${cacheDir}/${z}`;
-  const filePath = `${dirPath}/${x}-${y}.tif`
+  const dirPath = `./${cacheDir}/${z}/${x}`;
+  const filePath = tileFilePath( x, y, z );
   return new Promise( ( resolve, reject ) => {
     // http://stackoverflow.com/questions/13696148/node-js-create-folder-or-use-existing
     mkdirp( dirPath, e => {
@@ -76,7 +78,7 @@ const cacheTile = ( x, y, z ) => {
   } );
 }
 
-const cacheTiles = ( swlon, swlat, nelon, nelat ) => {
+const tilesForBbox = ( swlon, swlat, nelon, nelat ) => {
   let tiles = [];
   for ( let zoom = maxZoom; zoom >= minZoom; zoom-- ) {
     let bounds = merc.xyz( [ swlon, swlat, nelon, nelat ], zoom, false );
@@ -86,6 +88,11 @@ const cacheTiles = ( swlon, swlat, nelon, nelat ) => {
       }
     }
   }
+  return tiles;
+}
+
+const cacheTiles = ( swlon, swlat, nelon, nelat ) => {
+  let tiles = tilesForBbox( swlon, swlat, nelon, nelat );
   var progressBar = new _progress.Bar( {
     format: "Caching {value}/{total} tiles [{bar}] {percentage}% | ETA: {eta_formatted}",
     etaBuffer: 1000
@@ -112,34 +119,47 @@ const cacheTiles = ( swlon, swlat, nelon, nelat ) => {
 
 }
 
-const makeContours = ( ) => {
-  console.log( "Making contours" )
-  for ( let zoom = maxZoom; zoom >= minZoom; zoom-- ) {
-    let interval = 1000;
-    if ( zoom >= 12 ) {
-      interval = 10;
-    } else if ( zoom >= 10 ) {
-      interval = 100;
+const makeContours = ( swlon, swlat, nelon, nelat ) => {
+  const tiles = tilesForBbox( swlon, swlat, nelon, nelat );
+  var progressBar = new _progress.Bar( {
+    format: "Making {value}/{total} contours [{bar}] {percentage}% | ETA: {eta_formatted}",
+    etaBuffer: 1000
+  } );
+  let counter = 0;
+  progressBar.start( tiles.length, counter );
+  tiles.forEach( tile => {
+    let [x,y,z] = tile;
+    const contoursPath = tileFilePath( x, y, z, "geojson" );
+    if ( !fs.existsSync( contoursPath ) ) {
+      let interval = 1000;
+      if ( z >= 12 ) {
+        interval = 10;
+      } else if ( z >= 10 ) {
+        interval = 100;
+      }
+      // Merge all 8 tiles that surround this tile so we don't get weird edge
+      // effects.
+      const mergeCoords = [
+        [x - 1, y - 1], [x + 0, y - 1], [x + 1, y - 1],
+        [x - 1, y + 0], [x + 0, y + 0], [x + 1, y + 0],
+        [x - 1, y + 1], [x + 0, y + 1], [x + 1, y + 1]
+      ];
+      const mergeFilePaths = mergeCoords.map( xy => tileFilePath( xy[0], xy[1], z ) );
+      const mergePath = tileFilePath( x, y, z, "merge.tif" );
+      const mergeContoursPath = tileFilePath( x, y, z, "merge-contours.shp" );
+      execSync( `gdal_merge.py -q -o ${mergePath} ${mergeFilePaths.join( " " )}`, {stdio: "ignore" } );
+      execSync( `gdal_contour -q -i ${interval} -a elevation ${mergePath} ${mergeContoursPath}`, {stdio: "ignore" } );
+      const [e, s, w, n] = merc.bbox( x, y, z, false, "900913" );
+      execSync( `ogr2ogr -skipfailures -clipsrc ${w} ${s} ${e} ${n} -f GeoJSON ${contoursPath} ${mergeContoursPath}`, {stdio: [0,1,2]} );
     }
-    console.log( `Zoom ${zoom}, interval ${interval}, merge...` )
-    execSync( `gdal_merge.py -o elevation-tiles/${zoom}.tif ${cacheDir}/${zoom}/*.tif`, {stdio: [0,1,2]} );
-    console.log( `Zoom ${zoom}, interval ${interval}, contours...` )
-    execSync( `gdal_contour -i ${interval} -a elevation ${cacheDir}/${zoom}.tif ${cacheDir}/contours-${zoom}.shp`, {stdio: [0,1,2]} );
-  }
+    progressBar.update( counter += 1 );
+  } );
+  progressBar.stop( );
 }
 
 const makeMBTiles = ( z ) => {
   const outURI = `mbtiles://${__dirname}/elevation-tiles.mbtiles`;
-  // for ( let zoom = maxZoom; zoom >= minZoom; zoom-- ) {
-  console.log( "[DEBUG] minZoom: ", minZoom );
-  console.log( "[DEBUG] maxZoom: ", maxZoom );
-  let zoom = parseInt( z, 0 ) || minZoom;
-  zoom = zoom < minZoom ? minZoom : zoom;
-  console.log( "[DEBUG] zoom: ", zoom );
-  if ( zoom > maxZoom ) {
-    return;
-  }
-  const inpURI = `omnivore://${__dirname}/${cacheDir}/contours-${zoom}.shp`;
+  const inpURI = `file://${__dirname}/${cacheDir}?filetype=geojson`
   tilelive.load( inpURI, ( err, inp ) => {
     if (err) {
       Error( `err loading inp: ${err}` );
@@ -149,20 +169,19 @@ const makeMBTiles = ( z ) => {
         Error( `err loading out: ${err}` );
       }
       var options = {
-        minzoom: zoom,
-        maxzoom: zoom,
+        minzoom: minZoom,
+        maxzoom: maxZoom,
         listScheme: out.createZXYStream( )
       };
       tilelive.copy( inp, out, options, err => {
-        console.log( `Done writing zoom ${zoom} to mbtiles` );
-        makeMBTiles( zoom + 1 );
+        console.log( `Done writing zoom to mbtiles` );
       } );
     } );
   } );
 }
 
 // conenct to postgres to get the extents
-var pgClient = new pg.Client( { database: "underfoot", password: "vagrant" } );
+var pgClient = new pg.Client( { database: "underfoot", password: "underfoot" } );
 pgClient.connect( err => {
   if ( err ) throw err;
   pgClient.query('SELECT ST_Extent(ST_Transform(geom, 4326)) FROM units', [], ( err, result ) => {
@@ -174,7 +193,7 @@ pgClient.connect( err => {
     const nelon = matches[3];
     cacheTiles( swlon, swlat, nelon, nelat )
       .then( ( ) => {
-        makeContours( );
+        makeContours( swlon, swlat, nelon, nelat );
       } )
       .then( ( ) => {
         makeMBTiles( );
