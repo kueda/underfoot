@@ -151,6 +151,7 @@ const makeContours = ( swlon, swlat, nelon, nelat ) => {
       execSync( `gdal_contour -q -i ${interval} -a elevation ${mergePath} ${mergeContoursPath}`, {stdio: "ignore" } );
       const [e, s, w, n] = merc.bbox( x, y, z, false, "900913" );
       execSync( `ogr2ogr -skipfailures -clipsrc ${w} ${s} ${e} ${n} -f GeoJSON ${contoursPath} ${mergeContoursPath}`, {stdio: [0,1,2]} );
+      execSync( `rm -rf ${tileFilePath( x, y, z, "merge*" )}`, {stdio: "ignore" } );
     }
     progressBar.update( counter += 1 );
   } );
@@ -181,7 +182,7 @@ const makeMBTiles = ( z ) => {
 }
 
 // conenct to postgres to get the extents
-var pgClient = new pg.Client( { database: "underfoot", password: "underfoot" } );
+var pgClient = new pg.Client( { database: "underfoot", user: "underfoot", password: "underfoot" } );
 pgClient.connect( err => {
   if ( err ) throw err;
   pgClient.query('SELECT ST_Extent(ST_Transform(geom, 4326)) FROM units', [], ( err, result ) => {
