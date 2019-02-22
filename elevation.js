@@ -1,14 +1,7 @@
-/**
-  *
-  * Trivial script for generating underfoot tiles from a tile server. Assumes
-  * endpoints like http://localhost:8080/underfoot-units/${z}/${x}/${y}.mvt are
-  * available.
-  *
-  * Usage:
-  * # Generate tiles for zoom levels 7 to 12:
-  * node cachetiles.js 7 12
-  *
- **/
+// Downloads DEMs from AWS-hosted Mapzen terrain tiles, converts to contours
+// with gdal_contour, and loads them into PostGIS tables named contours${zoom}.
+// So if you run node elevation.js 10, it will create a contours table named
+// contours10.
 
 const fs = require( "fs" );
 const https = require( "https" );
@@ -20,15 +13,9 @@ const exec = require( "child_process" ).exec;
 const execSync = require( "child_process" ).execSync;
 const _progress = require('cli-progress');
 const pg = require( "pg" );
-const tilelive = require( "@mapbox/tilelive" );
-const MBTiles = require( "@mapbox/mbtiles" );
-const tlfile = require( "tilelive-file" );
-
-MBTiles.registerProtocols( tilelive );
-tlfile.registerProtocols( tilelive );
 
 const minZoom = process.argv[2] ? parseInt( process.argv[2] ) : 10;
-const maxZoom = process.argv[3] ? parseInt( process.argv[3] ) : 13;
+const maxZoom = process.argv[3] ? parseInt( process.argv[3] ) : minZoom;
 const cacheDir = "elevation-tiles";
 var merc = new SphericalMercator( {
   size: 256
@@ -130,7 +117,8 @@ const makeContours = ( swlon, swlat, nelon, nelat ) => {
   tiles.forEach( tile => {
     let [x,y,z] = tile;
     const contoursPath = tileFilePath( x, y, z, "geojson" );
-    if ( !fs.existsSync( contoursPath ) ) {
+    const mergeContoursPath = tileFilePath( x, y, z, "merge-contours.shp" );
+    if ( !fs.existsSync( mergeContoursPath ) ) {
       let interval = 1000;
       if ( z >= 12 ) {
         interval = 10;
@@ -146,39 +134,33 @@ const makeContours = ( swlon, swlat, nelon, nelat ) => {
       ];
       const mergeFilePaths = mergeCoords.map( xy => tileFilePath( xy[0], xy[1], z ) );
       const mergePath = tileFilePath( x, y, z, "merge.tif" );
-      const mergeContoursPath = tileFilePath( x, y, z, "merge-contours.shp" );
       execSync( `gdal_merge.py -q -o ${mergePath} ${mergeFilePaths.join( " " )}`, {stdio: "ignore" } );
       execSync( `gdal_contour -q -i ${interval} -a elevation ${mergePath} ${mergeContoursPath}`, {stdio: "ignore" } );
       const [e, s, w, n] = merc.bbox( x, y, z, false, "900913" );
-      execSync( `ogr2ogr -skipfailures -clipsrc ${w} ${s} ${e} ${n} -f GeoJSON ${contoursPath} ${mergeContoursPath}`, {stdio: [0,1,2]} );
-      execSync( `rm -rf ${tileFilePath( x, y, z, "merge*" )}`, {stdio: "ignore" } );
+      // Do a bunch of stuff, including clipping the lines back to the original
+      // tile boundaries, projecting them into 4326, and loading them into a
+      // PostGIS table named contours${zoom level}
+      const ogr2ogr = `
+        ogr2ogr
+          -append
+          -skipfailures
+          -nln contours${z}
+          -nlt MULTILINESTRING
+          -clipsrc ${w} ${s} ${e} ${n}
+          -f PostgreSQL PG:"dbname=underfoot"
+          -t_srs EPSG:4326
+          --config PG_USE_COPY YES
+          ${mergeContoursPath}
+      `.replace( /\s+/gm, " " );
+      // console.log( "[DEBUG] ogr2ogr: ", ogr2ogr );
+      execSync( ogr2ogr, {stdio: [0,1,2]} );
+      // execSync( ogr2ogr, {stdio: "ignore" } );
+      // execSync( `rm -rf ${tileFilePath( x, y, z, "merge*" )}`, {stdio: "ignore" } );
     }
     progressBar.update( counter += 1 );
   } );
+  console.log( "[DEBUG] stopping progressbar" );
   progressBar.stop( );
-}
-
-const makeMBTiles = ( z ) => {
-  const outURI = `mbtiles://${__dirname}/elevation-tiles.mbtiles`;
-  const inpURI = `file://${__dirname}/${cacheDir}?filetype=geojson`
-  tilelive.load( inpURI, ( err, inp ) => {
-    if (err) {
-      Error( `err loading inp: ${err}` );
-    }
-    tilelive.load( outURI, ( err, out ) => {
-      if (err) {
-        Error( `err loading out: ${err}` );
-      }
-      var options = {
-        minzoom: minZoom,
-        maxzoom: maxZoom,
-        listScheme: out.createZXYStream( )
-      };
-      tilelive.copy( inp, out, options, err => {
-        console.log( `Done writing zoom to mbtiles` );
-      } );
-    } );
-  } );
 }
 
 // conenct to postgres to get the extents
@@ -197,10 +179,9 @@ pgClient.connect( err => {
         makeContours( swlon, swlat, nelon, nelat );
       } )
       .then( ( ) => {
-        makeMBTiles( );
+        pgClient.end( err => {
+          if ( err ) throw err;
+        } );
       } );
-    pgClient.end( err => {
-      if ( err ) throw err;
-    } );
   } );
 } );

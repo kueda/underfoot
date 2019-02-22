@@ -49,8 +49,17 @@ npm install
 ./osm.sh
 
 # Generate elevation contours from Mapzen / Amazon elevation tiles
-(https://registry.opendata.aws/terrain-tiles/). Makes elevation-tiles.mbtiles
-node elevation.js
+(https://registry.opendata.aws/terrain-tiles/). Makes elevation.mbtiles
+./elevation.sh
+# Really only need the two levels, as they should be visible
+# at 2-3 zoom levels above and below.
+./node_modules/tl/bin/tl.js copy -i /vagrant/elevation.json -z 10 -Z 10 \
+  'postgis://vagrant:vagrant@localhost:5432/underfoot?table=contours10' \
+  mbtiles://./elevation.mbtiles
+# Annoying, but you have to ctrl-c here to get it to finish. Some kind of bug in tl.
+./node_modules/tl/bin/tl.js copy -i /vagrant/elevation.json -z 12 -Z 12 \
+  'postgis://vagrant:vagrant@localhost:5432/underfoot?table=contours12' \
+  mbtiles://./elevation.mbtiles
 ```
 
 # Adding Sources

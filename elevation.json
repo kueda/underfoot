@@ -1,0 +1,23 @@
+{
+  "vector_layers": [
+    {
+      "description": "Elevation contours, zoom 10, 100m interval",
+      "fields": {
+        "elevation": "Number"
+      },
+      "id": "contours10",
+      "maxzoom": 12,
+      "minzoom": 8
+    },
+    {
+      "description": "Elevation contours, zoom 12, 10m interval",
+      "fields": {
+        "elevation": "Number"
+      },
+      "id": "contours12",
+      "maxzoom": 13,
+      "minzoom": 14
+    }
+  ],
+  "attribution": "<a href='https://github.com/tilezen/joerd/blob/master/docs/attribution.md'>Mapzen Terrain tiles contributors</a>"
+}
