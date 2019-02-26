@@ -121,7 +121,7 @@ const makeContours = ( swlon, swlat, nelon, nelat ) => {
     if ( !fs.existsSync( mergeContoursPath ) ) {
       let interval = 1000;
       if ( z >= 12 ) {
-        interval = 10;
+        interval = 25;
       } else if ( z >= 10 ) {
         interval = 100;
       }

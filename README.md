@@ -5,7 +5,7 @@ Still reading? This repo is mostly for data prep. I used to have some Ionic-base
 
 ## Vagrant Setup
 You'll need to install [Vagrant](https://www.vagrantup.com/) and [VirtualBox](https://www.virtualbox.org/).
-```
+```bash
 git clone https://github.com/kueda/underfoot.git
 cd underfoot
 vagrant up # This will take a while
@@ -49,16 +49,18 @@ npm install
 ./osm.sh
 
 # Generate elevation contours from Mapzen / Amazon elevation tiles
-(https://registry.opendata.aws/terrain-tiles/). Makes elevation.mbtiles
-./elevation.sh
+# (https://registry.opendata.aws/terrain-tiles/) and load them into PostGIS
+node elevation.sh 10
+node elevation.sh 12
+
 # Really only need the two levels, as they should be visible
 # at 2-3 zoom levels above and below.
-./node_modules/tl/bin/tl.js copy -i /vagrant/elevation.json -z 10 -Z 10 \
-  'postgis://vagrant:vagrant@localhost:5432/underfoot?table=contours10' \
+./node_modules/tl/bin/tl.js copy -i elevation.json -z 10 -Z 10 \
+  'postgis://underfoot:underfoot@localhost:5432/underfoot?table=contours10' \
   mbtiles://./elevation.mbtiles
 # Annoying, but you have to ctrl-c here to get it to finish. Some kind of bug in tl.
-./node_modules/tl/bin/tl.js copy -i /vagrant/elevation.json -z 12 -Z 12 \
-  'postgis://vagrant:vagrant@localhost:5432/underfoot?table=contours12' \
+./node_modules/tl/bin/tl.js copy -i elevation.json -z 12 -Z 12 \
+  'postgis://underfoot:underfoot@localhost:5432/underfoot?table=contours12' \
   mbtiles://./elevation.mbtiles
 ```
 

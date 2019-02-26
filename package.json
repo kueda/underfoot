@@ -21,7 +21,7 @@
     "@mapbox/sphericalmercator": "^1.1.0",
     "cli-progress": "^1.2.0",
     "cors": "^2.8.1",
-    "lodash": "^4.16.4",
+    "lodash": ">=4.17.11",
     "morgan": "^1.7.0",
     "pg": "^6.1.0",
     "sleep": "^4.0.0",
