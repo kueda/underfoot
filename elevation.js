@@ -116,7 +116,6 @@ const makeContours = ( swlon, swlat, nelon, nelat ) => {
   progressBar.start( tiles.length, counter );
   tiles.forEach( tile => {
     let [x,y,z] = tile;
-    const contoursPath = tileFilePath( x, y, z, "geojson" );
     const mergeContoursPath = tileFilePath( x, y, z, "merge-contours.shp" );
     if ( !fs.existsSync( mergeContoursPath ) ) {
       let interval = 1000;
@@ -155,7 +154,7 @@ const makeContours = ( swlon, swlat, nelon, nelat ) => {
       // console.log( "[DEBUG] ogr2ogr: ", ogr2ogr );
       execSync( ogr2ogr, {stdio: [0,1,2]} );
       // execSync( ogr2ogr, {stdio: "ignore" } );
-      // execSync( `rm -rf ${tileFilePath( x, y, z, "merge*" )}`, {stdio: "ignore" } );
+      execSync( `rm -rf ${tileFilePath( x, y, z, "merge.tif" )}`, {stdio: "ignore" } );
     }
     progressBar.update( counter += 1 );
   } );
