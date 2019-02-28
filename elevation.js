@@ -119,9 +119,9 @@ const makeContours = ( swlon, swlat, nelon, nelat ) => {
     const mergeContoursPath = tileFilePath( x, y, z, "merge-contours.shp" );
     if ( !fs.existsSync( mergeContoursPath ) ) {
       let interval = 1000;
-      if ( z >= 12 ) {
+      if ( z >= 10 ) {
         interval = 25;
-      } else if ( z >= 10 ) {
+      } else if ( z >= 8 ) {
         interval = 100;
       }
       // Merge all 8 tiles that surround this tile so we don't get weird edge

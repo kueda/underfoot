@@ -50,17 +50,16 @@ npm install
 
 # Generate elevation contours from Mapzen / Amazon elevation tiles
 # (https://registry.opendata.aws/terrain-tiles/) and load them into PostGIS
-node elevation.sh 10
-node elevation.sh 12
+./elevation.sh
 
 # Really only need the two levels, as they should be visible
 # at 2-3 zoom levels above and below.
+./node_modules/tl/bin/tl.js copy -i elevation.json -z 8 -Z 8 \
+  'postgis://underfoot:underfoot@localhost:5432/underfoot?table=contours8' \
+  mbtiles://./elevation-20190227-8-10.mbtiles
+# Annoying, but you have to ctrl-c here to get it to finish. Some kind of bug in tl.
 ./node_modules/tl/bin/tl.js copy -i elevation.json -z 10 -Z 10 \
   'postgis://underfoot:underfoot@localhost:5432/underfoot?table=contours10' \
-  mbtiles://./elevation.mbtiles
-# Annoying, but you have to ctrl-c here to get it to finish. Some kind of bug in tl.
-./node_modules/tl/bin/tl.js copy -i elevation.json -z 12 -Z 12 \
-  'postgis://underfoot:underfoot@localhost:5432/underfoot?table=contours12' \
   mbtiles://./elevation.mbtiles
 ```
 
