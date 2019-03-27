@@ -37,7 +37,7 @@ def extract_units(gdb_path):
       "-nlt",
       "MULTIPOLYGON"
     ])
-  return units_path
+  return os.path.realpath(units_path)
 
 def extract_attributes(gdb_path):
   # ogr2ogr -progress -overwrite -skipfailures -f "CSV" test.csv  ~/Downloads/JOTR_OFR_v10-2.gdb TblUnitDescriptionSummary
@@ -52,7 +52,7 @@ def extract_attributes(gdb_path):
       gdb_path,
       "TblUnitDescriptionSummary"
     ])
-  return csv_path
+  return os.path.realpath(csv_path)
 
 def schemify_attributes(attributes_path):
   print("SCHEMIFYING ATTRIBUTES for {}...".format(attributes_path))
