@@ -1,21 +1,12 @@
 {
   "vector_layers": [
     {
-      "description": "Elevation contours, zoom 8, 100m interval",
+      "description": "Elevation contours, zoom 12, 25m interval",
       "fields": {
         "elevation": "Number"
       },
-      "id": "contours8",
+      "id": "contours12",
       "maxzoom": 12,
-      "minzoom": 8
-    },
-    {
-      "description": "Elevation contours, zoom 10, 25m interval",
-      "fields": {
-        "elevation": "Number"
-      },
-      "id": "contours10",
-      "maxzoom": 13,
       "minzoom": 16
     }
   ],
