@@ -30,16 +30,23 @@ METADATA_COLUMN_NAMES = [
   'est_age'
 ]
 
-lithology_PATTERN = re.compile(r'''(
+LITHOLOGY_PATTERN = re.compile(r'''(
   andesite|
+  aplite|
   artificial|
   basalt|
+  basaltic andesite|
   chert|
   clay|
+  claystone|
   conglomerate|
+  dacite|
   diabase|
+  dolomite|
   gabbro|
+  gneiss|
   granite|
+  granitoid|
   granodiorite|
   gravel|
   graywacke|
@@ -47,12 +54,21 @@ lithology_PATTERN = re.compile(r'''(
   keratophyre|
   limestone|
   marble|
+  microdiorite|
+  monzogranite|
   mud|
   mudstone|
+  mylonite|
+  orthogneiss|
+  paragneiss|
+  pegmatite|
+  pelit(e|ic)|
   quartz\sarenite|
   quartz\sdiorite|
   quartz\skeratophyre|
+  quartz\slatite|
   quartz\smonzonite|
+  quartzite|
   rhyodacite|
   rhyolite|
   sandstone|
@@ -61,33 +77,60 @@ lithology_PATTERN = re.compile(r'''(
   serpentinite|
   shale|
   siltstone|
+  tonalite|
   tuff|
   volcanoclastic\sbreccia
 )(?:\W|$)''', re.VERBOSE|re.I)
 
+LITHOLOGY_SYNONYMS = {
+  'pelitic': 'pelite',
+  'orthogneiss': 'gneiss',
+  'paragneiss': 'gneiss'
+}
+
 IGNEOUS_ROCKS = [
+  'andesite',
+  'aplite',
   'basalt',
+  'basaltic andesite',
+  'dacite',
   'diabase',
   'gabbro',
+  'granodiorite',
   'granite',
+  'granitoid',
   'keratophyre',
+  'microdiorite',
+  'monzogranite',
+  'pegmatite',
   'quartz diorite',
   'quartz keratophyre',
+  'quartz latite',
+  'quartz monzonite',
+  'rhyodacite',
+  'tonalite',
   'tuff',
   'volcanoclastic breccia'
 ]
 
 METAMORPHIC_ROCKS = [
+  'gneiss',
   'greenstone',
+  'mylonite',
+  'quartzite',
   'schist',
   'serpentinite'
 ]
 
 SEDIMENTARY_ROCKS = [
   'chert',
+  'clay',
+  'claystone',
   'conglomerate',
+  'dolomite',
   'limestone',
   'mudstone',
+  'pelite',
   'quartz arenite',
   'sandstone',
   'schist',
@@ -100,19 +143,25 @@ FORMATION_PATTERN = re.compile(r'([A-Z]\w+ )+\s?([Ff]ormation|[Tt]errane)')
 
 spans = {
   'precambrian': [4600e6, 570e6],
+    'proterozoic': [2500e6, 541e6],
+      'paleoproterozoic': [2500e6, 1600e6],
+      'mesoproterozoic': [1600e6, 1000e6],
+      'neoproterozoic': [1000e6, 541e6],
   'paleozoic': [570e6, 245e6],
   'mesozoic': [245e6, 65e6],
     'triassic': [252.17e6, 201.3e6],  # https://en.wikipedia.org/wiki/Triassic, accessed 2016-09-17
     'jurassic': [201.3e6, 145e6],     # https://en.wikipedia.org/wiki/Jurassic, accessed 2016-09-17
-    'cretaceous': [145e6, 65e6],
-  'cenozoic': [65e6, 0],
-    'paleocene': [66e6, 56e6],
-    'eocene': [56e6, 33.9e6],
-    'oligocene': [35.4e6, 23.3e6],
-    'miocene': [23.03e6, 5.332e6],
-    'pliocene': [5.333e6, 2.58e6],
-    'pleistocene': [2.588e6, 11700],
-    'holocene': [11700, 0]
+    'cretaceous': [145e6, 66e6],
+  'cenozoic': [66e6, 0],
+    'tertiary': [66e6, 2.6e6],
+      'paleocene': [66e6, 56e6],
+      'eocene': [56e6, 33.9e6],
+      'oligocene': [35.4e6, 23.3e6],
+      'miocene': [23.03e6, 5.332e6],
+      'pliocene': [5.333e6, 2.58e6],
+    'quaternary': [2.588e6, 0],
+      'pleistocene': [2.588e6, 11700],
+      'holocene': [11700, 0]
 }
 split_spans = {}
 for span, dates in spans.items():
@@ -125,15 +174,15 @@ for span, dates in spans.items():
     dates[1] + third,
     dates[1]
   ]
-  split_spans['early %s'.format(span).lower()] = [
+  split_spans['early {}'.format(span).lower()] = [
     dates[0],
     dates[0] - third,
   ]
-  split_spans['lower %s'.format(span).lower()] = [
+  split_spans['lower {}'.format(span).lower()] = [
     dates[0],
     dates[0] - third,
   ]
-  split_spans['middle %s'.format(span).lower()] = [
+  split_spans['middle {}'.format(span).lower()] = [
     dates[0] - third,
     dates[1] + third
   ]
@@ -214,8 +263,9 @@ def met2xml(path):
 def lithology_from_text(text):
   if not text:
     return
-  lithology_matches = lithology_PATTERN.search(text)
-  return (lithology_matches.group(1) if lithology_matches else '').lower()
+  lithology_matches = LITHOLOGY_PATTERN.search(text)
+  lithology = (lithology_matches.group(1) if lithology_matches else '').lower()
+  return LITHOLOGY_SYNONYMS[lithology] if lithology in LITHOLOGY_SYNONYMS.keys() else lithology;
 
 def formation_from_text(text):
   formation_matches = FORMATION_PATTERN.search(text) # basically any proper nouns
@@ -254,7 +304,7 @@ def ages_from_span(span):
           min_age = min_ages[0]
         if max_ages:
           max_age = max_ages[0]
-  if min_age and max_age:
+  if min_age is not None and max_age is not None:
     est_age = int((min_age + max_age) / 2.0)
   return (min_age, max_age, est_age)
 
@@ -290,11 +340,16 @@ def metadata_from_usgs_met(path):
     data.append([row[col] for col in METADATA_COLUMN_NAMES])
   return data
 
-def join_polygons_and_metadata(polygons_path, metadata_path,
-    output_path="units.geojson", polygons_join_col="PTYPE", metadata_join_col="code",
+def join_polygons_and_metadata(
+    polygons_path,
+    metadata_path,
+    output_path="units.geojson",
+    polygons_join_col="PTYPE",
+    polygons_table_name=None,
+    metadata_join_col="code",
     output_format="GeoJSON"):
   # print("polygons_path: {}".format(polygons_path))
-  polygons_table_name = extless_basename(polygons_path)
+  polygons_table_name = polygons_table_name or extless_basename(polygons_path)
   column_names = [col for col in METADATA_COLUMN_NAMES]
   # column_names[column_names.index('code')] = "{} AS code".format(join_col)
   metadata_layer_name = extless_basename(metadata_path)

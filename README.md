@@ -56,7 +56,7 @@ npm install
 # at 2-3 zoom levels above and below.
 ./node_modules/tl/bin/tl.js copy -i elevation.json -z 8 -Z 8 \
   'postgis://underfoot:underfoot@localhost:5432/underfoot?table=contours8' \
-  mbtiles://./elevation-20190227-8-10.mbtiles
+  mbtiles://./elevation.mbtiles
 # Annoying, but you have to ctrl-c here to get it to finish. Some kind of bug in tl.
 ./node_modules/tl/bin/tl.js copy -i elevation.json -z 10 -Z 10 \
   'postgis://underfoot:underfoot@localhost:5432/underfoot?table=contours10' \

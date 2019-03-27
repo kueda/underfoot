@@ -22,6 +22,7 @@ sources = [
   "sim2858",      # Mark West Springs, Sonoma County (Pepperwood)
   "of96_252",     # Alameda County, CA
   "of97_456",     # Point Reyes, Marin County, CA
+  "ofr20151175",  # Joshua Tree National Park
   "of2005_1305",  # all of California, coarse
 ]
 
