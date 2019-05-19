@@ -6,8 +6,8 @@
         "elevation": "Number"
       },
       "id": "contours12",
-      "maxzoom": 12,
-      "minzoom": 16
+      "maxzoom": 16,
+      "minzoom": 11
     }
   ],
   "attribution": "<a href='https://github.com/tilezen/joerd/blob/master/docs/attribution.md'>Mapzen Terrain tiles contributors</a>"

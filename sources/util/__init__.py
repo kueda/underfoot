@@ -425,7 +425,7 @@ def process_usgs_source(base_path, url, e00_path, polygon_pattern=None,
     skip_polygonize_arcs: If ogr2ogr successfully creates a useable polygon
       shapefile in PAL.shp, then we don't need to polygonize arcs, but this
       usually isn't the case. Default value is false.
-    uncompress_e00: If the e00 is itself compressed, unconpress it with e00conv.
+    uncompress_e00: If the e00 is itself compressed, uncompress it with e00conv.
       Default is false.
   """
   work_path = make_work_dir(base_path)

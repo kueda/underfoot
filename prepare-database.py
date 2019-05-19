@@ -5,6 +5,7 @@ import os
 import re
 import psycopg2
 import time
+from multiprocessing import Pool
 
 final_table_name = "units"
 mask_table_name = "masks"
@@ -128,10 +129,12 @@ def remove_polygon_overlaps(source_table_name, skip_mask=False):
   # util.run_sql("DROP TABLE IF EXISTS \"{}\"".format(temp_source_table_name), dbname=dbname)
   # util.run_sql("DROP TABLE IF EXISTS \"{}\"".format(dumped_source_table_name), dbname=dbname)
 
+pool = Pool(processes=4)
+pool.map(util.call_cmd, [["python", os.path.join("sources", "{}.py".format(source_identifier))] for source_identifier in sources])
+
 for idx, source_identifier in enumerate(sources):
   path = os.path.join("sources", "{}.py".format(source_identifier))
   work_path = util.make_work_dir(path)
-  util.call_cmd(["python", path])
   units_path = os.path.join(work_path, "units.geojson")
   source_table_name = re.sub(r"\W", "_", source_identifier)
   util.run_sql("DROP TABLE IF EXISTS \"{}\"".format(source_table_name), dbname=dbname)

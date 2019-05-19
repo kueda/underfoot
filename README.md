@@ -39,10 +39,10 @@ python prepare-database.py
 # Install node deps for generating MBTiles
 npm install
 
-# Generate MBtiles in the shared Vagrant synced folder
+# Generate MBtiles
 ./node_modules/tl/bin/tl.js copy -i underfoot_units.json -z 7 -Z 14 \
-  'postgis://vagrant:vagrant@localhost:5432/underfoot?table=units' \
-  mbtiles:///vagrant/underfoot_units.mbtiles
+  'postgis://underfoot:underfoot@localhost:5432/underfoot?table=units' \
+  mbtiles://./underfoot_units.mbtiles
 
 # Generate roads mbtiles from OSM data (currently hard-coded for California)
 # Makes underfoot_ways.mbtiles. It takes a long time and takes a lot of disk.
@@ -53,7 +53,7 @@ npm install
 ./elevation.sh
 
 # Annoying, but you have to ctrl-c here to get it to finish. Some kind of bug in tl.
-./node_modules/tl/bin/tl.js copy -i elevation.json -z 12 -Z 12 \
+./node_modules/tl/bin/tl.js copy -i elevation.json -z 14 -Z 14 \
   'postgis://underfoot:underfoot@localhost:5432/underfoot?table=contours12' \
   mbtiles://./elevation.mbtiles
 ```

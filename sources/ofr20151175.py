@@ -31,6 +31,7 @@ def extract_units(gdb_path):
       "-skipfailures",
       "-s_srs", srs,
       "-t_srs", util.SRS,
+      "-f", "GeoJSON",
       units_path,
       gdb_path,
       "GeologicUnits",
@@ -48,6 +49,7 @@ def extract_attributes(gdb_path):
       "-progress",
       "-overwrite",
       "-skipfailures",
+      "-f", "CSV",
       csv_path,
       gdb_path,
       "TblUnitDescriptionSummary"
