@@ -45,7 +45,9 @@ LITHOLOGY_PATTERN = re.compile(r'''(
   dolomite|
   gabbro|
   gneiss|
+  gneissic|
   granite|
+  granitic|
   granitoid|
   granodiorite|
   gravel|
@@ -85,7 +87,9 @@ LITHOLOGY_PATTERN = re.compile(r'''(
 LITHOLOGY_SYNONYMS = {
   'pelitic': 'pelite',
   'orthogneiss': 'gneiss',
-  'paragneiss': 'gneiss'
+  'paragneiss': 'gneiss',
+  'gneissic': 'gneiss',
+  'granitic': 'granite'
 }
 
 IGNEOUS_ROCKS = [

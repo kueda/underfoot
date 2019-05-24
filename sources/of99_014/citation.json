@@ -1,0 +1,51 @@
+[
+	{
+		"id": "http://zotero.org/users/2632539/items/2V5HVHPG",
+		"type": "webpage",
+		"title": "Regional Geologic Map of San Andreas and Related Faults in Carrizo Plain, Temblor, Caliente and La Panza Ranges and Vicinity, California; A Digital Database",
+		"container-title": "United States Geological Survey",
+		"URL": "https://pubs.usgs.gov/of/1999/of99-014/",
+		"author": [
+			{
+				"family": "Diblee",
+				"given": "T.W."
+			},
+			{
+				"family": "Graham",
+				"given": "S.E."
+			},
+			{
+				"family": "Mahony",
+				"given": "T.M."
+			},
+			{
+				"family": "Blissenbach",
+				"given": "J.L."
+			},
+			{
+				"family": "Mariant",
+				"given": "J.J."
+			},
+			{
+				"family": "Wentworth",
+				"given": "C.M."
+			}
+		],
+		"issued": {
+			"date-parts": [
+				[
+					"1999"
+				]
+			]
+		},
+		"accessed": {
+			"date-parts": [
+				[
+					"2019",
+					5,
+					20
+				]
+			]
+		}
+	}
+]
