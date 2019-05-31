@@ -89,15 +89,16 @@ def remove_polygon_overlaps(source_table_name, skip_mask=False):
         mask_table_name,
         dumped_source_table_name, mask_table_name
       ))
-  util.run_sql("ALTER TABLE {} ADD COLUMN id SERIAL PRIMARY KEY".format(dumped_source_table_name))
+  util.run_sql("ALTER TABLE {} ADD COLUMN id SERIAL PRIMARY KEY, ADD COLUMN area float".format(dumped_source_table_name))
+  util.run_sql("UPDATE {} SET area = ST_Area(geom)".format(dumped_source_table_name))
   # Now we iterate over each polygon order by size, and use it to cut a hole
   # out of all the other polygons that intersect it
-  print("\tCutting larger polygons by smaller polygons...")
   con = psycopg2.connect("dbname=underfoot")
   cur1 = con.cursor()
   cur1.execute("SELECT id, ST_Area(geom) FROM {} ORDER BY ST_Area(geom) ASC".format(dumped_source_table_name))
-  for row in cur1:
-    print('.', end="", flush=True)
+  for idx, row in enumerate(cur1):
+    print("\tCutting larger polygons by smaller polygons... ({} / {}, {}%)".format(
+      idx, cur1.rowcount, round(idx / cur1.rowcount * 100, 2)), end="\r", flush=True)
     id = row[0]
     area = row[1]
     cur2 = con.cursor()
@@ -107,7 +108,7 @@ def remove_polygon_overlaps(source_table_name, skip_mask=False):
       WHERE
         ST_Intersects(geom, (SELECT geom FROM {} WHERE id = {}))
         AND id != {}
-        AND ST_Area(geom) >= {}
+        AND area >= {}
     """.format(
       dumped_source_table_name,
       dumped_source_table_name, id,
@@ -198,10 +199,10 @@ for idx, source_identifier in enumerate(sources):
               ST_MakeValid(
                 ST_Union(geom)
               ),
-              1,
+              0.01,
               'join=mitre'
             ),
-            -1,
+            -0.01,
             'join=mitre'
           )
         )
@@ -223,10 +224,10 @@ for idx, source_identifier in enumerate(sources):
                       ST_MakeValid(
                         ST_Union(s.geom)
                       ),
-                      1,
+                      0.01,
                       'join=mitre'
                     ),
-                    -1,
+                    -0.01,
                     'join=mitre'
                   )
                 FROM {} s
