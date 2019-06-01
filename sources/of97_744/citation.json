@@ -1,0 +1,25 @@
+[
+	{
+		"id": "http://zotero.org/users/2632539/items/RMQPTFD3",
+		"type": "webpage",
+		"title": "USGS Open-File Report 97-744",
+		"container-title": "United States Geological Survey",
+		"URL": "https://pubs.usgs.gov/of/1997/of97-744/",
+		"issued": {
+			"date-parts": [
+				[
+					"1997"
+				]
+			]
+		},
+		"accessed": {
+			"date-parts": [
+				[
+					"2019",
+					6,
+					1
+				]
+			]
+		}
+	}
+]

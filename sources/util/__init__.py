@@ -31,10 +31,13 @@ METADATA_COLUMN_NAMES = [
 ]
 
 LITHOLOGY_PATTERN = re.compile(r'''(
+  agglomerate|
   andesite|
+  andesitic|
   aplite|
   artificial|
   basalt|
+  basaltic|
   basaltic andesite|
   chert|
   clay|
@@ -73,6 +76,7 @@ LITHOLOGY_PATTERN = re.compile(r'''(
   quartzite|
   rhyodacite|
   rhyolite|
+  rhyolitic|
   sandstone|
   sand|
   schist|
@@ -85,14 +89,18 @@ LITHOLOGY_PATTERN = re.compile(r'''(
 )(?:\W|$)''', re.VERBOSE|re.I)
 
 LITHOLOGY_SYNONYMS = {
-  'pelitic': 'pelite',
+  'andesitic': 'andesite',
+  'basaltic': 'basalt',
+  'gneissic': 'gneiss',
+  'granitic': 'granite',
   'orthogneiss': 'gneiss',
   'paragneiss': 'gneiss',
-  'gneissic': 'gneiss',
-  'granitic': 'granite'
+  'pelitic': 'pelite',
+  'rhyolitic': 'rhyolite'
 }
 
 IGNEOUS_ROCKS = [
+  'agglomerate',
   'andesite',
   'aplite',
   'basalt',
@@ -100,9 +108,9 @@ IGNEOUS_ROCKS = [
   'dacite',
   'diabase',
   'gabbro',
-  'granodiorite',
   'granite',
   'granitoid',
+  'granodiorite',
   'keratophyre',
   'microdiorite',
   'monzogranite',
@@ -112,6 +120,7 @@ IGNEOUS_ROCKS = [
   'quartz latite',
   'quartz monzonite',
   'rhyodacite',
+  'rhyolite',
   'tonalite',
   'tuff',
   'volcanoclastic breccia'
@@ -142,7 +151,7 @@ SEDIMENTARY_ROCKS = [
   'siltstone'
 ]
 
-GROUP_PATTERN = re.compile(r'(Franciscan complex|Great Valley Sequence)')
+GROUPING_PATTERN = re.compile(r'([Ff]ranciscan [Cc]omplex|[Gg]reat [Vv]alley [Ss]equence)')
 FORMATION_PATTERN = re.compile(r'([A-Z]\w+ )+\s?([Ff]ormation|[Tt]errane)')
 
 spans = {
@@ -273,7 +282,11 @@ def lithology_from_text(text):
 
 def formation_from_text(text):
   formation_matches = FORMATION_PATTERN.search(text) # basically any proper nouns
-  return formation_matches.group(0) if formation_matches else ''
+  return formation_matches.group(0).title() if formation_matches else ''
+
+def grouping_from_text(text):
+  grouping_matches = GROUPING_PATTERN.search(text)
+  return grouping_matches.group(0).title() if grouping_matches else ''
 
 def rock_type_from_lithology(lithology):
   rock_type = ''
