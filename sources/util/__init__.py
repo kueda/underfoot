@@ -30,73 +30,86 @@ METADATA_COLUMN_NAMES = [
   'est_age'
 ]
 
-LITHOLOGY_PATTERN = re.compile(r'''(
-  agglomerate|
-  andesite|
-  andesitic|
-  aplite|
-  artificial|
-  basalt|
-  basaltic|
-  basaltic andesite|
-  chert|
-  clay|
-  claystone|
-  conglomerate|
-  dacite|
-  diabase|
-  dolomite|
-  gabbro|
-  gneiss|
-  gneissic|
-  granite|
-  granitic|
-  granitoid|
-  granodiorite|
-  gravel|
-  graywacke|
-  greenstone|
-  keratophyre|
-  limestone|
-  marble|
-  microdiorite|
-  monzogranite|
-  mud|
-  mudstone|
-  mylonite|
-  orthogneiss|
-  paragneiss|
-  pegmatite|
-  pelit(e|ic)|
-  quartz\sarenite|
-  quartz\sdiorite|
-  quartz\skeratophyre|
-  quartz\slatite|
-  quartz\smonzonite|
-  quartzite|
-  rhyodacite|
-  rhyolite|
-  rhyolitic|
-  sandstone|
-  sand|
-  schist|
-  serpentinite|
-  shale|
-  siltstone|
-  tonalite|
-  tuff|
-  volcanoclastic\sbreccia
-)(?:\W|$)''', re.VERBOSE|re.I)
+LITHOLOGY_PATTERN = re.compile(
+  re.sub(r'\s+', '', r'''(
+    agglomerate|
+    alluvium|
+    alluvial\sfan|
+    andesite|
+    andesitic|
+    aplite|
+    artificial|
+    basalt|
+    basaltic|
+    basaltic andesite|
+    chert|
+    clay|
+    claystone|
+    conglomerate|
+    dacite|
+    diabase|
+    dolomite|
+    gabbro|
+    gneiss|
+    gneissic|
+    granite|
+    granitic|
+    granitoid|
+    granodiorite|
+    gravel|
+    graywacke|
+    greenstone|
+    keratophyre|
+    landslide|
+    levee|
+    limestone|
+    marble|
+    m(e|é)lange|
+    microdiorite|
+    monzogranite|
+    mud|
+    mudstone|
+    mylonite|
+    orthogneiss|
+    paragneiss|
+    pegmatite|
+    pelit(e|ic)|
+    quartz\sarenite|
+    quartz\sdiorite|
+    quartz\skeratophyre|
+    quartz\slatite|
+    quartz\smonzonite|
+    quartzite|
+    rhyodacite|
+    rhyolite|
+    rhyolitic|
+    sandstone|
+    sand|
+    schist|
+    serpentinite|
+    shale|
+    siltstone|
+    surficial\sdeposit|
+    tonalite|
+    tuff|
+    unconsolidated\smaterial|
+    volcanoclastic\sbreccia
+  )''', flags=re.MULTILINE),
+  flags=re.VERBOSE|re.I
+)
 
 LITHOLOGY_SYNONYMS = {
   'andesitic': 'andesite',
+  'alluvial fan': 'alluvium',
   'basaltic': 'basalt',
   'gneissic': 'gneiss',
   'granitic': 'granite',
   'orthogneiss': 'gneiss',
   'paragneiss': 'gneiss',
   'pelitic': 'pelite',
-  'rhyolitic': 'rhyolite'
+  'rhyolitic': 'rhyolite',
+  'mélange': 'melange',
+  'surficial deposit': 'surficial deposits'
 }
 
 IGNEOUS_ROCKS = [
@@ -141,6 +154,7 @@ SEDIMENTARY_ROCKS = [
   'claystone',
   'conglomerate',
   'dolomite',
+  'graywacke',
   'limestone',
   'mudstone',
   'pelite',
@@ -149,6 +163,13 @@ SEDIMENTARY_ROCKS = [
   'schist',
   'shale',
   'siltstone'
+]
+
+NON_ROCKS = [
+  'alluvium',
+  'landslide',
+  'melange',
+  'sand'
 ]
 
 GROUPING_PATTERN = re.compile(r'([Ff]ranciscan [Cc]omplex|[Gg]reat [Vv]alley [Ss]equence)')
@@ -277,7 +298,7 @@ def lithology_from_text(text):
   if not text:
     return
   lithology_matches = LITHOLOGY_PATTERN.search(text)
-  lithology = (lithology_matches.group(1) if lithology_matches else '').lower()
+  lithology = (lithology_matches[0] if lithology_matches else '').lower()
   return LITHOLOGY_SYNONYMS[lithology] if lithology in LITHOLOGY_SYNONYMS.keys() else lithology;
 
 def formation_from_text(text):
@@ -401,7 +422,8 @@ def infer_metadata_from_csv(infile_path):
       writer.writeheader()
       for row in reader:
         row['span'] = span_from_text(row['title'])
-        row['lithology'] = lithology_from_text(row['title'])
+        if not row['lithology'] or len(row['lithology']) == 0:
+          row['lithology'] = lithology_from_text(row['title'])
         if not row['lithology'] or len(row['lithology']) == 0:
           row['lithology'] = lithology_from_text(row['description'])
         row['formation'] = formation_from_text(row['title'])

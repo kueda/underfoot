@@ -13,7 +13,7 @@ dbname = "underfoot"
 srid = "4326"
 sources = [
   "mf2342c",      # Oakland, CA
-  "mf2337c",      # SF, parts of Marin County, CA
+  "mf2337c",      # SF, most of Marin County, CA
   "of94_622",     # Contra Costa County, CA
   "of97_489",     # Santa Cruz County, CA
   "of98_354",     # South SF
