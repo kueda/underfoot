@@ -76,8 +76,16 @@ def merge_shapes(paths):
 def merge_attributes(paths):
   print("MERGING SHAPEFILES...")
   merged_path = "merged_units.csv"
-  merged = pd.concat([pd.read_csv(path) for path in paths])
-  merged.to_csv(merged_path)
+  merged = pd.concat([pd.read_csv(path, encoding="ISO-8859-1") for path in paths])
+  merged.loc[:, [
+    'ORIG_LABEL',
+    'UNIT_LINK',
+    'UNIT_NAME',
+    'UNIT_AGE',
+    'UNITDESC',
+    'UNIT_COM',
+    'ROCKTYPE1'
+  ]].to_csv(merged_path, encoding='utf-8')
   return merged_path
 
 def copy_citation():
@@ -157,7 +165,10 @@ def copy_citation():
   with open(os.path.join(work_path, "citation.json"), 'w') as outfile:
     json.dump(data, outfile)
 
-states = ['CA']
+states = [
+  'AZ',
+  'CA'
+]
 shape_paths = [download_shapes(state) for state in states]
 single_shapefile_path = merge_shapes(shape_paths)
 attribute_paths = [download_attributes(state) for state in states]
