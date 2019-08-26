@@ -422,9 +422,9 @@ def infer_metadata_from_csv(infile_path):
       writer.writeheader()
       for row in reader:
         row['span'] = span_from_text(row['title'])
-        if not row['lithology'] or len(row['lithology']) == 0:
+        if not row.get('lithology') or len(row['lithology']) == 0:
           row['lithology'] = lithology_from_text(row['title'])
-        if not row['lithology'] or len(row['lithology']) == 0:
+        if not row.get('lithology') or len(row['lithology']) == 0:
           row['lithology'] = lithology_from_text(row['description'])
         row['formation'] = formation_from_text(row['title'])
         if row['lithology']:
