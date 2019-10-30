@@ -12,20 +12,20 @@ mask_table_name = "masks"
 dbname = "underfoot"
 srid = "4326"
 sources = [
-  "mf2342c",      # Oakland, CA
-  "mf2337c",      # SF, most of Marin County, CA
-  "of94_622",     # Contra Costa County, CA
-  "of97_489",     # Santa Cruz County, CA
-  "of98_354",     # South SF
-  "mf2403c",      # Napa and Lake Counties, in part
-  "of98_137",     # San Mateo County, CA
-  "mf2402",       # Western Sonoma County
-  "sim2858",      # Mark West Springs, Sonoma County (Pepperwood)
-  "of96_252",     # Alameda County, CA
-  "of97_456",     # Point Reyes, Marin County, CA
-  "of97_744",     # San Francisco Bay Area
-  "ofr20151175",  # Joshua Tree National Park
-  "of99_014",     # Carrizo Plain
+  # "mf2342c",      # Oakland, CA
+  # "mf2337c",      # SF, most of Marin County, CA
+  # "of94_622",     # Contra Costa County, CA
+  # "of97_489",     # Santa Cruz County, CA
+  # "of98_354",     # South SF
+  # "mf2403c",      # Napa and Lake Counties, in part
+  # "of98_137",     # San Mateo County, CA
+  # "mf2402",       # Western Sonoma County
+  # "sim2858",      # Mark West Springs, Sonoma County (Pepperwood)
+  # "of96_252",     # Alameda County, CA
+  # "of97_456",     # Point Reyes, Marin County, CA
+  # "of97_744",     # San Francisco Bay Area
+  # "ofr20151175",  # Joshua Tree National Park
+  # "of99_014",     # Carrizo Plain
   "of2005_1305",  # all of California, coarse
 ]
 
@@ -112,8 +112,8 @@ def process_source(source_identifier):
   work_source_table_name = "work_{}".format(source_table_name)
   util.run_sql("DROP TABLE IF EXISTS \"{}\"".format(work_source_table_name), dbname=dbname)
   util.run_sql("CREATE TABLE {} AS SELECT * FROM {}".format(work_source_table_name, source_table_name), dbname=dbname)
-  print("Deleting water units...")
-  util.run_sql("DELETE FROM {} WHERE LOWER(code) IN ('h2o', 'water')".format(work_source_table_name), dbname=dbname)
+  # print("Deleting water units...")
+  # util.run_sql("DELETE FROM {} WHERE LOWER(code) IN ('h2o', 'water')".format(work_source_table_name), dbname=dbname)
   print("Deleting empty units...")
   util.run_sql("DELETE FROM {} WHERE code IS NULL OR code = ''".format(work_source_table_name), dbname=dbname)
   print("Repairing invalid geometries...")

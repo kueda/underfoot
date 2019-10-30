@@ -166,7 +166,7 @@ def copy_citation():
     json.dump(data, outfile)
 
 states = [
-  'AZ',
+  # 'AZ',
   'CA'
 ]
 shape_paths = [download_shapes(state) for state in states]

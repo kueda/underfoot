@@ -35,6 +35,7 @@ def run():
         'formation': 'str',
         'grouping': 'str',
         'span': 'str',
+        'controlled_span': 'str',
         'min_age': 'int',
         'max_age': 'int',
         'est_age': 'int',
@@ -119,6 +120,7 @@ def run():
           if title and (lithology == '' or lithology == None):
             lithology = util.lithology_from_text(title)
           span = None
+          controlled_span = None
           min_age = None
           max_age = None
           est_age = None
@@ -128,6 +130,7 @@ def run():
             span = age_dict[unit_age.lower()]
             if span:
               min_age, max_age, est_age = util.ages_from_span(span)
+              controlled_span = util.controlled_span_from_text(span)
           output.write({
             'properties': {
               'code': unit['properties']['UNIT'],
@@ -138,6 +141,7 @@ def run():
               'formation': formation,
               'grouping': grouping,
               'span': span,
+              'controlled_span': controlled_span,
               'min_age': min_age,
               'max_age': max_age,
               'est_age': est_age,
