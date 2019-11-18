@@ -7,6 +7,8 @@ import psycopg2
 import time
 from multiprocessing import Pool
 
+NUM_PROCESSES = 4
+
 final_table_name = "units"
 mask_table_name = "masks"
 dbname = "underfoot"
@@ -197,7 +199,7 @@ util.run_sql("""
 """.format(mask_table_name, srid))
 
 # Creaate a processing pool to max out 4 processors
-pool = Pool(processes=4)
+pool = Pool(processes=NUM_PROCESSES)
 pool.map(process_source, sources)
 
 for idx, source_identifier in enumerate(sources):

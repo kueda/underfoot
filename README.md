@@ -70,7 +70,8 @@ Each source is an executable Python script that creates a directory at `sources/
   1. `rock_type`: igneous, sedimentary, or metamorphic
   1. `formation`
   1. `grouping`: i.e. the group, e.g. Franciscan Complex 
-  1. `span`: geologic time span of unit formation, e.g. Cretaceous
+  1. `span`: geologic time span of unit formation, e.g. Cretaceous, extracted from source but generally verbatim
+  1. `controlled_span`: geologic time span of unit based on a controlled vocabulary dereived from the [Wikipedia "Period start" template](https://en.wikipedia.org/w/index.php?title=Template:Period_start&action=edit)
   1. `min_age`: Minimum age of the unit
   1. `max_age`: Maximum age of the unit
   1. `est_age`: Estimated age of the unit

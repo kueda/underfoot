@@ -50,7 +50,10 @@ def schemify_attributes(attributes_path):
         row['lithology'] = row['ROCKTYPE1']
         row['rock_type'] = util.rock_type_from_lithology(row['ROCKTYPE1'])
         row['span'] = row['UNIT_AGE']
-        row['min_age'], row['max_age'], row['est_age'] = util.ages_from_span(row['UNIT_AGE'])
+        if not row['span']:
+          row['span'] = util.span_from_lithology(row['lithology'])
+        row['controlled_span'] = util.controlled_span_from_span(row['span'])
+        row['min_age'], row['max_age'], row['est_age'] = util.ages_from_span(row['span'])
         writer.writerow(row)
   return os.path.realpath(outfile_path)
 

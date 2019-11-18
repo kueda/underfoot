@@ -78,6 +78,7 @@ def schemify_attributes(attributes_path):
           row['span'] = util.span_from_text(split_unit_age[1])
         if 'span' not in row.keys() or not row['span']:
           row['span'] = util.span_from_text(row['UnitAge'])
+        row['controlled_span'] = util.controlled_span_from_span(row['span'])
         row['min_age'], row['max_age'], row['est_age'] = util.ages_from_span(row['span'])
         writer.writerow(row)
   return os.path.realpath(outfile_path)

@@ -31,6 +31,8 @@ METADATA_COLUMN_NAMES = [
   'controlled_span'
 ]
 
+# Note that you should try to list substrings *after* longer strings, e.g. mud
+# after mudstone, otherwise "mudstone" in text will get matched to "mud"
 LITHOLOGY_PATTERN = re.compile(
   re.sub(r'\s+', '', r'''(
     agglomerate|
@@ -40,12 +42,12 @@ LITHOLOGY_PATTERN = re.compile(
     andesitic|
     aplite|
     artificial|
-    basalt|
-    basaltic|
     basaltic andesite|
+    basaltic|
+    basalt|
     chert|
-    clay|
     claystone|
+    clay|
     conglomerate|
     dacite|
     diabase|
@@ -68,8 +70,8 @@ LITHOLOGY_PATTERN = re.compile(
     m(e|é)lange|
     microdiorite|
     monzogranite|
-    mud|
     mudstone|
+    mud|
     mylonite|
     orthogneiss|
     paragneiss|
@@ -596,12 +598,12 @@ def rock_type_from_lithology(lithology):
 def span_from_text(text):
   if not text:
     return
-  span_matches = SPAN_PATTERN.search(text)
+  span_matches = SPAN_PATTERN.search(text.lower())
   if span_matches:
     return span_matches.group(1).lower()
 
 def span_from_lithology(lithology):
-  if lithology and lithology == "artificial":
+  if lithology and (lithology == "artificial" or lithology == "water"):
     return "present"
 
 def span_from_code(code):
@@ -621,20 +623,39 @@ def controlled_span_from_span(text):
     return
   key = re.sub(r'\(.+?\)', "", text)
   key = re.sub(r'\s+', " ", key)
-  if key in WIKI_SPANS.keys():
-    return key
-  key = re.sub(r'early\s+', "lower ", key)
+  key = key.lower().strip()
   key = re.sub(r'\s+', " ", key)
   if key in WIKI_SPANS.keys():
     return key
-  key = re.sub(r'late\s+', "upper ", key)
-  key = re.sub(r'\s+', " ", key)
-  if key in WIKI_SPANS.keys():
-    return key
-  key = re.sub(r'(upper|middle|lower|early|late)\s+', "", key)
-  key = re.sub(r'\s+', " ", key)
-  if key in WIKI_SPANS.keys():
-    return key
+  key_sans_x_to_y = re.sub(r'(early|middle|late) to (early|middle|late)', "", key).strip()
+  if key_sans_x_to_y in WIKI_SPANS.keys():
+    return key_sans_x_to_y
+  key_sans_lower = re.sub(r'early\s+', "lower ", key).strip()
+  if key_sans_lower in WIKI_SPANS.keys():
+    return key_sans_lower
+  key_sans_upper = re.sub(r'late\s+', "upper ", key).strip()
+  if key_sans_upper in WIKI_SPANS.keys():
+    return key_sans_upper
+  key_sans_subspan = re.sub(r'(upper|middle|lower|early|late)\s+', "", key).strip()
+  if key_sans_subspan in WIKI_SPANS.keys():
+    return key_sans_subspan
+  # Split on (to|\-)
+  matches = re.findall(r'([\s\w]+)\s+(to|\-|or)\s+([\s\w]+)', key)
+  if len(matches) > 0:
+    # get controlled_span for each half
+    print("matches[0][0]: {}".format(matches[0][0]))
+    start_span = controlled_span_from_span(matches[0][0])
+    print("start_span: {}".format(start_span))
+    end_span = controlled_span_from_span(matches[0][2])
+    if start_span and end_span:
+      start_start_age = SPANS[start_span][0]
+      end_end_age = SPANS[end_span][1]
+      # sort wiki spans by start_date asc
+      sorted_spans = sorted([(k, SPANS[k][0], SPANS[k][1]) for k in SPANS], key=lambda s: s[1])
+      # find first span where start_age >= 1st half start age and end_age <= 2nd half end age
+      container_span = next((s for s in sorted_spans if s[1] >= start_start_age and s[2] <= end_end_age), None)
+      if container_span:
+        return container_span[0]
 
 def ages_from_span(span):
   min_age = None

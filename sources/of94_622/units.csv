@@ -16,6 +16,7 @@ Tm,Moraga Formation (Miocene),"Basalt and andesite flows, minor rhyolite tuff. A
 Tms,"Moraga Formation (Miocene), interflow sedimentary rocks",Interflow sedimentary rocks of the Moraga Formation
 Tor,Orinda Formation (Miocene),"Conglomerate, sandstone, siltstone. Nonmarine with abundant clasts of rocks from the Franciscan Complex."
 Tcc,Claremont Chert (Miocene),"Laminated and bedded diatomaceous chert, minor brown shale and white sandstone. Interbedded sandstone (Tccs) mapped locally."
+Tccs,Interbedded sandstone of the Claremont Chert (Miocene),
 Tgs,"Unnamed sandstone and siltstone (Eocene, Oligocene, and Miocene)",Glauconitic sandstone and brown massive siltstone.
 Tsh,Greenish gray shale (Eocene),
 Kph,Pinehurst Shale (Late Cretaceous),"Siliceous shale with interbedded sandstone and siltstone. Includes maroon, concretionary shale at base. This formation was originally considered to be Paleocene, but it contains foraminifers and radiolarians of Late Cretaceous age in its type area and throughout its outcrop extent."
@@ -55,6 +56,7 @@ Tts,Tuffaceous sandstone (Oligocene or Miocene?),"Light-gray tuffaceous sandston
 Tsr,San Ramon Sandstone (Oligocene and/or Miocene),"Massive, medium to coarse-grained, fossiliferous, marine sandstone."
 Tshc,Shale and claystone (Eocene),Also contains minor sandstone.
 Tcgl,"Conglomerate, sandstone, siltstone (Miocene and Pliocene)","Contains abundant clasts of Claremont chert. Includes rhyolite tuff and tuff breccia (Tcglt), correlated with the 5.7 to 6.1 Ma Roblar tuff of Sonoma County (Sarna-Wojcicki, written communication,1990)."
+Tcglt,Rhyolite tuff and tuff breccia (Miocene and Pliocene),
 Tut,Tuff (Miocene),Tuffaceous sandstone containing pumice fragments.
 Tdi,Diatomite (Miocene),Light gray to white with minor brown shale.
 Tsa,Sandstone (Miocene),"Massive, light gray, fine to medium-grained."
@@ -111,7 +113,7 @@ Tm,Meganos Formation (Paleocene),"Sandstone, shale, and conglomerate."
 Tme,Meganos Formation (Paleocene) Upper member,"Greenish-gray to light gray, biotite-rich siltstone and silty mudstone, with abundant plant debris in places. Division E of Meganos Formation of Clark (1921)"
 Tmd,Meganos Formation (Paleocene) Sandstone member,"Medium grained, light gray to bluish-gray sandstone with carbonaceous laminations; pebble conglomerate present locally at base. Division D of Meganos Formation of Clark (1921)."
 Tmc,Meganos Formation (Paleocene) Shale member,Bluish - gray shale with sandstone interbeds. Division C of Meganos Formation of Clark (1921).
-Tmcss,Meganos Formation (Paleocene) Sandstone interbeds,
+Tmcs,Meganos Formation (Paleocene) Sandstone interbeds,
 Tma,Meganos Formation (Paleocene) Lower member,"Sandstone with basal conglomerate. Medium to coarse grained, clean, white, distinctly cross bedded, biotite bearing arkosic sandstone. Equivalent to Divisions A and B of Meganos Formation of Clark (1921)."
 Tmz,Unnamed sandstone and shale (Paleocene),
 Tmzu,Unnamed sandstone and shale (Paleocene) Upper member,Siltstone and shale.
@@ -137,3 +139,4 @@ Jpb,"Coast Range Ophiolite (Jurassic) Pillow basalt, basalt breccia, and minor d
 Jdb,Coast Range Ophiolite (Jurassic) Diabase,Mainly sills and dikes; also includes screens of pillow basalt.
 sp,Coast Range Ophiolite (Jurassic) Serpentinite,"Mainly sheared serpentinite, but also includes massive harzburgite."
 sc,Coast Range Ophiolite (Jurassic) Silica carbonate rocks,Altered serpentinite.
+H2O,Water,

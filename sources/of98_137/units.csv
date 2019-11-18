@@ -1,4 +1,4 @@
-code,title,grouping,description
+code,title,group,description
 af,Artificial fill (Historic),,"Loose to very well consolidated gravel, sand, silt, clay, rock fragments, organic matter, and man-made debris in various combinations.  Thickness is variable and may exceed 30 m in places. Some is  compacted and quite firm, but fill made before 1965 is nearly everywhere not compacted and consists simply of dumped materials"
 alf,Artificial levee fill (Historic),,"Man-made deposit of various materials and ages, forming artificial levees as much as 6.5 m high.  Some are compacted and quite firm, but fills made before 1965 are almost everywhere not compacted and consist simply of dumped materials.  The distribution of levee fill conforms to levees shown on the most recent U.S. Geological Survey 7.5- minute quadrangle maps"
 Qhasc,Artificial stream channels (Historic),,"Modified stream channels, in most places where streams have been straightened and realigned"
@@ -66,3 +66,4 @@ sp,Serpentinite (Cretaceous and/or Jurassic),,"Greenish-gray to bluish-green she
 Jsv,Siliceous volcanic rocks and keratophyre (Jurassic?),,"Highly altered intermediate and silicic volcanic and hypabyssal rocks.  Feldspars are almost all replaced by albite. Recent biostratigraphic and isotopic analyses yielded a Jurassic age for similar rocks in Alameda and Contra Costa Counties (Jones and Curtis, 1991)"
 Jgb,Gabbro (Jurassic?),,"Light green-gray, dark-gray weathering, mafic intrusive rock, mostly gabbro but also includes some diabase locally.  The age of this unit is unknown, but the unit is probably part of the Jurassic Coast Range Ophiolite"
 m,Marble and hornfels (Paleozoic?),,"White to gray finely crystalline marble, graphitic marble, and quartz-mica hornfels, in places distinctly bedded, in places foliated.  Marble and hornfels crop out as rare isolated bodies as much as 75 m long in granitic rocks of Montara Mountain"
+H2O,Water,,

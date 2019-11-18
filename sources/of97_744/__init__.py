@@ -96,7 +96,7 @@ def run():
     with fiona.collection(units_path, "w", "GeoJSON", schema) as output:
       with fiona.open(input_path) as units:
         for idx, unit in enumerate(units):
-          if unit['properties']['NPTYPE'] <= 0:
+          if unit['properties']['NPTYPE'] < 0:
             continue
           print("Filling in data for {} ({} / {}, {}%)".format(
             str(unit['properties']['SF_MTLS2_D']).ljust(8),
@@ -115,10 +115,10 @@ def run():
           if unit['properties']['AGELITH']:
             unit_age, unit_lith = unit['properties']['AGELITH'].split( "-" )
           lithology = None
-          if unit_lith:
-            lithology = util.lithology_from_text(lith_dict[unit_lith])
-          if title and (lithology == '' or lithology == None):
+          if title:
             lithology = util.lithology_from_text(title)
+          if unit_lith and (lithology == '' or lithology == None):
+            lithology = util.lithology_from_text(lith_dict[unit_lith])
           span = None
           controlled_span = None
           min_age = None
@@ -130,7 +130,10 @@ def run():
             span = age_dict[unit_age.lower()]
             if span:
               min_age, max_age, est_age = util.ages_from_span(span)
-              controlled_span = util.controlled_span_from_text(span)
+          if span:
+            controlled_span = util.controlled_span_from_span(span)
+          if controlled_span == None and lithology:
+            controlled_span = util.span_from_lithology(lithology)
           output.write({
             'properties': {
               'code': unit['properties']['UNIT'],
