@@ -67,7 +67,7 @@ LITHOLOGY_PATTERN = re.compile(
     levee|
     limestone|
     marble|
-    m(e|é)lange|
+    m(e|é|é)lange|
     microdiorite|
     monzogranite|
     mudstone|
@@ -77,7 +77,7 @@ LITHOLOGY_PATTERN = re.compile(
     paragneiss|
     pegmatite|
     pelit(e|ic)|
-    quartz\sarenite|
+    quartz(\-lithic)?\sarenite|
     quartz\sdiorite|
     quartz\skeratophyre|
     quartz\slatite|
@@ -97,23 +97,31 @@ LITHOLOGY_PATTERN = re.compile(
     tuff|
     unconsolidated\smaterial|
     volcanoclastic\sbreccia|
-    water
+    water|
+    metasedimentary|
+    sedimentary|
+    volcanic
   )''', flags=re.MULTILINE),
   flags=re.VERBOSE|re.I
 )
 
 LITHOLOGY_SYNONYMS = {
-  'andesitic': 'andesite',
   'alluvial fan': 'alluvium',
+  'andesitic': 'andesite',
   'basaltic': 'basalt',
   'gneissic': 'gneiss',
   'granitic': 'granite',
+  'metasedimentary': 'metasedimentary rock',
+  'mélange': 'melange',
+  'mélange': 'melange',
   'orthogneiss': 'gneiss',
   'paragneiss': 'gneiss',
   'pelitic': 'pelite',
+  'quartz-lithic arenite': 'quartz arenite',
   'rhyolitic': 'rhyolite',
-  'mélange': 'melange',
-  'surficial deposit': 'surficial deposits'
+  'sedimentary': 'sedimentary rock',
+  'surficial deposit': 'surficial deposits',
+  'volcanic': 'volcanic rock',
 }
 
 IGNEOUS_ROCKS = [
@@ -140,7 +148,8 @@ IGNEOUS_ROCKS = [
   'rhyolite',
   'tonalite',
   'tuff',
-  'volcanoclastic breccia'
+  'volcanoclastic breccia',
+  'volcanic rock'
 ]
 
 METAMORPHIC_ROCKS = [
@@ -149,7 +158,8 @@ METAMORPHIC_ROCKS = [
   'mylonite',
   'quartzite',
   'schist',
-  'serpentinite'
+  'serpentinite',
+  'metasedimentary rock'
 ]
 
 SEDIMENTARY_ROCKS = [
@@ -166,7 +176,8 @@ SEDIMENTARY_ROCKS = [
   'sandstone',
   'schist',
   'shale',
-  'siltstone'
+  'siltstone',
+  'sedimentary rock'
 ]
 
 NON_ROCKS = [
@@ -622,9 +633,14 @@ def controlled_span_from_span(text):
   if not text:
     return
   key = re.sub(r'\(.+?\)', "", text)
+  key = re.sub(r'undivided', "", key)
   key = re.sub(r'\s+', " ", key)
   key = key.lower().strip()
-  key = re.sub(r'\s+', " ", key)
+  synonyms = {
+    'present': 'holocene'
+  }
+  if key in synonyms.keys() and synonyms[key] in WIKI_SPANS:
+    return synonyms[key]
   if key in WIKI_SPANS.keys():
     return key
   key_sans_x_to_y = re.sub(r'(early|middle|late) to (early|middle|late)', "", key).strip()
@@ -640,12 +656,10 @@ def controlled_span_from_span(text):
   if key_sans_subspan in WIKI_SPANS.keys():
     return key_sans_subspan
   # Split on (to|\-)
-  matches = re.findall(r'([\s\w]+)\s+(to|\-|or)\s+([\s\w]+)', key)
+  matches = re.findall(r'([\s\w]+)\s+(to|\-|or|and\/or)\s+([\s\w]+)', key)
   if len(matches) > 0:
     # get controlled_span for each half
-    print("matches[0][0]: {}".format(matches[0][0]))
     start_span = controlled_span_from_span(matches[0][0])
-    print("start_span: {}".format(start_span))
     end_span = controlled_span_from_span(matches[0][2])
     if start_span and end_span:
       start_start_age = SPANS[start_span][0]

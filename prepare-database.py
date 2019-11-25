@@ -14,20 +14,20 @@ mask_table_name = "masks"
 dbname = "underfoot"
 srid = "4326"
 sources = [
-  # "mf2342c",      # Oakland, CA
-  # "mf2337c",      # SF, most of Marin County, CA
-  # "of94_622",     # Contra Costa County, CA
-  # "of97_489",     # Santa Cruz County, CA
-  # "of98_354",     # South SF
-  # "mf2403c",      # Napa and Lake Counties, in part
-  # "of98_137",     # San Mateo County, CA
-  # "mf2402",       # Western Sonoma County
-  # "sim2858",      # Mark West Springs, Sonoma County (Pepperwood)
-  # "of96_252",     # Alameda County, CA
-  # "of97_456",     # Point Reyes, Marin County, CA
-  # "of97_744",     # San Francisco Bay Area
-  # "ofr20151175",  # Joshua Tree National Park
-  # "of99_014",     # Carrizo Plain
+  "mf2342c",      # Oakland, CA
+  "mf2337c",      # SF, most of Marin County, CA
+  "of94_622",     # Contra Costa County, CA
+  "of97_489",     # Santa Cruz County, CA
+  "of98_354",     # South SF
+  "mf2403c",      # Napa and Lake Counties, in part
+  "of98_137",     # San Mateo County, CA
+  "mf2402",       # Western Sonoma County
+  "sim2858",      # Mark West Springs, Sonoma County (Pepperwood)
+  "of96_252",     # Alameda County, CA
+  "of97_456",     # Point Reyes, Marin County, CA
+  "of97_744",     # San Francisco Bay Area
+  "ofr20151175",  # Joshua Tree National Park
+  "of99_014",     # Carrizo Plain
   "of2005_1305",  # all of California, coarse
 ]
 
