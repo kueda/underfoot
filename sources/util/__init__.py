@@ -677,6 +677,8 @@ def ages_from_span(span):
   est_age = None
   if span and len(span) > 0:
     span = span.lower()
+    span = span.replace('undivided', '')
+    span = span.replace(r'\(.+\)', '')
     ages = SPANS.get(span)
     if ages:
       max_age = ages[0]
