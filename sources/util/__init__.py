@@ -41,6 +41,7 @@ LITHOLOGY_PATTERN = re.compile(
     andesite|
     andesitic|
     aplite|
+    arkose|
     artificial|
     basaltic andesite|
     basaltic|
@@ -66,6 +67,10 @@ LITHOLOGY_PATTERN = re.compile(
     landslide|
     levee|
     limestone|
+    listwanite|
+    listvenite|
+    listvanite|
+    listwaenite|
     marble|
     m(e|é|é)lange|
     microdiorite|
@@ -77,6 +82,8 @@ LITHOLOGY_PATTERN = re.compile(
     paragneiss|
     pegmatite|
     pelit(e|ic)|
+    peridotite|
+    pyroxenite|
     quartz(\-lithic)?\sarenite|
     quartz\sdiorite|
     quartz\skeratophyre|
@@ -89,8 +96,10 @@ LITHOLOGY_PATTERN = re.compile(
     sandstone|
     sand|
     schist|
+    serpentine|
     serpentinite|
     shale|
+    silica(\-|\s)carbonate|
     siltstone|
     surficial\sdeposit|
     tonalite|
@@ -111,6 +120,10 @@ LITHOLOGY_SYNONYMS = {
   'basaltic': 'basalt',
   'gneissic': 'gneiss',
   'granitic': 'granite',
+  'listwanite': 'silica-carbonate',
+  'listvenite': 'silica-carbonate',
+  'listvanite': 'silica-carbonate',
+  'listwaenite': 'silica-carbonate',
   'metasedimentary': 'metasedimentary rock',
   'mélange': 'melange',
   'mélange': 'melange',
@@ -120,6 +133,8 @@ LITHOLOGY_SYNONYMS = {
   'quartz-lithic arenite': 'quartz arenite',
   'rhyolitic': 'rhyolite',
   'sedimentary': 'sedimentary rock',
+  'serpentine': 'serpentinite',
+  'silica carbonate': 'silica-carbonate',
   'surficial deposit': 'surficial deposits',
   'volcanic': 'volcanic rock',
 }
@@ -140,6 +155,8 @@ IGNEOUS_ROCKS = [
   'microdiorite',
   'monzogranite',
   'pegmatite',
+  'peridotite',
+  'pyroxenite',
   'quartz diorite',
   'quartz keratophyre',
   'quartz latite',
@@ -159,10 +176,12 @@ METAMORPHIC_ROCKS = [
   'quartzite',
   'schist',
   'serpentinite',
+  'silica-carbonate',
   'metasedimentary rock'
 ]
 
 SEDIMENTARY_ROCKS = [
+  'arkose',
   'chert',
   'clay',
   'claystone',
@@ -730,6 +749,8 @@ def metadata_from_usgs_met(path):
       row['span'] = span_from_code(row['code'])
     row['min_age'], row['max_age'], row['est_age'] = ages_from_span(row['span'])
     row['controlled_span'] = controlled_span_from_span(row['span'])
+    if row['controlled_span'] and not row['min_age']:
+      row['min_age'], row['max_age'], row['est_age'] = ages_from_span(row['controlled_span'])
     data.append([row[col] for col in METADATA_COLUMN_NAMES])
   return data
 
