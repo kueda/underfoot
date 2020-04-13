@@ -66,6 +66,7 @@ Vagrant.configure("2") do |config|
     apt-get install -y git
     apt-get install -y virtualenv
     apt-get install -y python3
+    apt-get install -y python3-dev
     apt-get install -y python-gdal
     apt-get install -y gdal-bin
     apt-get install -y libgdal-dev
@@ -79,4 +80,8 @@ Vagrant.configure("2") do |config|
     #{pgsql_mods}
     service postgresql restart
   SHELL
+
+  # TODO move node-related setup to an nvm-based post-provisioning step, b/c for
+  # some reason it just doesn't work anymore
+
 end
