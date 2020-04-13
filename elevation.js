@@ -2,6 +2,9 @@
 // with gdal_contour, and loads them into PostGIS tables named contours${zoom}.
 // So if you run node elevation.js 10, it will create a contours table named
 // contours10.
+// 
+// This script only downloads DEMs for the areas covered by the units table in
+// Postgres, so that needs to be populated first
 
 const fs = require( "fs" );
 const https = require( "https" );

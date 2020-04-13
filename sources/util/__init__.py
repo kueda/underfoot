@@ -527,7 +527,7 @@ def extless_basename(path):
 
 def call_cmd(*args, **kwargs):
   print("Calling `{}` with kwargs: {}".format(" ".join(args[0]), kwargs))
-  run(*args, **kwargs)
+  return run(*args, **kwargs)
 
 def run_sql(sql, dbname="underfoot"):
   # print("running {}".format(sql))

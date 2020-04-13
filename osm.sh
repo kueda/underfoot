@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Make a PostGIS database for the OSM data using the omsosis schema. Note that
-# those osmosis files should  have been installed with osmosis when the VM was
+# those osmosis files should have been installed with osmosis when the VM was
 # provisioned.
 echo ""
 echo "Creating the database and schema"
