@@ -169,7 +169,7 @@ const makeContours = ( swlon, swlat, nelon, nelat ) => {
 var pgClient = new pg.Client( { database: "underfoot", user: "underfoot", password: "underfoot" } );
 pgClient.connect( err => {
   if ( err ) throw err;
-  pgClient.query('SELECT ST_Extent(ST_Transform(geom, 4326)) FROM units', [], ( err, result ) => {
+  pgClient.query('SELECT ST_Extent(ST_Transform(geom, 4326)) FROM rock_units', [], ( err, result ) => {
     if ( err ) throw err;
     matches = result.rows[0]['st_extent'].match(/BOX\(([0-9\-\.]+) ([0-9\-\.]+),([0-9\-\.]+) ([0-9\-\.]+)\)/)
     const swlat = matches[2];

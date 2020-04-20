@@ -13,28 +13,34 @@ psql -d underfoot_ways < /usr/share/doc/osmosis/examples/pgsnapshot_schema_0.6_b
 psql -d underfoot_ways < /usr/share/doc/osmosis/examples/pgsnapshot_schema_0.6_linestring.sql
 
 # for state in arizona california # if you want to make an osm export for multiple states
-for state in california
-do
-  echo ""
-  echo "Downloading an export of recent $state OSM data (thanks, Geofabrik!)"
-  if ! [ -e $state-latest.osm.pbf ]
-  then
-    curl -o $state-latest.osm.pbf http://download.geofabrik.de/north-america/us/$state-latest.osm.pbf
-  fi
-  # Load ways from the PBF into the database
-  echo ""
-  echo "Loading data from the PBF into the database"
-  osmosis \
-    --read-pbf $state-latest.osm.pbf \
-    --tf accept-ways highway=* \
-    --tf reject-ways service=* \
-    --tf reject-ways footway=sidewalk \
-    --tf reject-ways highway=proposed \
-    --tf reject-ways highway=footway \
-    --tf reject-ways highway=pedestrian \
-    --tf reject-ways highway=steps \
-    --write-pgsql database="underfoot_ways" user="underfoot" password="underfoot"
-done
+pbf_url=$1
+if [ -z "$pbf_url" ]
+then
+  echo "You must specify a PBF URL"
+  exit 1
+fi
+echo "PBF URL: $pbf_url"
+filename=$(basename $pbf_url)
+echo "Filename: $filename"
+echo ""
+echo "Downloading OSM data from $pbf_url (thanks, Geofabrik!)"
+if ! [ -e $filename ]
+then
+  curl -o $filename $pbf_url
+fi
+# Load ways from the PBF into the database
+echo ""
+echo "Loading data from the PBF into the database"
+osmosis \
+  --read-pbf $filename \
+  --tf accept-ways highway=* \
+  --tf reject-ways service=* \
+  --tf reject-ways footway=sidewalk \
+  --tf reject-ways highway=proposed \
+  --tf reject-ways highway=footway \
+  --tf reject-ways highway=pedestrian \
+  --tf reject-ways highway=steps \
+  --write-pgsql database="underfoot_ways" user="underfoot" password="underfoot"
 
 # Create a table for ways with just names and highway tags
 echo ""

@@ -5,6 +5,8 @@ export an MBTiles file, and return a list with the files you need.
 """
 
 import os
+import shutil
+import sys
 import re
 import psycopg2
 import time
@@ -142,11 +144,14 @@ def clip_source_polygons_by_mask(source_table_name):
   ))
   util.run_sql("DELETE FROM {} WHERE ST_GeometryType(geom) = 'ST_GeometryCollection'".format(source_table_name))
 
-"""Load geological units into the database from the specified sources
-
-Sources must be a list of source names
-"""
 def load_units(sources):
+  """Load geological units into the database from the specified sources
+  
+  Parameters
+  ----------
+  sources : list
+    Names of sources to load
+  """
   # Drop existing units and masks tables
   for table_name in [final_table_name, mask_table_name]:
     util.run_sql("DROP TABLE IF EXISTS {}".format(table_name), dbname=DBNAME)
@@ -263,16 +268,21 @@ def load_units(sources):
 
   print("Database {} created with table {}".format(DBNAME, final_table_name))
 
+def clean_sources(sources):
+  """Clean any cached data for specified sources"""
+  for idx, source_identifier in enumerate(sources):
+    path = os.path.join("sources", "{}.py".format(source_identifier))
+    work_path = util.make_work_dir(path)
+    shutil.rmtree(work_path)
+
 def make_mbtiles():
-  # ./node_modules/tl/bin/tl.js copy -i underfoot_units.json -z 7 -Z 14 \
-  # 'postgis://underfoot:underfoot@localhost:5432/underfoot?table=units' \
-  # mbtiles://./underfoot_units.mbtiles
-  path = "./underfoot_units.mbtiles"
+  """Export rock units into am MBTiles file"""
+  path = "./underfoot_rock_units.mbtiles"
   cmd = [
     "node_modules/tl/bin/tl.js",
     "copy",
     "-i",
-    "underfoot_units.json",
+    "underfoot_rock_units.json",
     "-z",
     "7",
     "-Z",
@@ -283,7 +293,12 @@ def make_mbtiles():
   util.call_cmd(cmd)
   return os.path.abspath(path)
 
-def make_rocks(sources):
+def make_rocks(sources, options={}):
+  if options.clean:
+    clean_sources(sources)
   load_units(sources)
   mbtiles_path = make_mbtiles()
   return [mbtiles_path]
+
+if __name__ == "__main__":
+  make_rocks(sys.argv)

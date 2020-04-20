@@ -12,7 +12,9 @@ Which *should* create all the necessary files and wrap them up in a zip archive
 
 import argparse
 from rocks import make_rocks
+from osm import make_ways
 from database import make_database
+from sources import util
 
 PACKS = {
   "us-ca": {
@@ -59,7 +61,13 @@ PACKS = {
     "rock": [
       "mf2342c",      # Oakland, CA
     ],
-    "osm": "http://download.geofabrik.de/north-america/us/california/norcal-latest.osm.pbf"
+    "osm": "http://download.geofabrik.de/north-america/us/california/norcal-latest.osm.pbf",
+    "bbox": {
+      "top": 37.9999225069647,
+      "bottom": 37.6249329829376,
+      "left": -122.37608299613,
+      "right": -122.00107120948
+    }
   }
 }
 
@@ -67,19 +75,23 @@ def list_packs():
   for pack_name in PACKS:
     print("\t{}: {}".format(pack_name, PACKS[pack_name]["description"]))
 
-def make_pack(pack_name):
+def make_pack(pack_name, options={}):
   make_database()
   pack = PACKS[pack_name]
-  paths = make_rocks(pack["rock"])
+  paths = make_rocks(pack["rock"], args)
   # These should happen last b/c they depend on the spatial scope of the
   # database tables populated above
   # TODO Make the OSM mbtiles
+  # util.call_cmd(["./osm.sh", pack["osm"]])
+  paths = make_ways(pack["osm"], bbox=pack["bbox"])
   # TODO Make the contours mbtiles
+  util.call_cmd(["./elevation.sh"])
   # TODO zip up all relevant files
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description="Make a data pack for Underfoot")
   parser.add_argument("pack", metavar="PACK_NAME", type=str, help="Make the specified pack. Use `list` to list available packs")
+  parser.add_argument("--clean", action="store_true", help="Clean all cached files before building")
   args = parser.parse_args()
 
   if args.pack == "list":
@@ -87,4 +99,4 @@ if __name__ == "__main__":
     list_packs()
   else:
     print("making pack: {}".format(args.pack))
-    make_pack(args.pack)
+    make_pack(args.pack, args)

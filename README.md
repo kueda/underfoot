@@ -30,7 +30,7 @@ cd underfoot
 # SQLite will note compile
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh | bash
 source ~/.profile
-nvm use
+nvm install
 
 # Set up a python virtual environment
 virtualenv venv -p python3 --no-site-packages

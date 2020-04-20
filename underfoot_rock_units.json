@@ -1,0 +1,26 @@
+{
+    "vector_layers": [
+        {
+            "id": "rock_units",
+            "description": "Geological units",
+            "fields": {
+                "code": "String",
+                "title": "String",
+                "description": "String",
+                "lithology": "String",
+                "lithologies": "Array",
+                "rock_type": "String",
+                "formation": "String",
+                "grouping": "String",
+                "span": "String",
+                "min_age": "String",
+                "max_age": "String",
+                "est_age": "String",
+                "source": "String"
+            },
+            "maxzoom": 14,
+            "minzoom": 0
+        }
+    ],
+    "attribution": "<a href='http://openstreetmap.org'>OSM contributors</a>"
+}
