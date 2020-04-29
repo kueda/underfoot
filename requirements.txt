@@ -2,3 +2,5 @@ Fiona
 Shapely
 psycopg2
 pandas
+requests
+tqdm

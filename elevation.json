@@ -5,7 +5,7 @@
       "fields": {
         "elevation": "Number"
       },
-      "id": "contours12",
+      "id": "contours",
       "maxzoom": 16,
       "minzoom": 11
     }

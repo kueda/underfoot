@@ -2,6 +2,8 @@ import psycopg2
 from sources import util
 
 DBNAME = "underfoot"
+DB_USER = "underfoot"
+DB_PASSWORD = "underfoot"
 SRID = "4326"
 
 def make_database():
