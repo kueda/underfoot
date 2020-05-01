@@ -29,8 +29,9 @@ Vagrant.configure("2") do |config|
   # and create an ubuntu superuser
   config.vm.provision "shell", inline: <<-SHELL
     add-apt-repository ppa:ubuntugis/ppa
+    add-apt-repository ppa:deadsnakes/ppa
     apt-get update
-    apt-get install -y git virtualenv python3 python3-dev python-gdal gdal-bin libgdal-dev postgis unzip osmosis
+    apt-get install -y git virtualenv python3.8 python3.8-dev python-gdal gdal-bin libgdal-dev postgis unzip osmosis
     #{pgsql_mods}
     service postgresql restart
   SHELL

@@ -11,8 +11,12 @@ Which *should* create all the necessary files and wrap them up in a zip archive
 """
 
 import argparse
+import os
+import shutil
+import tempfile
 from rocks import make_rocks
 from osm import make_ways
+from elevation import make_contours
 from database import make_database
 from sources import util
 
@@ -75,18 +79,29 @@ def list_packs():
   for pack_name in PACKS:
     print("\t{}: {}".format(pack_name, PACKS[pack_name]["description"]))
 
-def make_pack(pack_name, options={}):
+def make_pack(pack_name, clean=False):
   make_database()
   pack = PACKS[pack_name]
-  paths = make_rocks(pack["rock"], args)
-  # These should happen last b/c they depend on the spatial scope of the
-  # database tables populated above
-  # TODO Make the OSM mbtiles
-  # util.call_cmd(["./osm.sh", pack["osm"]])
-  paths = make_ways(pack["osm"], bbox=pack["bbox"])
-  # TODO Make the contours mbtiles
-  util.call_cmd(["./elevation.sh"])
-  # TODO zip up all relevant files
+  paths = []
+  paths.append(make_rocks(pack["rock"], args))
+  paths.append(make_ways(pack["osm"], bbox=pack["bbox"]))
+  # TODO make this work with a boundary. Mercantile can do this and we don't
+  # need to download most of Nevada for an mbtiles covering California
+  paths.append(
+    make_contours(
+      pack["bbox"]["left"],
+      pack["bbox"]["bottom"],
+      pack["bbox"]["right"],
+      pack["bbox"]["top"],
+      12,
+      mbtiles_zoom=14,
+      clean=clean))
+  with tempfile.TemporaryDirectory() as tmpdirname:
+    pack_path = os.path.join(tmpdirname, pack_name)
+    os.makedirs(pack_path)
+    for path in paths:
+      shutil.copy(path, pack_path)
+    return shutil.make_archive(pack_name, "zip", pack_path)
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description="Make a data pack for Underfoot")
@@ -99,4 +114,5 @@ if __name__ == "__main__":
     list_packs()
   else:
     print("making pack: {}".format(args.pack))
-    make_pack(args.pack, args)
+    pack_path = make_pack(args.pack, clean=args.clean)
+    print(f"Pack available at {pack_path}")

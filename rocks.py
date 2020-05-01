@@ -298,7 +298,7 @@ def make_rocks(sources, options={}):
     clean_sources(sources)
   load_units(sources)
   mbtiles_path = make_mbtiles()
-  return [mbtiles_path]
+  return mbtiles_path
 
 if __name__ == "__main__":
   make_rocks(sys.argv)

@@ -33,7 +33,7 @@ source ~/.profile
 nvm install
 
 # Set up a python virtual environment
-virtualenv venv -p python3 --no-site-packages
+virtualenv venv -p python3.8 --no-site-packages
 source venv/bin/activate
 
 # Install deps and some stuff for working with ESRI Arc/Info coverages

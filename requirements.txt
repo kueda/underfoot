@@ -4,3 +4,6 @@ psycopg2
 pandas
 requests
 tqdm
+httpx
+mercantile
+aiofiles
