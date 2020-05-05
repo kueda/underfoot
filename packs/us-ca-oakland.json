@@ -1,0 +1,16 @@
+{
+    "bbox": {
+        "bottom": 37.6249329829376,
+        "left": -122.37608299613,
+        "right": -122.00107120948,
+        "top": 37.9999225069647
+    },
+    "description": "Oakland, CA, USA. Mostly for testing some place small.",
+    "geojson": {
+        "$ref": "file://./us-ca-oakland.geojson"
+    },
+    "osm": "http://download.geofabrik.de/north-america/us/california/norcal-latest.osm.pbf",
+    "rock": [
+        "mf2342c"
+    ]
+}

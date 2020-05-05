@@ -1,0 +1,10 @@
+{
+    "description": "SF Bay Area, coarse, for testing",
+    "geojson": {
+        "$ref": "file://./us-ca-sfba.geojson"
+    },
+    "osm": "http://download.geofabrik.de/north-america/us/california/norcal-latest.osm.pbf",
+    "rock": [
+        "of97_744"
+    ]
+}

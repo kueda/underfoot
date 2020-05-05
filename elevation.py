@@ -12,13 +12,38 @@ import os
 import httpx
 import asyncio
 import aiofiles
+import json
 from multiprocessing import Pool
+from supermercado import burntiles, super_utils
 
 TABLE_NAME = "contours"
 CACHE_DIR = "./elevation-tiles"
 
 def tile_file_path(x, y, z, ext="tif"):
   return "{}/{}/{}/{}.{}".format(CACHE_DIR, z, x, y, ext)
+
+def tiles_from_bbox(swlon, swlat, nelon, nelat, zooms):
+  """Tiles from a bounding box specified by southwest and northeast coordinates
+  and a list of zooms
+  """
+  return list(mercantile.tiles(swlon, swlat, nelon, nelat, zooms, truncate=False))
+
+def tiles_from_geojson(geojson, zooms):
+  """Tiles from a GeoJSON feature passed in as a dict"""
+  tiles = []
+  features = [geojson]
+  # supermercado expects features, so if this is a just a geometry, wrap it in a
+  # Feature
+  if geojson["type"] != "Feature":
+    features = [{ "type": "Feature", "geometry": geojson}]
+  for zoom in zooms:
+    # So much more complicated than it needs to be. burntiles.burn only accepts
+    # a list of polygons, not features, not multipolygons, just polygons, so
+    # super_utils.filter_polygons gets the polygons out of diverse GeoJSON-y
+    # dicts. It also returns a list of numpy.ndarray objects, which are not
+    # lists and need to be turned into lists with tolist()
+    tiles += [ftiles.tolist() for ftiles in burntiles.burn(list(super_utils.filter_polygons(features)), zoom)]
+  return [mercantile.Tile(*tile) for tile in tiles]
 
 async def cache_tile(tile, client, clean=False):
   tile_path = "{}/{}/{}.tif".format(tile.z, tile.x, tile.y)
@@ -42,9 +67,8 @@ async def cache_tile(tile, client, clean=False):
     # print("Wrote {}".format(file_path))
 
 # Cache DEM tiles using asyncio for this presumably IO-bound process
-async def cache_tiles(swlon, swlat, nelon, nelat, zooms, clean=False):
+async def cache_tiles(tiles, clean=False):
   async with httpx.AsyncClient() as client:
-    tiles = list(mercantile.tiles(swlon, swlat, nelon, nelat, zooms, truncate=False))
     # using as_completed with tqdm (https://stackoverflow.com/a/37901797)
     tasks = [cache_tile(tile, client, clean=clean) for tile in tiles]
     pbar = tqdm(asyncio.as_completed(tasks),
@@ -109,12 +133,12 @@ def make_contours_for_tile(tile):
 
 # Make contours from DEM files using a multiprocessing pool for this presumably
 # CPU-bound process
-def make_contours_table(swlon, swlat, nelon, nelat, zooms, clean=False, procs=2):
+def make_contours_table(tiles, clean=False, procs=2):
   make_database()
+  zooms = set([tile.z for tile in tiles])
   if clean:
     for z in zooms:
       util.run_sql("DROP TABLE IF EXISTS {}".format(TABLE_NAME))
-  tiles = list(mercantile.tiles(swlon, swlat, nelon, nelat, zooms, truncate=False))
   pool = Pool(processes=procs)
   pbar = tqdm(pool.imap_unordered(make_contours_for_tile, tiles),
     desc="Converting to contours & importing",
@@ -123,7 +147,7 @@ def make_contours_table(swlon, swlat, nelon, nelat, zooms, clean=False, procs=2)
   for _ in pbar:
     pass
 
-async def make_contours_mbtiles(swlon, swlat, nelon, nelat, zoom, mbtiles_zoom=None,
+async def make_contours_mbtiles(zoom, swlon=None, swlat=None, nelon=None, nelat=None, geojson=None, mbtiles_zoom=None,
     clean=False, procs=2):
   zooms = [zoom]
   if not mbtiles_zoom:
@@ -134,8 +158,18 @@ async def make_contours_mbtiles(swlon, swlat, nelon, nelat, zoom, mbtiles_zoom=N
     os.remove(mbtiles_path)
   util.call_cmd(["psql", DBNAME, "-c", "DROP TABLE {}".format(TABLE_NAME)])
   util.call_cmd(["find", "elevation-tiles/", "-type", "f", "-name", "*.merge*", "-delete"])
-  await cache_tiles(swlon, swlat, nelon, nelat, zooms, clean=clean)
-  make_contours_table(swlon, swlat, nelon, nelat, zooms, clean=clean, procs=procs)
+  tiles = None
+  if geojson:
+    tiles  = tiles_from_geojson(geojson, zooms)
+  elif swlon and swlat and nelon and nelat:
+    tiles = tiles_from_bbox(swlon, swlat, nelon, nelat, zooms)
+  if tiles == None:
+    raise "You must specify a bounding box or a GeoJSON feature"
+  await cache_tiles(tiles, clean=clean)
+  make_contours_table(tiles, clean=clean, procs=procs)
+  # TODO make mbtiles_zoom into mbtiles_zooms which is a mapping between the
+  # desired zooms in the mbtiles and what zoom-level table in the database to
+  # fill it with (i.e. what contour resolution)
   util.call_cmd([
     "./node_modules/tl/bin/tl.js", "copy",
     "-i", "elevation.json",
@@ -153,15 +187,16 @@ async def make_contours_mbtiles(swlon, swlat, nelon, nelat, zoom, mbtiles_zoom=N
 
 # Seemingly useless method so we can export a synchronous method that calls
 # async code
-def make_contours(swlon, swlat, nelon, nelat, min_zoom,
-    mbtiles_zoom=None, clean=False, procs=2):
+def make_contours(zoom, swlon=None, swlat=None, nelon=None,
+    nelat=None, geojson=None, mbtiles_zoom=None, clean=False, procs=2):
   path = asyncio.run(
     make_contours_mbtiles(
-      swlon,
-      swlat,
-      nelon,
-      nelat,
-      min_zoom,
+      zoom,
+      swlon=swlon,
+      swlat=swlat,
+      nelon=nelon,
+      nelat=nelat,
+      geojson=geojson,
       mbtiles_zoom=mbtiles_zoom,
       clean=clean,
       procs=procs
@@ -171,15 +206,26 @@ def make_contours(swlon, swlat, nelon, nelat, min_zoom,
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description="Make an MBTiles of contours given a bounding box and zoom range")
-  parser.add_argument("swlon", type=float, help="Bounding box swlon")
-  parser.add_argument("swlat", type=float, help="Bounding box swlat")
-  parser.add_argument("nelon", type=float, help="Bounding box nelon")
-  parser.add_argument("nelat", type=float, help="Bounding box nelat")
   parser.add_argument("zoom", type=int, help="Single zoom or minimum zoom")
+  parser.add_argument("--swlon", type=float, help="Bounding box swlon")
+  parser.add_argument("--swlat", type=float, help="Bounding box swlat")
+  parser.add_argument("--nelon", type=float, help="Bounding box nelon")
+  parser.add_argument("--nelat", type=float, help="Bounding box nelat")
+  parser.add_argument("-f", "--geojson", type=str, help="Path to a file with a GeoJSON feature defining the target area")
   parser.add_argument("--procs", type=int, help="Number of processes to use for multiprocessing")
   parser.add_argument("--clean", action="store_true", help="Clean cached data before running")
   args = parser.parse_args()
   min_zoom = args.zoom
-  path = make_contours(args.swlon, args.swlat, args.nelon, args.nelat, min_zoom,
-    clean=args.clean, procs=args.procs)
-  print("MBTiles created at {}".format(path))
+  path = None
+  if args.geojson:
+    with open(args.geojson) as f:
+      geojson = json.loads(f.read())
+      path = make_contours(min_zoom, geojson=geojson, clean=args.clean, procs=args.procs)
+  else:
+    path = make_contours(args.swlon, args.swlat, args.nelon, args.nelat, min_zoom,
+      clean=args.clean, procs=args.procs)
+  if path:
+    print("MBTiles created at {}".format(path))
+  else:
+    print("Failed to generate MBTiles")
+

@@ -1,0 +1,27 @@
+{
+    "bbox": {
+        "bottom": 36.851146697998,
+        "left": -123.75,
+        "right": -121.207077026367,
+        "top": 38.875
+    },
+    "description": "Nine counties of the San Francisco Bay Area in California, USA, plus Santa Cruz County",
+    "geojson": {
+        "$ref": "file://./us-ca-sfba.geojson"
+    },
+    "osm": "http://download.geofabrik.de/north-america/us/california/norcal-latest.osm.pbf",
+    "rock": [
+        "mf2342c",
+        "mf2337c",
+        "of94_622",
+        "of97_489",
+        "of98_354",
+        "mf2403c",
+        "of98_137",
+        "mf2402",
+        "sim2858",
+        "of96_252",
+        "of97_456",
+        "of97_744"
+    ]
+}
