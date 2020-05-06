@@ -42,7 +42,7 @@ def list_packs():
     for pack_name in PACKS:
         print("\t{}: {}".format(pack_name, PACKS[pack_name]["description"]))
 
-def make_pack(pack_name, clean=False):
+def make_pack(pack_name, clean=False, procs=2):
     make_database()
     pack = PACKS[pack_name]
     paths = []
@@ -50,7 +50,7 @@ def make_pack(pack_name, clean=False):
     paths.append(make_ways(pack["osm"], bbox=pack["bbox"]))
     if pack["geojson"]:
         paths.append(
-            make_contours(12, geojson=pack["geojson"], mbtiles_zoom=14, clean=clean))
+            make_contours(12, geojson=pack["geojson"], mbtiles_zoom=14, clean=clean, procs=procs))
     else:
         paths.append(
             make_contours(
@@ -72,6 +72,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Make a data pack for Underfoot")
     parser.add_argument("pack", metavar="PACK_NAME", type=str, help="Make the specified pack. Use `list` to list available packs")
     parser.add_argument("--clean", action="store_true", help="Clean all cached files before building")
+    parser.add_argument("--procs", type=int, default=2, help="Number of processes to run in parallel when multiprocessing")
     args = parser.parse_args()
 
     if args.pack == "list":
@@ -79,5 +80,5 @@ if __name__ == "__main__":
         list_packs()
     else:
         print("making pack: {}".format(args.pack))
-        pack_path = make_pack(args.pack, clean=args.clean)
+        pack_path = make_pack(args.pack, clean=args.clean, procs=args.procs)
         print(f"Pack available at {pack_path}")
