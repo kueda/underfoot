@@ -46,8 +46,8 @@ def make_pack(pack_name, clean=False, procs=2):
     make_database()
     pack = PACKS[pack_name]
     paths = []
-    paths.append(make_rocks(pack["rock"], args))
-    paths.append(make_ways(pack["osm"], bbox=pack["bbox"]))
+    paths.append(make_rocks(pack["rock"], clean=clean))
+    paths.append(make_ways(pack["osm"], bbox=pack["bbox"], clean=clean))
     if pack["geojson"]:
         paths.append(
             make_contours(12, geojson=pack["geojson"], mbtiles_zoom=14, clean=clean, procs=procs))

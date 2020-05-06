@@ -283,6 +283,7 @@ def make_mbtiles():
     "copy",
     "-i",
     "underfoot_rock_units.json",
+    "--quiet",
     "-z",
     "7",
     "-Z",
@@ -293,8 +294,8 @@ def make_mbtiles():
   util.call_cmd(cmd)
   return os.path.abspath(path)
 
-def make_rocks(sources, options={}):
-  if options.clean:
+def make_rocks(sources, clean=False):
+  if clean:
     clean_sources(sources)
   load_units(sources)
   mbtiles_path = make_mbtiles()

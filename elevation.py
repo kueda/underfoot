@@ -173,6 +173,7 @@ async def make_contours_mbtiles(zoom, swlon=None, swlat=None, nelon=None, nelat=
   util.call_cmd([
     "./node_modules/tl/bin/tl.js", "copy",
     "-i", "elevation.json",
+    "--quiet",
     "-z", str(mbtiles_zoom),
     "-Z", str(mbtiles_zoom),
     "postgis://{}:{}@localhost:5432/{}?table={}".format(

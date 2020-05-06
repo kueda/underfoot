@@ -29,8 +29,7 @@ def make_ways(pbf_url, clean=False, bbox=None):
     pass
   else:
     util.call_cmd(["curl", "-o", filename, pbf_url], check=True)
-  if clean:
-    util.call_cmd(["dropdb", DBNAME], check=True)
+  util.call_cmd(["dropdb", DBNAME], check=True)
   # Check to see if db exists
   try:
     con = psycopg2.connect("dbname={}".format(DBNAME))
@@ -97,7 +96,7 @@ def make_ways(pbf_url, clean=False, bbox=None):
   if os.path.exists(mbtiles_path):
     os.remove(mbtiles_path)
   util.call_cmd([
-    "./node_modules/tl/bin/tl.js", "copy", "-i", "underfoot_ways.json", "-z", "3", "-Z", "13",
+    "./node_modules/tl/bin/tl.js", "copy", "-i", "underfoot_ways.json", "--quiet", "-z", "3", "-Z", "13",
     "postgis://{}:{}@localhost:5432/{}?table={}&query=(SELECT%20*%20from%20underfoot_ways%20WHERE%20highway%20in%20('motorway'))%20AS%20foo".format(
       DB_USER,
       DB_PASSWORD,
@@ -107,7 +106,7 @@ def make_ways(pbf_url, clean=False, bbox=None):
     "mbtiles://{}".format(mbtiles_path)
   ])
   util.call_cmd([
-    "./node_modules/tl/bin/tl.js", "copy", "-i", "underfoot_ways.json", "-z", "7", "-Z", "13",
+    "./node_modules/tl/bin/tl.js", "copy", "-i", "underfoot_ways.json", "--quiet", "-z", "7", "-Z", "13",
     "postgis://{}:{}@localhost:5432/{}?table={}&query=(SELECT%20*%20from%20underfoot_ways%20WHERE%20highway%20in%20('motorway','primary','trunk'))%20AS%20foo".format(
       DB_USER,
       DB_PASSWORD,
@@ -117,7 +116,7 @@ def make_ways(pbf_url, clean=False, bbox=None):
     "mbtiles://{}".format(mbtiles_path)
   ])
   util.call_cmd([
-    "./node_modules/tl/bin/tl.js", "copy", "-i", "underfoot_ways.json", "-z", "11", "-Z", "13",
+    "./node_modules/tl/bin/tl.js", "copy", "-i", "underfoot_ways.json", "--quiet", "-z", "11", "-Z", "13",
     "postgis://{}:{}@localhost:5432/{}?table={}&query=(SELECT%20*%20from%20underfoot_ways%20WHERE%20highway%20in%20('motorway','primary','trunk','secondary','tertiary','motorway_link'))%20AS%20foo".format(
       DB_USER,
       DB_PASSWORD,
@@ -127,7 +126,7 @@ def make_ways(pbf_url, clean=False, bbox=None):
     "mbtiles://{}".format(mbtiles_path)
   ])
   util.call_cmd([
-    "./node_modules/tl/bin/tl.js", "copy", "-i", "underfoot_ways.json", "-z", "13", "-Z", "13",
+    "./node_modules/tl/bin/tl.js", "copy", "-i", "underfoot_ways.json", "--quiet", "-z", "13", "-Z", "13",
     "postgis://{}:{}@localhost:5432/{}?table={}".format(
       DB_USER,
       DB_PASSWORD,
