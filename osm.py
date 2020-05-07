@@ -1,14 +1,15 @@
+from sources import util
 import os
 import psycopg2
 import sys
-from sources import util
+import time
 
 DBNAME = "underfoot_ways"
 DB_USER = "underfoot"
 DB_PASSWORD = "underfoot"
 TABLE_NAME = "underfoot_ways"
 
-def make_ways(pbf_url, clean=False, bbox=None):
+def make_ways(pbf_url, clean=False, bbox=None, path="./ways.mbtiles"):
   r"""Make an MBTiles files for OSM ways data given an OSM PBF export URL
 
   Parameters
@@ -40,7 +41,6 @@ def make_ways(pbf_url, clean=False, bbox=None):
     util.call_cmd(["psql", "-d", DBNAME, "-f", "/usr/share/doc/osmosis/examples/pgsnapshot_schema_0.6_bbox.sql"])
     util.call_cmd(["psql", "-d", DBNAME, "-f", "/usr/share/doc/osmosis/examples/pgsnapshot_schema_0.6_linestring.sql"])
     con = psycopg2.connect("dbname={}".format(DBNAME))
-  # con.close()
   # Check to see if table exists and has rows
   cur1 = con.cursor()
   ways_table_missing = False
@@ -92,9 +92,8 @@ def make_ways(pbf_url, clean=False, bbox=None):
     "CREATE TABLE {} AS SELECT id, version, tags -> 'name' AS name, tags -> 'highway' AS highway, linestring FROM ways".format(TABLE_NAME)
   ])
   # Export ways into the MBTiles using different zoom levels for different types
-  mbtiles_path = "./underfoot_ways.mbtiles"
-  if os.path.exists(mbtiles_path):
-    os.remove(mbtiles_path)
+  if os.path.exists(path):
+    os.remove(path)
   util.call_cmd([
     "./node_modules/tl/bin/tl.js", "copy", "-i", "underfoot_ways.json", "--quiet", "-z", "3", "-Z", "13",
     "postgis://{}:{}@localhost:5432/{}?table={}&query=(SELECT%20*%20from%20underfoot_ways%20WHERE%20highway%20in%20('motorway'))%20AS%20foo".format(
@@ -103,8 +102,9 @@ def make_ways(pbf_url, clean=False, bbox=None):
       DBNAME,
       TABLE_NAME
     ),
-    "mbtiles://{}".format(mbtiles_path)
+    "mbtiles://{}".format(path)
   ])
+  time.sleep(5)
   util.call_cmd([
     "./node_modules/tl/bin/tl.js", "copy", "-i", "underfoot_ways.json", "--quiet", "-z", "7", "-Z", "13",
     "postgis://{}:{}@localhost:5432/{}?table={}&query=(SELECT%20*%20from%20underfoot_ways%20WHERE%20highway%20in%20('motorway','primary','trunk'))%20AS%20foo".format(
@@ -113,8 +113,9 @@ def make_ways(pbf_url, clean=False, bbox=None):
       DBNAME,
       TABLE_NAME
     ),
-    "mbtiles://{}".format(mbtiles_path)
+    "mbtiles://{}".format(path)
   ])
+  time.sleep(5)
   util.call_cmd([
     "./node_modules/tl/bin/tl.js", "copy", "-i", "underfoot_ways.json", "--quiet", "-z", "11", "-Z", "13",
     "postgis://{}:{}@localhost:5432/{}?table={}&query=(SELECT%20*%20from%20underfoot_ways%20WHERE%20highway%20in%20('motorway','primary','trunk','secondary','tertiary','motorway_link'))%20AS%20foo".format(
@@ -123,8 +124,9 @@ def make_ways(pbf_url, clean=False, bbox=None):
       DBNAME,
       TABLE_NAME
     ),
-    "mbtiles://{}".format(mbtiles_path)
+    "mbtiles://{}".format(path)
   ])
+  time.sleep(5)
   util.call_cmd([
     "./node_modules/tl/bin/tl.js", "copy", "-i", "underfoot_ways.json", "--quiet", "-z", "13", "-Z", "13",
     "postgis://{}:{}@localhost:5432/{}?table={}".format(
@@ -133,10 +135,10 @@ def make_ways(pbf_url, clean=False, bbox=None):
       DBNAME,
       TABLE_NAME
     ),
-    "mbtiles://{}".format(mbtiles_path)
+    "mbtiles://{}".format(path)
   ])
-  return mbtiles_path
+  return path
 
 if __name__ == "__main__":
-  mbtiles_path = make_ways(sys.argv[0])
-  print("Created mbtiles at {}".format(mbtiles_path))
+  path = make_ways(sys.argv[0])
+  print("Created mbtiles at {}".format(path))

@@ -3,18 +3,18 @@
 """
 from database import make_database, DBNAME, DB_USER, DB_PASSWORD, SRID
 from fiona.transform import transform
+from multiprocessing import Pool
 from sources import util
 from subprocess import run
+from supermercado import burntiles, super_utils
 from tqdm import tqdm
+import aiofiles
 import argparse
+import asyncio
+import httpx
+import json
 import mercantile
 import os
-import httpx
-import asyncio
-import aiofiles
-import json
-from multiprocessing import Pool
-from supermercado import burntiles, super_utils
 
 TABLE_NAME = "contours"
 CACHE_DIR = "./elevation-tiles"
@@ -148,14 +148,13 @@ def make_contours_table(tiles, clean=False, procs=2):
     pass
 
 async def make_contours_mbtiles(zoom, swlon=None, swlat=None, nelon=None, nelat=None, geojson=None, mbtiles_zoom=None,
-    clean=False, procs=2):
+    clean=False, procs=2, path="./contours.mbtiles"):
   zooms = [zoom]
   if not mbtiles_zoom:
     mbtiles_zoom = zoom
-  mbtiles_path = "./elevation.mbtiles"
   print("Clearing out existing data...")
-  if os.path.exists(mbtiles_path):
-    os.remove(mbtiles_path)
+  if os.path.exists(path):
+    os.remove(path)
   util.call_cmd(["psql", DBNAME, "-c", "DROP TABLE {}".format(TABLE_NAME)])
   util.call_cmd(["find", "elevation-tiles/", "-type", "f", "-name", "*.merge*", "-delete"])
   tiles = None
@@ -182,15 +181,16 @@ async def make_contours_mbtiles(zoom, swlon=None, swlat=None, nelon=None, nelat=
       DBNAME,
       TABLE_NAME
     ),
-    "mbtiles://{}".format(mbtiles_path)
+    "mbtiles://{}".format(path)
   ])
-  return mbtiles_path
+  return path
 
 # Seemingly useless method so we can export a synchronous method that calls
 # async code
 def make_contours(zoom, swlon=None, swlat=None, nelon=None,
-    nelat=None, geojson=None, mbtiles_zoom=None, clean=False, procs=2):
-  path = asyncio.run(
+    nelat=None, geojson=None, mbtiles_zoom=None, clean=False, procs=2,
+    path="./contours.mbtiles"):
+  mbtiles_path = asyncio.run(
     make_contours_mbtiles(
       zoom,
       swlon=swlon,
@@ -200,10 +200,11 @@ def make_contours(zoom, swlon=None, swlat=None, nelon=None,
       geojson=geojson,
       mbtiles_zoom=mbtiles_zoom,
       clean=clean,
-      procs=procs
+      procs=procs,
+      path=path
     )
   )
-  return path
+  return mbtiles_path
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description="Make an MBTiles of contours given a bounding box and zoom range")

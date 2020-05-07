@@ -275,9 +275,8 @@ def clean_sources(sources):
     work_path = util.make_work_dir(path)
     shutil.rmtree(work_path)
 
-def make_mbtiles():
+def make_mbtiles(path="./rocks.mbtiles"):
   """Export rock units into am MBTiles file"""
-  path = "./underfoot_rock_units.mbtiles"
   cmd = [
     "node_modules/tl/bin/tl.js",
     "copy",
@@ -294,11 +293,11 @@ def make_mbtiles():
   util.call_cmd(cmd)
   return os.path.abspath(path)
 
-def make_rocks(sources, clean=False):
+def make_rocks(sources, clean=False, path="./rocks.mbtiles"):
   if clean:
     clean_sources(sources)
   load_units(sources)
-  mbtiles_path = make_mbtiles()
+  mbtiles_path = make_mbtiles(path=path)
   return mbtiles_path
 
 if __name__ == "__main__":
