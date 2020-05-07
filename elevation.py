@@ -136,9 +136,8 @@ def make_contours_for_tile(tile):
 def make_contours_table(tiles, clean=False, procs=2):
   make_database()
   zooms = set([tile.z for tile in tiles])
-  if clean:
-    for z in zooms:
-      util.run_sql("DROP TABLE IF EXISTS {}".format(TABLE_NAME))
+  for z in zooms:
+    util.run_sql("DROP TABLE IF EXISTS {}".format(TABLE_NAME))
   pool = Pool(processes=procs)
   pbar = tqdm(pool.imap_unordered(make_contours_for_tile, tiles),
     desc="Converting to contours & importing",
