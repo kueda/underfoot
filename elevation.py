@@ -15,6 +15,7 @@ import httpx
 import json
 import mercantile
 import os
+import time
 
 TABLE_NAME = "contours"
 CACHE_DIR = "./elevation-tiles"
@@ -45,7 +46,7 @@ def tiles_from_geojson(geojson, zooms):
     tiles += [ftiles.tolist() for ftiles in burntiles.burn(list(super_utils.filter_polygons(features)), zoom)]
   return [mercantile.Tile(*tile) for tile in tiles]
 
-async def cache_tile(tile, client, clean=False):
+async def cache_tile(tile, client, clean=False, max_retries=3):
   tile_path = "{}/{}/{}.tif".format(tile.z, tile.x, tile.y)
   url = "https://s3.amazonaws.com/elevation-tiles-prod/geotiff/{}".format(tile_path)
   dir_path = "./{}/{}/{}".format(CACHE_DIR, tile.z, tile.x)
@@ -57,14 +58,24 @@ async def cache_tile(tile, client, clean=False):
     else:
       return file_path
   # TODO handle errors, client abort, server abort
-  r = await client.get(url)
-  if r.status_code != 200:
-    print("Request for {} failed with {}".formt(url, r.status_code))
-    return
-  async with aiofiles.open(file_path, 'wb') as fd:
-    async for chunk in r.aiter_bytes():
-      await fd.write(chunk)
-    # print("Wrote {}".format(file_path))
+  for try_num in range(1, max_retries + 1):
+    try:
+      r = await client.get(url)
+      if r.status_code != 200:
+        print(f"Request for {url} failed with {r.status_code}, skipping...")
+        return
+      async with aiofiles.open(file_path, 'wb') as fd:
+        async for chunk in r.aiter_bytes():
+          await fd.write(chunk)
+        # print("Wrote {}".format(file_path))
+      break
+    except asyncio.exceptions.TimeoutError:
+      if try_num > max_retries:
+        print(f"Request for {url} timed out {max_retries} times, skipping...")
+      else:
+        time.sleep(try_num ** 3)
+      pass
+
 
 # Cache DEM tiles using asyncio for this presumably IO-bound process
 async def cache_tiles(tiles, clean=False):

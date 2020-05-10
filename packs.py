@@ -80,8 +80,11 @@ def make_pack(pack_name, clean=False, clean_rocks=False, clean_ways=False,
     elif os.path.isfile(contours_mbtiles_path):
         print(f"{contours_mbtiles_path} exists, skipping...")
     with tempfile.TemporaryDirectory() as tmpdirname:
-        return shutil.make_archive(pack_dir, format="zip", root_dir=pack_dir,
-            base_dir=build_dir)
+        return shutil.make_archive(
+            pack_dir,
+            format="zip",
+            root_dir=build_dir,
+            base_dir=os.path.basename(pack_dir))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Make a data pack for Underfoot")
