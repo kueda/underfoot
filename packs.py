@@ -23,6 +23,8 @@ import os
 import pathlib
 import shutil
 import tempfile
+import re
+from datetime import datetime
 
 PACKS = {}
 pack_glob = os.path.join(pathlib.Path(__file__).parent.absolute(), "packs/*.json")
@@ -42,11 +44,30 @@ def list_packs():
     for pack_name in PACKS:
         print("\t{}: {}".format(pack_name, PACKS[pack_name]["description"]))
 
+def get_build_dir():
+    return os.path.join(pathlib.Path(__file__).parent.absolute(), "build" )
+
+def make_manifest():
+    build_dir = get_build_dir()
+    built_packs = [
+        os.path.basename(re.sub(r"\.zip$", "", path))
+        for path in glob(os.path.join(build_dir, "*.zip"))]
+    packs = [{**PACKS[pack], **{"name": pack}} for pack in built_packs]
+    for i, pack in enumerate(packs):
+        pack_path = os.path.join(build_dir, "{}.zip".format(pack["name"]))
+        mtime = datetime.fromtimestamp(os.path.getmtime(pack_path))
+        packs[i]["updated_at"] = datetime.isoformat(mtime)
+        packs[i]["path"] = os.path.relpath(pack_path, build_dir)
+    manifest = {"packs": packs, "updated_at": max([p["updated_at"] for p in packs])}
+    with open(os.path.join(build_dir, "manifest.json"), "w") as manifest_f:
+        json.dump(manifest, manifest_f)
+
+
 def make_pack(pack_name, clean=False, clean_rocks=False, clean_ways=False,
         clean_contours=False, procs=2):
     make_database()
     pack = PACKS[pack_name]
-    build_dir = os.path.join(pathlib.Path(__file__).parent.absolute(), "build" )
+    build_dir = get_build_dir()
     pack_dir = os.path.join(build_dir, pack_name)
     if not os.path.isdir(pack_dir):
         os.makedirs(pack_dir)
@@ -88,7 +109,8 @@ def make_pack(pack_name, clean=False, clean_rocks=False, clean_ways=False,
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Make a data pack for Underfoot")
-    parser.add_argument("pack", metavar="PACK_NAME", type=str, help="Make the specified pack. Use `list` to list available packs")
+    parser.add_argument("pack", metavar="PACK_NAME",
+        type=str, help="Make the specified pack. Use `list` to list available packs")
     parser.add_argument("--clean", action="store_true", help="Clean all cached files before building")
     parser.add_argument("--clean-rocks", action="store_true", help="Clean all cached files for geologic data before building")
     parser.add_argument("--clean-ways", action="store_true", help="Clean all cached files for ways before building")
@@ -99,9 +121,12 @@ if __name__ == "__main__":
     if args.pack == "list":
         print("Available packs:")
         list_packs()
+    elif args.pack == "manifest":
+        make_manifest()
     else:
         print("making pack: {}".format(args.pack))
         pack_path = make_pack(args.pack, clean=args.clean,
             clean_rocks=args.clean_rocks, clean_ways=args.clean_ways,
             clean_contours=args.clean_contours, procs=args.procs)
+        make_manifest()
         print(f"Pack available at {pack_path}")

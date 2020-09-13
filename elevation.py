@@ -40,10 +40,10 @@ def tiles_from_geojson(geojson, zooms):
   for zoom in zooms:
     # So much more complicated than it needs to be. burntiles.burn only accepts
     # a list of polygons, not features, not multipolygons, just polygons, so
-    # super_utils.filter_polygons gets the polygons out of diverse GeoJSON-y
+    # super_utils.filter_features gets the polygons out of diverse GeoJSON-y
     # dicts. It also returns a list of numpy.ndarray objects, which are not
     # lists and need to be turned into lists with tolist()
-    tiles += [ftiles.tolist() for ftiles in burntiles.burn(list(super_utils.filter_polygons(features)), zoom)]
+    tiles += [ftiles.tolist() for ftiles in burntiles.burn(list(super_utils.filter_features(features)), zoom)]
   return [mercantile.Tile(*tile) for tile in tiles]
 
 async def cache_tile(tile, client, clean=False, max_retries=3):
@@ -166,7 +166,10 @@ async def make_contours_mbtiles(zoom, swlon=None, swlat=None, nelon=None, nelat=
   if os.path.exists(path):
     os.remove(path)
   util.call_cmd(["psql", DBNAME, "-c", "DROP TABLE {}".format(TABLE_NAME)])
-  util.call_cmd(["find", "elevation-tiles/", "-type", "f", "-name", "*.merge*", "-delete"])
+  if os.path.isdir(CACHE_DIR):
+    util.call_cmd(["find", CACHE_DIR, "-type", "f", "-name", "*.merge*", "-delete"])
+  else:
+    os.mkdir(CACHE_DIR)
   tiles = None
   if geojson:
     tiles  = tiles_from_geojson(geojson, zooms)

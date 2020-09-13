@@ -30,7 +30,7 @@ def make_ways(pbf_url, clean=False, bbox=None, path="./ways.mbtiles"):
     pass
   else:
     util.call_cmd(["curl", "-o", filename, pbf_url], check=True)
-  util.call_cmd(["dropdb", DBNAME], check=True)
+  util.call_cmd(["dropdb", "--if-exists", DBNAME], check=True)
   # Check to see if db exists
   try:
     con = psycopg2.connect("dbname={}".format(DBNAME))

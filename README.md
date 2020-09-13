@@ -27,7 +27,7 @@ git clone https://github.com/kueda/underfoot.git
 cd underfoot
 
 # Set up node via NVM. The important part is that you want node 10.x, otherwise
-# SQLite will note compile
+# SQLite will not compile
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh | bash
 source ~/.profile
 nvm install
@@ -40,32 +40,8 @@ source venv/bin/activate
 # ./setup
 python setup.py
 
-# Make an pack
+# Make a pack
 python packs.py us-ca-oakland
-
-# # Create the database and prepare all the data. Takes a good long while.
-# python prepare-database.py
-
-# # Install node deps for generating MBTiles
-# npm install
-
-# # Generate MBtiles
-# ./node_modules/tl/bin/tl.js copy -i underfoot_units.json -z 7 -Z 14 \
-#   'postgis://underfoot:underfoot@localhost:5432/underfoot?table=units' \
-#   mbtiles://./underfoot_units.mbtiles
-
-# # Generate roads mbtiles from OSM data (currently hard-coded for California)
-# # Makes underfoot_ways.mbtiles. It takes a long time and takes a lot of disk.
-# ./osm.sh
-
-# # Generate elevation contours from Mapzen / Amazon elevation tiles
-# # (https://registry.opendata.aws/terrain-tiles/) and load them into PostGIS
-# ./elevation.sh
-
-# # Annoying, but you have to ctrl-c here to get it to finish. Some kind of bug in tl.
-# ./node_modules/tl/bin/tl.js copy -i elevation.json -z 14 -Z 14 \
-#   'postgis://underfoot:underfoot@localhost:5432/underfoot?table=contours12' \
-#   mbtiles://./elevation.mbtiles
 ```
 
 # Adding Sources
