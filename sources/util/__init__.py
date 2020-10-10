@@ -7,6 +7,8 @@ from subprocess import call, run, Popen, PIPE
 import os
 import re
 import shutil
+import time
+import psycopg2
 from glob import glob
 import xml.etree.ElementTree as ET
 from collections import OrderedDict
@@ -534,6 +536,29 @@ def run_sql(sql, dbname="underfoot"):
   call_cmd([
     "psql", dbname, "-c", sql
   ])
+
+def run_sql_with_retries(sql, max_retries=3, retry=1, dbname="underfoot"):
+  con = psycopg2.connect("dbname={}".format(dbname))
+  cur = con.cursor()
+  try:
+    cur.execute(sql)
+    results = None
+    try:
+      results = cur.fetchall()
+    except psycopg2.ProgrammingError:
+      results = None
+    con.commit()
+    cur.close()
+    con.close()
+    return results
+  except psycopg2.OperationalError as e:
+    if retry > max_retries:
+      raise e
+    else:
+      sleep = retry ** 3
+      print("Failed to execute `{}`: {}. Trying again in {}s".format(sql, e, sleep))
+      time.sleep(sleep)
+      return run_sql_with_retries(sql, retry + 1)
 
 def basename_for_path(path):
   basename = extless_basename(path)

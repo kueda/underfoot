@@ -14,11 +14,15 @@ from multiprocessing import Pool
 
 from sources import util
 from database import DBNAME, SRID
+from datetime import datetime as dt
 
 NUM_PROCESSES = 4
 
 final_table_name = "rock_units"
 mask_table_name = "rock_units_masks"
+
+def log(msg="", **kwargs):
+  print("[{}] {}".format(dt.now().isoformat(), msg), **kwargs)
 
 # Painful process of removing polygon overlaps
 def remove_polygon_overlaps(source_table_name):
@@ -27,7 +31,7 @@ def remove_polygon_overlaps(source_table_name):
   util.run_sql("ALTER TABLE {} RENAME TO {}".format(source_table_name, temp_source_table_name))
   # First we need to split the table into its constituent polygons so we can
   # sort them by size and use them to cut holes out of the larger polygons
-  print("\tDumping into constituent polygons...")
+  log("\tDumping into constituent polygons...")
   dumped_source_table_name = "dumped_{}".format(source_table_name)
   util.run_sql("DROP TABLE IF EXISTS \"{}\"".format(dumped_source_table_name), dbname=DBNAME)
   util.run_sql("""
@@ -41,15 +45,13 @@ def remove_polygon_overlaps(source_table_name):
   util.run_sql("UPDATE {} SET area = ST_Area(geom)".format(dumped_source_table_name))
   # Now we iterate over each polygon order by size, and use it to cut a hole
   # out of all the other polygons that intersect it
-  con = psycopg2.connect("dbname={}".format(DBNAME))
-  cur1 = con.cursor()
-  cur1.execute("SELECT id, ST_Area(geom) FROM {} ORDER BY ST_Area(geom) ASC".format(dumped_source_table_name))
-  for idx, row in enumerate(cur1):
-    print("\tCutting larger polygons by smaller polygons... ({} / {}, {}%)".format(
-      idx, cur1.rowcount, round(idx / cur1.rowcount * 100, 2)), end="\r", flush=True)
+  polygons = util.run_sql_with_retries("SELECT id, ST_Area(geom) FROM {} ORDER BY ST_Area(geom) ASC".format(dumped_source_table_name))
+  for idx, row in enumerate(polygons):
+    log("\tCutting larger polygons by smaller polygons... ({} / {}, {}%)".format(
+      idx, len(polygons), round(idx / len(polygons) * 100, 2)), end="\r", flush=True)
     id = row[0]
     area = row[1]
-    cur2 = con.cursor()
+    # cur2 = con.cursor()
     sql = """
       UPDATE {}
       SET geom = ST_Multi(ST_Difference(geom, (SELECT geom FROM {} WHERE id = {})))
@@ -63,12 +65,9 @@ def remove_polygon_overlaps(source_table_name):
       dumped_source_table_name, id, id,
       area
     )
-    cur2.execute(sql)
-    cur2.close()
-  cur1.close()
-  con.commit()
-  print()
-  print("\tRecreating multipolygons...")
+    util.run_sql_with_retries(sql, dbname=DBNAME)
+  log()
+  log("\tRecreating multipolygons...")
   util.run_sql("CREATE TABLE {} AS SELECT {}, ST_Multi(ST_Union(geom)) AS geom FROM {} GROUP BY {}".format(
     source_table_name,
     ", ".join(util.METADATA_COLUMN_NAMES),
@@ -86,7 +85,7 @@ def process_source(source_identifier):
   source_table_name = re.sub(r"\W", "_", source_identifier)
   util.run_sql("DROP TABLE IF EXISTS \"{}\"".format(source_table_name), dbname=DBNAME)
   time.sleep(5) # stupid hack to make sure the table is dropped before we start loading into it
-  print("Loading {} into {} table...".format(units_path, source_table_name))
+  log("Loading {} into {} table...".format(units_path, source_table_name))
   util.call_cmd([
     "ogr2ogr",
       "-f", "PostgreSQL",
@@ -101,18 +100,18 @@ def process_source(source_identifier):
   work_source_table_name = "work_{}".format(source_table_name)
   util.run_sql("DROP TABLE IF EXISTS \"{}\"".format(work_source_table_name), dbname=DBNAME)
   util.run_sql("CREATE TABLE {} AS SELECT * FROM {}".format(work_source_table_name, source_table_name), dbname=DBNAME)
-  print("Deleting empty units...")
+  log("Deleting empty units...")
   util.run_sql("DELETE FROM {} WHERE code IS NULL OR code = ''".format(work_source_table_name), dbname=DBNAME)
-  print("Repairing invalid geometries...")
+  log("Repairing invalid geometries...")
   util.run_sql("UPDATE {} SET geom = ST_MakeValid(geom) WHERE NOT ST_IsValid(geom)".format(work_source_table_name))
-  print("Removing polygon overlaps...")
+  log("Removing polygon overlaps...")
   remove_polygon_overlaps(work_source_table_name)
   util.run_sql("DELETE FROM {} WHERE ST_GeometryType(geom) = 'ST_GeometryCollection'".format(work_source_table_name))
   util.run_sql("UPDATE {} SET geom = ST_MakeValid(geom) WHERE NOT ST_IsValid(geom)".format(work_source_table_name))
 
 def clip_source_polygons_by_mask(source_table_name):
-  print("Clipping source polygons by the mask...")
-  print("\tDumping into constituent polygons...")
+  log("Clipping source polygons by the mask...")
+  log("\tDumping into constituent polygons...")
   dumped_source_table_name = "dumped_{}".format(source_table_name)
   util.run_sql("DROP TABLE IF EXISTS \"{}\"".format(dumped_source_table_name), dbname=DBNAME)
   util.run_sql("""
@@ -133,7 +132,7 @@ def clip_source_polygons_by_mask(source_table_name):
       mask_table_name,
       dumped_source_table_name, mask_table_name
     ))
-  print("\tRecreating multipolygons...")
+  log("\tRecreating multipolygons...")
   temp_source_table_name = "temp_{}".format(source_table_name)
   util.run_sql("DROP TABLE IF EXISTS \"{}\"".format(source_table_name), dbname=DBNAME)
   util.run_sql("CREATE TABLE {} AS SELECT {}, ST_Multi(ST_Union(geom)) AS geom FROM {} GROUP BY {}".format(
@@ -188,11 +187,10 @@ def load_units(sources):
   pool.map(process_source, sources)
 
   for idx, source_identifier in enumerate(sources):
-    # print()
     source_table_name = re.sub(r"\W", "_", source_identifier)
     work_source_table_name = "work_{}".format(source_table_name)
     if idx == 0:
-      print("Creating {} and inserting...".format(final_table_name))
+      log("Creating {} and inserting...".format(final_table_name))
       util.run_sql("INSERT INTO {} ({}, source, geom) SELECT {}, '{}', geom FROM {}".format(
         final_table_name,
         ", ".join(util.METADATA_COLUMN_NAMES),
@@ -202,7 +200,7 @@ def load_units(sources):
       ))
     else:
       clip_source_polygons_by_mask(work_source_table_name)
-      print("Inserting into {}...".format(final_table_name))
+      log("Inserting into {}...".format(final_table_name))
       util.run_sql("""
         INSERT INTO {} ({})
         SELECT {}, '{}', s.geom
@@ -212,7 +210,7 @@ def load_units(sources):
         ", ".join(util.METADATA_COLUMN_NAMES), source_identifier,
         work_source_table_name
       ))
-    print("Updating {}...".format(mask_table_name))
+    log("Updating {}...".format(mask_table_name))
     # Remove slivers and make it valid
     if idx == 0:
       util.run_sql("""
@@ -266,7 +264,7 @@ def load_units(sources):
         mask_table_name, source_table_name
       ))
 
-  print("Database {} created with table {}".format(DBNAME, final_table_name))
+  log("Database {} created with table {}".format(DBNAME, final_table_name))
 
 def clean_sources(sources):
   """Clean any cached data for specified sources"""
@@ -301,4 +299,7 @@ def make_rocks(sources, clean=False, path="./rocks.mbtiles"):
   return mbtiles_path
 
 if __name__ == "__main__":
-  make_rocks(sys.argv)
+  if sys.argv[0] == __file__:
+    make_rocks(sys.argv[1:])
+  else:
+    make_rocks(sys.argv)
