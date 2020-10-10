@@ -2,6 +2,7 @@
 (https://registry.opendata.aws/terrain-tiles/)
 """
 from database import make_database, DBNAME, DB_USER, DB_PASSWORD, SRID
+from datetime import datetime as dt
 from fiona.transform import transform
 from multiprocessing import Pool
 from sources import util
@@ -19,6 +20,9 @@ import time
 
 TABLE_NAME = "contours"
 CACHE_DIR = "./elevation-tiles"
+
+def log(msg="", **kwargs):
+  print("[{}] {}".format(dt.now().isoformat(), msg), **kwargs)
 
 def tile_file_path(x, y, z, ext="tif"):
   return "{}/{}/{}/{}.{}".format(CACHE_DIR, z, x, y, ext)
@@ -62,18 +66,19 @@ async def cache_tile(tile, client, clean=False, max_retries=3):
     try:
       r = await client.get(url)
       if r.status_code != 200:
-        print(f"Request for {url} failed with {r.status_code}, skipping...")
+        log(f"Request for {url} failed with {r.status_code}, skipping...")
         return
       async with aiofiles.open(file_path, 'wb') as fd:
         async for chunk in r.aiter_bytes():
           await fd.write(chunk)
-        # print("Wrote {}".format(file_path))
+        # log("Wrote {}".format(file_path))
       break
-    except asyncio.exceptions.TimeoutError:
+    except (asyncio.exceptions.TimeoutError, httpx.ConnectTimeout):
       if try_num > max_retries:
-        print(f"Request for {url} timed out {max_retries} times, skipping...")
+        log(f"Request for {url} timed out {max_retries} times, skipping...")
       else:
-        time.sleep(try_num ** 3)
+        # log(f"Sleeping for {try_num ** 3}s...")
+        await asyncio.sleep(try_num ** 3)
       pass
 
 
