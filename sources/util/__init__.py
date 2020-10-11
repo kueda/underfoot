@@ -13,6 +13,7 @@ from glob import glob
 import xml.etree.ElementTree as ET
 from collections import OrderedDict
 import csv
+from datetime import datetime as dt
 
 WEB_MERCATOR_PROJ4 = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +over +no_defs"
 NAD27_UTM10_PROJ4 = "+proj=utm +zone=10 +datum=NAD27 +units=m +no_defs"
@@ -522,6 +523,9 @@ for span, dates in WIKI_SPANS.items():
     ]
 SPAN_PATTERN = re.compile(r'('+('|').join(SPANS.keys())+')', re.I)
 
+def log(msg="", **kwargs):
+  print("[{}] {}".format(dt.now().isoformat(), msg), **kwargs)
+
 def extless_basename(path):
   if os.path.isfile(path):
     return os.path.splitext(os.path.basename(path))[0]
@@ -533,24 +537,26 @@ def call_cmd(*args, **kwargs):
 
 def run_sql(sql, dbname="underfoot"):
   # print("running {}".format(sql))
-  call_cmd([
-    "psql", dbname, "-c", sql
-  ])
-
-def run_sql_with_retries(sql, max_retries=3, retry=1, dbname="underfoot"):
+  # call_cmd([
+  #   "psql", dbname, "-c", sql
+  # ])
   con = psycopg2.connect("dbname={}".format(dbname))
   cur = con.cursor()
+  log(f"Running {sql}")
+  cur.execute(sql)
+  results = None
   try:
-    cur.execute(sql)
+    results = cur.fetchall()
+  except psycopg2.ProgrammingError:
     results = None
-    try:
-      results = cur.fetchall()
-    except psycopg2.ProgrammingError:
-      results = None
-    con.commit()
-    cur.close()
-    con.close()
-    return results
+  con.commit()
+  cur.close()
+  con.close()
+  return results
+
+def run_sql_with_retries(sql, max_retries=3, retry=1, dbname="underfoot"):
+  try:
+    return run_sql(sql, dbname=dbname)
   except psycopg2.OperationalError as e:
     if retry > max_retries:
       raise e

@@ -4,6 +4,7 @@ Main export is make_rocks, which should load everything into the database,
 export an MBTiles file, and return a list with the files you need.
 """
 
+import argparse
 import os
 import shutil
 import sys
@@ -14,15 +15,11 @@ from multiprocessing import Pool
 
 from sources import util
 from database import DBNAME, SRID
-from datetime import datetime as dt
 
 NUM_PROCESSES = 4
 
 final_table_name = "rock_units"
 mask_table_name = "rock_units_masks"
-
-def log(msg="", **kwargs):
-  print("[{}] {}".format(dt.now().isoformat(), msg), **kwargs)
 
 # Painful process of removing polygon overlaps
 def remove_polygon_overlaps(source_table_name):
@@ -31,7 +28,7 @@ def remove_polygon_overlaps(source_table_name):
   util.run_sql("ALTER TABLE {} RENAME TO {}".format(source_table_name, temp_source_table_name))
   # First we need to split the table into its constituent polygons so we can
   # sort them by size and use them to cut holes out of the larger polygons
-  log("\tDumping into constituent polygons...")
+  util.log("\tDumping into constituent polygons...")
   dumped_source_table_name = "dumped_{}".format(source_table_name)
   util.run_sql("DROP TABLE IF EXISTS \"{}\"".format(dumped_source_table_name), dbname=DBNAME)
   util.run_sql("""
@@ -47,8 +44,11 @@ def remove_polygon_overlaps(source_table_name):
   # out of all the other polygons that intersect it
   polygons = util.run_sql_with_retries("SELECT id, ST_Area(geom) FROM {} ORDER BY ST_Area(geom) ASC".format(dumped_source_table_name))
   for idx, row in enumerate(polygons):
-    log("\tCutting larger polygons by smaller polygons... ({} / {}, {}%)".format(
-      idx, len(polygons), round(idx / len(polygons) * 100, 2)), end="\r", flush=True)
+    progress = round(idx / len(polygons) * 100, 2)
+    if progress % 10 < 0.01:
+      # util.log("\tCutting larger polygons by smaller polygons... ({} / {}, {}%)".format(
+      #   idx, len(polygons), round(idx / len(polygons) * 100, 2)), end="\r", flush=True)
+      util.log(f"\tCutting larger polygons by smaller polygons in {source_table_name}... ({idx} / {len(polygons)}, {progress}%)")
     id = row[0]
     area = row[1]
     # cur2 = con.cursor()
@@ -66,8 +66,8 @@ def remove_polygon_overlaps(source_table_name):
       area
     )
     util.run_sql_with_retries(sql, dbname=DBNAME)
-  log()
-  log("\tRecreating multipolygons...")
+  util.log()
+  util.log("\tRecreating multipolygons...")
   util.run_sql("CREATE TABLE {} AS SELECT {}, ST_Multi(ST_Union(geom)) AS geom FROM {} GROUP BY {}".format(
     source_table_name,
     ", ".join(util.METADATA_COLUMN_NAMES),
@@ -85,7 +85,7 @@ def process_source(source_identifier):
   source_table_name = re.sub(r"\W", "_", source_identifier)
   util.run_sql("DROP TABLE IF EXISTS \"{}\"".format(source_table_name), dbname=DBNAME)
   time.sleep(5) # stupid hack to make sure the table is dropped before we start loading into it
-  log("Loading {} into {} table...".format(units_path, source_table_name))
+  util.log("Loading {} into {} table...".format(units_path, source_table_name))
   util.call_cmd([
     "ogr2ogr",
       "-f", "PostgreSQL",
@@ -100,18 +100,18 @@ def process_source(source_identifier):
   work_source_table_name = "work_{}".format(source_table_name)
   util.run_sql("DROP TABLE IF EXISTS \"{}\"".format(work_source_table_name), dbname=DBNAME)
   util.run_sql("CREATE TABLE {} AS SELECT * FROM {}".format(work_source_table_name, source_table_name), dbname=DBNAME)
-  log("Deleting empty units...")
+  util.log("Deleting empty units...")
   util.run_sql("DELETE FROM {} WHERE code IS NULL OR code = ''".format(work_source_table_name), dbname=DBNAME)
-  log("Repairing invalid geometries...")
+  util.log("Repairing invalid geometries...")
   util.run_sql("UPDATE {} SET geom = ST_MakeValid(geom) WHERE NOT ST_IsValid(geom)".format(work_source_table_name))
-  log("Removing polygon overlaps...")
+  util.log("Removing polygon overlaps...")
   remove_polygon_overlaps(work_source_table_name)
   util.run_sql("DELETE FROM {} WHERE ST_GeometryType(geom) = 'ST_GeometryCollection'".format(work_source_table_name))
   util.run_sql("UPDATE {} SET geom = ST_MakeValid(geom) WHERE NOT ST_IsValid(geom)".format(work_source_table_name))
 
 def clip_source_polygons_by_mask(source_table_name):
-  log("Clipping source polygons by the mask...")
-  log("\tDumping into constituent polygons...")
+  util.log("Clipping source polygons by the mask...")
+  util.log("\tDumping into constituent polygons...")
   dumped_source_table_name = "dumped_{}".format(source_table_name)
   util.run_sql("DROP TABLE IF EXISTS \"{}\"".format(dumped_source_table_name), dbname=DBNAME)
   util.run_sql("""
@@ -121,6 +121,8 @@ def clip_source_polygons_by_mask(source_table_name):
     ", ".join(util.METADATA_COLUMN_NAMES),
     source_table_name
   ))
+  # Pretty sure this clips any polygons that would overlap the existing units,
+  # since we don't want any overlaps
   util.run_sql("""
     UPDATE {}
     SET geom = ST_Difference({}.geom, {}.geom)
@@ -132,16 +134,23 @@ def clip_source_polygons_by_mask(source_table_name):
       mask_table_name,
       dumped_source_table_name, mask_table_name
     ))
-  log("\tRecreating multipolygons...")
+  util.log("\tRecreating multipolygons...")
   temp_source_table_name = "temp_{}".format(source_table_name)
   util.run_sql("DROP TABLE IF EXISTS \"{}\"".format(source_table_name), dbname=DBNAME)
-  util.run_sql("CREATE TABLE {} AS SELECT {}, ST_Multi(ST_Union(geom)) AS geom FROM {} GROUP BY {}".format(
-    source_table_name,
-    ", ".join(util.METADATA_COLUMN_NAMES),
-    dumped_source_table_name,
-    ", ".join(util.METADATA_COLUMN_NAMES)
-  ))
-  util.run_sql("DELETE FROM {} WHERE ST_GeometryType(geom) = 'ST_GeometryCollection'".format(source_table_name))
+  util.run_sql(f"""
+    CREATE TABLE {source_table_name} AS
+    SELECT
+      {", ".join(util.METADATA_COLUMN_NAMES)},
+      ST_Multi(ST_Union(geom)) AS geom
+    FROM {dumped_source_table_name}
+    GROUP BY {", ".join(util.METADATA_COLUMN_NAMES)}
+  """)
+  util.run_sql(f"""
+    DELETE FROM {source_table_name}
+    WHERE
+      ST_GeometryType(geom) = 'ST_GeometryCollection'
+      OR ST_NPoints(geom) = 0
+  """)
 
 def load_units(sources):
   """Load geological units into the database from the specified sources
@@ -190,7 +199,7 @@ def load_units(sources):
     source_table_name = re.sub(r"\W", "_", source_identifier)
     work_source_table_name = "work_{}".format(source_table_name)
     if idx == 0:
-      log("Creating {} and inserting...".format(final_table_name))
+      util.log("Creating {} and inserting...".format(final_table_name))
       util.run_sql("INSERT INTO {} ({}, source, geom) SELECT {}, '{}', geom FROM {}".format(
         final_table_name,
         ", ".join(util.METADATA_COLUMN_NAMES),
@@ -200,7 +209,7 @@ def load_units(sources):
       ))
     else:
       clip_source_polygons_by_mask(work_source_table_name)
-      log("Inserting into {}...".format(final_table_name))
+      util.log("Inserting into {}...".format(final_table_name))
       util.run_sql("""
         INSERT INTO {} ({})
         SELECT {}, '{}', s.geom
@@ -210,7 +219,7 @@ def load_units(sources):
         ", ".join(util.METADATA_COLUMN_NAMES), source_identifier,
         work_source_table_name
       ))
-    log("Updating {}...".format(mask_table_name))
+    util.log("Updating {}...".format(mask_table_name))
     # Remove slivers and make it valid
     if idx == 0:
       util.run_sql("""
@@ -264,7 +273,7 @@ def load_units(sources):
         mask_table_name, source_table_name
       ))
 
-  log("Database {} created with table {}".format(DBNAME, final_table_name))
+  util.log("Database {} created with table {}".format(DBNAME, final_table_name))
 
 def clean_sources(sources):
   """Clean any cached data for specified sources"""
@@ -299,6 +308,10 @@ def make_rocks(sources, clean=False, path="./rocks.mbtiles"):
   return mbtiles_path
 
 if __name__ == "__main__":
+  parser = argparse.ArgumentParser(description="Make an MBTiles of geologic units from given source(s)")
+  parser.add_argument("source", type=str, help="Source(s)")
+  parser.add_argument("--clean", action="store_true", help="Clean cached data before running")
+  args = parser.parse_args()
   if sys.argv[0] == __file__:
     make_rocks(sys.argv[1:])
   else:
