@@ -66,7 +66,8 @@ def load_ways_data(data_path, recreate=False, bbox=None):
       "--tf", "reject-ways", "service=*",
       "--tf", "reject-ways", "footway=sidewalk",
       "--tf", "reject-ways", "highway=proposed",
-      "--tf", "reject-ways", "highway=footway",
+      "--tf", "reject-ways", "golf=*",
+      "--tf", "reject-ways", "golf-cart=*",
       "--tf", "reject-ways", "highway=pedestrian",
       "--tf", "reject-ways", "highway=steps"
     ]
@@ -93,8 +94,7 @@ def load_ways_data(data_path, recreate=False, bbox=None):
     CREATE TABLE {TABLE_NAME} AS
     SELECT
       id,
-      version,
-      tags -> 'name' AS name,
+      COALESCE(tags -> 'ref', tags -> 'tiger:name_base', tags -> 'name') AS name,
       tags -> 'highway' AS highway,
       linestring
     FROM ways
