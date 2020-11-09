@@ -1,6 +1,8 @@
 from sources import util
+import json
 import os
 import psycopg2
+import re
 import sys
 import time
 
@@ -104,49 +106,48 @@ def make_ways_mbtiles(path):
   # Export ways into the MBTiles using different zoom levels for different types
   if os.path.exists(path):
     os.remove(path)
-  util.call_cmd([
-    "./node_modules/tl/bin/tl.js", "copy", "-i", "underfoot_ways.json", "--quiet", "-z", "3", "-Z", "13",
-    "postgis://{}:{}@localhost:5432/{}?table={}&query=(SELECT%20*%20from%20underfoot_ways%20WHERE%20highway%20in%20('motorway'))%20AS%20foo".format(
-      DB_USER,
-      DB_PASSWORD,
-      DBNAME,
-      TABLE_NAME
-    ),
-    "mbtiles://{}".format(path)
-  ])
-  time.sleep(5)
-  util.call_cmd([
-    "./node_modules/tl/bin/tl.js", "copy", "-i", "underfoot_ways.json", "--quiet", "-z", "7", "-Z", "13",
-    "postgis://{}:{}@localhost:5432/{}?table={}&query=(SELECT%20*%20from%20underfoot_ways%20WHERE%20highway%20in%20('motorway','primary','trunk'))%20AS%20foo".format(
-      DB_USER,
-      DB_PASSWORD,
-      DBNAME,
-      TABLE_NAME
-    ),
-    "mbtiles://{}".format(path)
-  ])
-  time.sleep(5)
-  util.call_cmd([
-    "./node_modules/tl/bin/tl.js", "copy", "-i", "underfoot_ways.json", "--quiet", "-z", "11", "-Z", "13",
-    "postgis://{}:{}@localhost:5432/{}?table={}&query=(SELECT%20*%20from%20underfoot_ways%20WHERE%20highway%20in%20('motorway','primary','trunk','secondary','tertiary','motorway_link'))%20AS%20foo".format(
-      DB_USER,
-      DB_PASSWORD,
-      DBNAME,
-      TABLE_NAME
-    ),
-    "mbtiles://{}".format(path)
-  ])
-  time.sleep(5)
-  util.call_cmd([
-    "./node_modules/tl/bin/tl.js", "copy", "-i", "underfoot_ways.json", "--quiet", "-z", "13", "-Z", "13",
-    "postgis://{}:{}@localhost:5432/{}?table={}".format(
-      DB_USER,
-      DB_PASSWORD,
-      DBNAME,
-      TABLE_NAME
-    ),
-    "mbtiles://{}".format(path)
-  ])
+  gpkg_path = f"{util.basename_for_path(path)}.gpkg"
+  zooms = (
+    (3,6, ('motorway',)),
+    (7,10, ('motorway', 'primary', 'trunk')),
+    (11,12, ('motorway', 'primary', 'trunk', 'secondary', 'tertiary', 'motorway_link')),
+    (13,13, ())
+  )
+  for idx, row in enumerate(zooms):
+    minzoom, maxzoom, types = row
+    where = None
+    cmd = ["ogr2ogr"]
+    if idx != 0:
+      cmd += ["-update"]
+    cmd += [
+      gpkg_path,
+      f"PG:dbname={DBNAME}",
+      TABLE_NAME,
+      "-nln", f"underfoot_ways_{minzoom}_{maxzoom}"
+    ]
+    if len(types):
+      types_list = ", ".join([f"'{t}'" for t in types])
+      cmd += ["-where", f"highway IN ({types_list})"]
+    util.call_cmd(cmd)
+  conf = {
+    f"underfoot_ways_{minzoom}_{maxzoom}": {
+      "target_name": TABLE_NAME,
+      "minzoom": minzoom,
+      "maxzoom": maxzoom
+    } for minzoom, maxzoom, types in zooms}
+  cmd = f"""
+    ogr2ogr {path} {gpkg_path}
+      -dsco MAX_SIZE=5000000
+      -dsco MINZOOM={min([row[0] for row in zooms])}
+      -dsco MAXZOOM={max([row[0] for row in zooms])}
+      -dsco CONF='{json.dumps(conf)}'
+  """
+  # Some weirdness: if you calll subprocess.run with a list like usually do, it
+  # fails because it will pass the CONF arg like -dsco "CONF=blah" and ogr2ogr
+  # does not like that. It just silently ignores that dsco. Instead, I'm
+  # constructing a string version of the command and pass that with shell=True
+  # some it doesn't try to do any fance string escaping
+  util.call_cmd(re.sub(r'\s+', " ", cmd).strip(), shell=True)
 
 def make_ways(pbf_url, clean=False, bbox=None, path="./ways.mbtiles"):
   r"""Make an MBTiles files for OSM ways data given an OSM PBF export URL
@@ -165,7 +166,7 @@ def make_ways(pbf_url, clean=False, bbox=None, path="./ways.mbtiles"):
   if not pbf_url or len(pbf_url) == 0:
     raise ValueError("You must specify a PBF URL")
   filename = fetch_data(pbf_url, clean=clean)
-  load_ways_data(filename, recreate=True, bbox=bbox)
+  load_ways_data(filename, recreate=clean, bbox=bbox)
   make_ways_mbtiles(path)
   return path
 

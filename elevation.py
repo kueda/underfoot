@@ -184,20 +184,17 @@ async def make_contours_mbtiles(zoom, swlon=None, swlat=None, nelon=None, nelat=
   # TODO make mbtiles_zoom into mbtiles_zooms which is a mapping between the
   # desired zooms in the mbtiles and what zoom-level table in the database to
   # fill it with (i.e. what contour resolution)
-  util.call_cmd([
-    "./node_modules/tl/bin/tl.js", "copy",
-    "-i", "elevation.json",
-    "--quiet",
-    "-z", str(mbtiles_zoom),
-    "-Z", str(mbtiles_zoom),
-    "postgis://{}:{}@localhost:5432/{}?table={}".format(
-      DB_USER,
-      DB_PASSWORD,
-      DBNAME,
-      TABLE_NAME
-    ),
-    "mbtiles://{}".format(path)
-  ])
+  cmd = [
+    "ogr2ogr",
+    "-f", "MBTILES",
+    path,
+    f"PG:dbname={DBNAME}",
+    TABLE_NAME,
+    "-dsco", f"MINZOOM={mbtiles_zoom}",
+    "-dsco", f"MAXZOOM={mbtiles_zoom}",
+    "-dsco", "DESCRIPTION=\"Elevation contours, 25m interval\""
+  ]
+  util.call_cmd(cmd)
   return path
 
 # Seemingly useless method so we can export a synchronous method that calls

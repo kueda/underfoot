@@ -532,6 +532,9 @@ def extless_basename(path):
   return os.path.split(path)[-1]
 
 def call_cmd(*args, **kwargs):
+  if isinstance(args[0], str) and len(args) == 1:
+    print(f"Calling `{args[0]}` with kwargs: {kwargs}")
+    return run(args[0], **kwargs)
   print("Calling `{}` with kwargs: {}".format(" ".join(args[0]), kwargs))
   return run(*args, **kwargs)
 

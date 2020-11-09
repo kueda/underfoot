@@ -13,27 +13,16 @@ vagrant ssh
 
 # Subsequent commands in the Vagrant VM
 
-# Now you need to clone within the VM. You *could* use the mounted repo at
-# /vagrant, which will give you easy filesystem access from the host, but npm
-# does not seem to build things like mapnik there (lots of ENOENT errors due to
-# symlink problems with shared folders, see
-# https://github.com/npm/npm/issues/9479), and I haven't figured out a fix, so
-# to get *every* part of the process to work you need this separate checkout. If
-# you need access to the files you generate from the host you can just move them
-# to /vagrant or set up another synced folder a la
-# https://www.vagrantup.com/docs/synced-folders/basic_usage.html
-
+# This is kind of optional. You could just run the code from /vagrant/, i.e. the
+# files on the host, but it might be a bit safer to clone them from the repo and
+# work on a separate clone. Then you have the awkwardness of copying files back
+# and forth if you're developing, or syncing folders
+# (https://www.vagrantup.com/docs/synced-folders/basic_usage.html). Up to you.
 git clone https://github.com/kueda/underfoot.git
 cd underfoot
 
-# Set up node via NVM. The important part is that you want node 10.x, otherwise
-# SQLite will not compile
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh | bash
-source ~/.profile
-nvm install
-
 # Set up a python virtual environment
-virtualenv venv -p python3.8 --no-site-packages
+virtualenv venv -p python3.8
 source venv/bin/activate
 
 # Install deps and some stuff for working with ESRI Arc/Info coverages

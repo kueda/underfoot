@@ -77,12 +77,20 @@ def remove_polygon_overlaps(source_table_name):
   util.run_sql("DELETE FROM {} WHERE ST_GeometryType(geom) = 'ST_GeometryCollection'".format(source_table_name))
 
 # Run the source scripts and load their data into the database
-def process_source(source_identifier):
+def process_source(source_identifier, clean=False):
+  source_table_name = re.sub(r"\W", "_", source_identifier)
+  try:
+    num_rows = util.run_sql(f"SELECT COUNT(*) FROM {source_table_name}")[0][0]
+    if num_rows > 0 and not clean:
+      util.log(f"{source_table_name} exists and has data, skipping the source build...")
+      return
+  except psycopg2.errors.UndefinedTable:
+    # If the table doesn't exist we need to proceed
+    pass
   util.call_cmd(["python", os.path.join("sources", "{}.py".format(source_identifier))])
   path = os.path.join("sources", "{}.py".format(source_identifier))
   work_path = util.make_work_dir(path)
   units_path = os.path.join(work_path, "units.geojson")
-  source_table_name = re.sub(r"\W", "_", source_identifier)
   util.run_sql("DROP TABLE IF EXISTS \"{}\"".format(source_table_name), dbname=DBNAME)
   time.sleep(5) # stupid hack to make sure the table is dropped before we start loading into it
   util.log("Loading {} into {} table...".format(units_path, source_table_name))
@@ -285,17 +293,14 @@ def clean_sources(sources):
 def make_mbtiles(path="./rocks.mbtiles"):
   """Export rock units into am MBTiles file"""
   cmd = [
-    "node_modules/tl/bin/tl.js",
-    "copy",
-    "-i",
-    "underfoot_rock_units.json",
-    "--quiet",
-    "-z",
-    "7",
-    "-Z",
-    "14",
-    "postgis://underfoot:underfoot@localhost:5432/{}?table={}".format(DBNAME, final_table_name),
-    "mbtiles://{}".format(path)
+    "ogr2ogr",
+    "-f", "MBTILES",
+    path,
+    f"PG:dbname={DBNAME}",
+    final_table_name,
+    "-dsco", "MINZOOM=7",
+    "-dsco", "MAXZOOM=14",
+    "-dsco", "DESCRIPTION=\"Geological units\""
   ]
   util.call_cmd(cmd)
   return os.path.abspath(path)

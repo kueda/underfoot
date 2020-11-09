@@ -27,4 +27,3 @@ def setup_e00conv():
 if __name__ == "__main__":
   shell_cmd(["pip", "install", "-r", "requirements.txt"], msg="INSTALLING PYTHON PACKAGES...")
   setup_e00conv()
-  shell_cmd(["npm", "install"], msg="INSTALLING NODE MODULES...")
