@@ -170,7 +170,7 @@ def load_units(sources):
   """
   # Drop existing units and masks tables
   for table_name in [final_table_name, mask_table_name]:
-    util.run_sql("DROP TABLE IF EXISTS {}".format(table_name), dbname=DBNAME)
+    util.run_sql("DROP TABLE IF EXISTS {} CASCADE".format(table_name), dbname=DBNAME)
 
   # Create the units table
   column_names = ['id'] + util.METADATA_COLUMN_NAMES + ['source', 'geom']
@@ -292,17 +292,35 @@ def clean_sources(sources):
 
 def make_mbtiles(path="./rocks.mbtiles"):
   """Export rock units into am MBTiles file"""
-  cmd = [
+  mbtiles_cmd = [
     "ogr2ogr",
     "-f", "MBTILES",
     path,
     f"PG:dbname={DBNAME}",
-    final_table_name,
+    "-sql", "SELECT id::text AS id, lithology, min_age, controlled_span, geom FROM rock_units",
+    "-nln", final_table_name,
+    "-dsco", "MAX_SIZE=5000000",
     "-dsco", "MINZOOM=7",
     "-dsco", "MAXZOOM=14",
     "-dsco", "DESCRIPTION=\"Geological units\""
   ]
-  util.call_cmd(cmd)
+  util.call_cmd(mbtiles_cmd)
+  attrs_csv_path = f"{os.path.basename(path)}.csv"
+  columns = ["id"] + util.METADATA_COLUMN_NAMES + ["source"]
+  attrs_sql = "SELECT {} FROM {}".format(", ".join(columns), final_table_name)
+  util.call_cmd(f"psql {DBNAME} -c \"COPY ({attrs_sql}) TO STDOUT WITH CSV HEADER\" > {attrs_csv_path}", shell=True, check=True)
+  shutil.rmtree(attrs_csv_path, ignore_errors=True)
+  util.call_cmd([
+    "sqlite3",
+    "-csv",
+    path,
+    f".import {attrs_csv_path} {final_table_name}_attrs"
+  ])
+  util.call_cmd([
+    "sqlite3",
+    path,
+    f"CREATE INDEX {final_table_name}_attrs_id ON {final_table_name}_attrs(id)"
+  ], check=True)
   return os.path.abspath(path)
 
 def make_rocks(sources, clean=False, path="./rocks.mbtiles"):

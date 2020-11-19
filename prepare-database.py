@@ -1,5 +1,4 @@
 from sources import util
-from subprocess import call, Popen, PIPE
 import glob
 import os
 import re

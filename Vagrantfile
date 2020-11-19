@@ -31,7 +31,7 @@ Vagrant.configure("2") do |config|
     add-apt-repository ppa:ubuntugis/ppa
     add-apt-repository ppa:deadsnakes/ppa
     apt-get update
-    apt-get install -y build-essential git virtualenv python3.8 python3.8-dev python3-gdal gdal-bin libgdal-dev postgis unzip osmosis
+    apt-get install -y build-essential git virtualenv python3.8 python3.8-dev python3-gdal gdal-bin libgdal-dev postgis unzip osmosis sqlite3
     #{pgsql_mods}
     service postgresql restart
   SHELL
