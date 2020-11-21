@@ -11,6 +11,7 @@ import sys
 import re
 import psycopg2
 import time
+import json
 from multiprocessing import Pool
 
 from sources import util
@@ -20,6 +21,7 @@ NUM_PROCESSES = 4
 
 final_table_name = "rock_units"
 mask_table_name = "rock_units_masks"
+citations_table_name = "citations"
 
 # Painful process of removing polygon overlaps
 def remove_polygon_overlaps(source_table_name):
@@ -46,9 +48,7 @@ def remove_polygon_overlaps(source_table_name):
   for idx, row in enumerate(polygons):
     progress = round(idx / len(polygons) * 100, 2)
     if progress % 10 < 0.01:
-      # util.log("\tCutting larger polygons by smaller polygons... ({} / {}, {}%)".format(
-      #   idx, len(polygons), round(idx / len(polygons) * 100, 2)), end="\r", flush=True)
-      util.log(f"\tCutting larger polygons by smaller polygons in {source_table_name}... ({idx} / {len(polygons)}, {progress}%)")
+      util.log(f"Cutting larger polygons by smaller polygons in {source_table_name}... ({idx} / {len(polygons)}, {progress}%)")
     id = row[0]
     area = row[1]
     # cur2 = con.cursor()
@@ -65,7 +65,7 @@ def remove_polygon_overlaps(source_table_name):
       dumped_source_table_name, id, id,
       area
     )
-    util.run_sql_with_retries(sql, dbname=DBNAME)
+    util.run_sql_with_retries(sql, dbname=DBNAME, quiet=True)
   util.log()
   util.log("\tRecreating multipolygons...")
   util.run_sql("CREATE TABLE {} AS SELECT {}, ST_Multi(ST_Union(geom)) AS geom FROM {} GROUP BY {}".format(
@@ -76,6 +76,37 @@ def remove_polygon_overlaps(source_table_name):
   ))
   util.run_sql("DELETE FROM {} WHERE ST_GeometryType(geom) = 'ST_GeometryCollection'".format(source_table_name))
 
+def load_citation_for_source(source_identifier):
+  path = os.path.join("sources", "{}.py".format(source_identifier))
+  work_path = util.make_work_dir(path)
+  citation_json_path = os.path.join(work_path, "citation.json")
+  if os.path.isfile(citation_json_path):
+    with open(citation_json_path) as f:
+      citation_json = json.loads(f.read())
+      c = citation_json[0]
+      authorship = ""
+      for idx, author in enumerate(c["author"]):
+        if idx != 0:
+          if idx == len(c["author"]) - 1:
+            authorship += ", & "
+          else:
+            authorship += ", "
+        authorship += ", ".join([piece for piece in [author.get("family"), author.get("given")] if piece is not None])
+      pieces = [
+        authorship,
+        f"({c['issued']['date-parts'][0][0]})",
+        c.get("title"),
+        c.get("container-title"),
+        c.get("publisher"),
+        c.get("URL")
+      ]
+      citation = ". ".join([piece for piece in pieces if piece])
+      citation = re.sub(r"\.+", ".", citation)
+      util.run_sql(f"CREATE TABLE IF NOT EXISTS {citations_table_name} (source VARCHAR(10), citation TEXT)")
+      existing = util.run_sql(f"DELETE FROM {citations_table_name} WHERE source = '{source_identifier}'")
+      util.log(f"Loading citation for {source_identifier}: {citation}")
+      util.run_sql(f"INSERT INTO {citations_table_name} VALUES ('{source_identifier}', '{citation}')")
+
 # Run the source scripts and load their data into the database
 def process_source(source_identifier, clean=False):
   source_table_name = re.sub(r"\W", "_", source_identifier)
@@ -83,6 +114,7 @@ def process_source(source_identifier, clean=False):
     num_rows = util.run_sql(f"SELECT COUNT(*) FROM {source_table_name}")[0][0]
     if num_rows > 0 and not clean:
       util.log(f"{source_table_name} exists and has data, skipping the source build...")
+      load_citation_for_source(source_identifier)
       return
   except psycopg2.errors.UndefinedTable:
     # If the table doesn't exist we need to proceed
@@ -116,6 +148,7 @@ def process_source(source_identifier, clean=False):
   remove_polygon_overlaps(work_source_table_name)
   util.run_sql("DELETE FROM {} WHERE ST_GeometryType(geom) = 'ST_GeometryCollection'".format(work_source_table_name))
   util.run_sql("UPDATE {} SET geom = ST_MakeValid(geom) WHERE NOT ST_IsValid(geom)".format(work_source_table_name))
+  load_citation_for_source(source_identifier)
 
 def clip_source_polygons_by_mask(source_table_name):
   util.log("Clipping source polygons by the mask...")
@@ -160,7 +193,7 @@ def clip_source_polygons_by_mask(source_table_name):
       OR ST_NPoints(geom) = 0
   """)
 
-def load_units(sources):
+def load_units(sources, clean=False):
   """Load geological units into the database from the specified sources
   
   Parameters
@@ -201,7 +234,13 @@ def load_units(sources):
 
   # Creaate a processing pool to max out 4 processors
   pool = Pool(processes=NUM_PROCESSES)
-  pool.map(process_source, sources)
+  # Since I'm almost certainly going to forget how this works,
+  # pool.map(process_source, sources) would run process_source() on each item in
+  # sources, so if sources is ['foo', 'bar'], it would run process_source('foo')
+  # and process_source('bar'). pool.starmap does the same thing except the
+  # second arg is an iterable of iterables, if it's ['foo', true], it will run
+  # process_source('foo', true)
+  pool.starmap(process_source, [[src, clean] for src in sources])
 
   for idx, source_identifier in enumerate(sources):
     source_table_name = re.sub(r"\W", "_", source_identifier)
@@ -290,6 +329,25 @@ def clean_sources(sources):
     work_path = util.make_work_dir(path)
     shutil.rmtree(work_path)
 
+def add_table_from_query_to_mbtiles(table_name, query, path, index_column=None):
+  csv_path = f"{os.path.basename(path)}.csv"
+  # columns = ["id"] + util.METADATA_COLUMN_NAMES + ["source"]
+  # sql = "SELECT {} FROM {}".format(", ".join(columns), final_table_name)
+  util.call_cmd(f"psql {DBNAME} -c \"COPY ({query}) TO STDOUT WITH CSV HEADER\" > {csv_path}", shell=True, check=True)
+  shutil.rmtree(csv_path, ignore_errors=True)
+  util.call_cmd([
+    "sqlite3",
+    "-csv",
+    path,
+    f".import {csv_path} {table_name}"
+  ])
+  if index_column:
+    util.call_cmd([
+      "sqlite3",
+      path,
+      f"CREATE INDEX {table_name}_{index_column} ON {table_name}({index_column})"
+    ], check=True)
+
 def make_mbtiles(path="./rocks.mbtiles"):
   """Export rock units into am MBTiles file"""
   mbtiles_cmd = [
@@ -305,28 +363,23 @@ def make_mbtiles(path="./rocks.mbtiles"):
     "-dsco", "DESCRIPTION=\"Geological units\""
   ]
   util.call_cmd(mbtiles_cmd)
-  attrs_csv_path = f"{os.path.basename(path)}.csv"
   columns = ["id"] + util.METADATA_COLUMN_NAMES + ["source"]
-  attrs_sql = "SELECT {} FROM {}".format(", ".join(columns), final_table_name)
-  util.call_cmd(f"psql {DBNAME} -c \"COPY ({attrs_sql}) TO STDOUT WITH CSV HEADER\" > {attrs_csv_path}", shell=True, check=True)
-  shutil.rmtree(attrs_csv_path, ignore_errors=True)
-  util.call_cmd([
-    "sqlite3",
-    "-csv",
-    path,
-    f".import {attrs_csv_path} {final_table_name}_attrs"
-  ])
-  util.call_cmd([
-    "sqlite3",
-    path,
-    f"CREATE INDEX {final_table_name}_attrs_id ON {final_table_name}_attrs(id)"
-  ], check=True)
+  add_table_from_query_to_mbtiles(
+    table_name=f"{final_table_name}_attrs",
+    query=f"SELECT {', '.join(columns)} FROM {final_table_name}",
+    path=path,
+    index_column="id")
+  add_table_from_query_to_mbtiles(
+    table_name=citations_table_name,
+    query=f"SELECT * FROM {citations_table_name}",
+    path=path,
+    index_column="source")
   return os.path.abspath(path)
 
 def make_rocks(sources, clean=False, path="./rocks.mbtiles"):
   if clean:
     clean_sources(sources)
-  load_units(sources)
+  load_units(sources, clean=clean)
   mbtiles_path = make_mbtiles(path=path)
   return mbtiles_path
 

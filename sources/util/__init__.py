@@ -538,14 +538,15 @@ def call_cmd(*args, **kwargs):
   print("Calling `{}` with kwargs: {}".format(" ".join(args[0]), kwargs))
   return run(*args, **kwargs)
 
-def run_sql(sql, dbname="underfoot"):
+def run_sql(sql, dbname="underfoot", quiet=False):
   # print("running {}".format(sql))
   # call_cmd([
   #   "psql", dbname, "-c", sql
   # ])
   con = psycopg2.connect("dbname={}".format(dbname))
   cur = con.cursor()
-  log(f"Running {sql}")
+  if not quiet:
+    log(f"Running {sql}")
   cur.execute(sql)
   results = None
   try:
@@ -557,9 +558,9 @@ def run_sql(sql, dbname="underfoot"):
   con.close()
   return results
 
-def run_sql_with_retries(sql, max_retries=3, retry=1, dbname="underfoot"):
+def run_sql_with_retries(sql, max_retries=3, retry=1, dbname="underfoot", quiet=False):
   try:
-    return run_sql(sql, dbname=dbname)
+    return run_sql(sql, dbname=dbname, quiet=quiet)
   except psycopg2.OperationalError as e:
     if retry > max_retries:
       raise e
