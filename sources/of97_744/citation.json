@@ -5,6 +5,24 @@
 		"title": "USGS Open-File Report 97-744",
 		"container-title": "United States Geological Survey",
 		"URL": "https://pubs.usgs.gov/of/1997/of97-744/",
+		"author": [
+		  {
+		    "family": "Wentworth",
+		    "given": "Carl M."
+		  },
+		  {
+		    "family": "Brabb",
+		    "given": "E.E."
+		  },
+		  {
+		    "family": "Ellen",
+		    "given": "S.E."
+		  },
+		  {
+		    "family": "Lajoie",
+		    "given": "K.R."
+		  }
+		],
 		"issued": {
 			"date-parts": [
 				[
