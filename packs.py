@@ -64,7 +64,7 @@ def make_manifest():
 
 
 def make_pack(pack_name, clean=False, clean_rocks=False, clean_ways=False,
-        clean_contours=False, procs=2):
+              clean_contours=False, procs=2):
     make_database()
     pack = PACKS[pack_name]
     build_dir = get_build_dir()
@@ -73,20 +73,31 @@ def make_pack(pack_name, clean=False, clean_rocks=False, clean_ways=False,
         os.makedirs(pack_dir)
     rocks_mbtiles_path = os.path.join(pack_dir, "rocks.mbtiles")
     if clean or clean_rocks == "rocks" or not os.path.isfile(rocks_mbtiles_path):
-        make_rocks(pack["rock"], clean=(clean or clean_rocks), path=rocks_mbtiles_path)
+        make_rocks(
+            pack["rock"],
+            clean=(clean or clean_rocks),
+            path=rocks_mbtiles_path,
+            procs=procs)
     elif os.path.isfile(rocks_mbtiles_path):
         print(f"{rocks_mbtiles_path} exists, skipping...")
     ways_mbtiles_path = os.path.join(pack_dir, "ways.mbtiles")
     if clean or clean_ways or not os.path.isfile(ways_mbtiles_path):
-        make_ways(pack["osm"], bbox=pack["bbox"], clean=(clean or clean_ways),
+        make_ways(
+            pack["osm"],
+            bbox=pack["bbox"],
+            clean=(clean or clean_ways),
             path=ways_mbtiles_path)
     elif os.path.isfile(ways_mbtiles_path):
         print(f"{ways_mbtiles_path} exists, skipping...")
     contours_mbtiles_path = os.path.join(pack_dir, "contours.mbtiles")
     if clean or clean_contours or not os.path.isfile(contours_mbtiles_path):
         if pack["geojson"]:
-            make_contours(12, geojson=pack["geojson"], mbtiles_zoom=14,
-                clean=(clean or clean_contours), procs=procs,
+            make_contours(
+                12,
+                geojson=pack["geojson"],
+                mbtiles_zoom=14,
+                clean=(clean or clean_contours),
+                procs=procs,
                 path=contours_mbtiles_path)
         else:
             make_contours(
@@ -97,7 +108,8 @@ def make_pack(pack_name, clean=False, clean_rocks=False, clean_ways=False,
                 nelat=pack["bbox"]["top"],
                 mbtiles_zoom=14,
                 path=contours_mbtiles_path,
-                clean=(clean or clean_contours))
+                clean=(clean or clean_contours),
+                procs=procs)
     elif os.path.isfile(contours_mbtiles_path):
         print(f"{contours_mbtiles_path} exists, skipping...")
     with tempfile.TemporaryDirectory() as tmpdirname:

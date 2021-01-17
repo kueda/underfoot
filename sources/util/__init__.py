@@ -77,6 +77,7 @@ LITHOLOGY_PATTERN = re.compile(
     marble|
     m(e|é|é)lange|
     microdiorite|
+    monzodiorite|
     monzogranite|
     mudstone|
     mud|
@@ -105,6 +106,7 @@ LITHOLOGY_PATTERN = re.compile(
     silica(\-|\s)carbonate|
     siltstone|
     surficial\sdeposit|
+    tephrite|
     tonalite|
     tuff|
     unconsolidated\smaterial|
@@ -121,6 +123,8 @@ LITHOLOGY_SYNONYMS = {
   'alluvial fan': 'alluvium',
   'andesitic': 'andesite',
   'basaltic': 'basalt',
+  'dolostone': 'dolomite',
+  'dolostone (dolomite)': 'dolomite',
   'gneissic': 'gneiss',
   'granitic': 'granite',
   'listwanite': 'silica-carbonate',
@@ -148,6 +152,7 @@ IGNEOUS_ROCKS = [
   'aplite',
   'basalt',
   'basaltic andesite',
+  'basanite',
   'dacite',
   'diabase',
   'gabbro',
@@ -156,6 +161,7 @@ IGNEOUS_ROCKS = [
   'granodiorite',
   'keratophyre',
   'microdiorite',
+  'monzodiorite',
   'monzogranite',
   'pegmatite',
   'peridotite',
@@ -166,6 +172,7 @@ IGNEOUS_ROCKS = [
   'quartz monzonite',
   'rhyodacite',
   'rhyolite',
+  'tephrite',
   'tonalite',
   'tuff',
   'volcanoclastic breccia',
@@ -538,16 +545,21 @@ def call_cmd(*args, **kwargs):
   print("Calling `{}` with kwargs: {}".format(" ".join(args[0]), kwargs))
   return run(*args, **kwargs)
 
-def run_sql(sql, dbname="underfoot", quiet=False):
+def run_sql(sql, dbname="underfoot", quiet=False, interpolations=None):
   # print("running {}".format(sql))
   # call_cmd([
   #   "psql", dbname, "-c", sql
   # ])
   con = psycopg2.connect("dbname={}".format(dbname))
   cur = con.cursor()
-  if not quiet:
-    log(f"Running {sql}")
-  cur.execute(sql)
+  if interpolations:
+    if not quiet:
+      log(f"Running {sql} ({interpolations})")
+    cur.execute(sql, interpolations)
+  else:
+    if not quiet:
+      log(f"Running {sql}")
+    cur.execute(sql)
   results = None
   try:
     results = cur.fetchall()

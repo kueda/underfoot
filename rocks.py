@@ -21,6 +21,8 @@ NUM_PROCESSES = 4
 
 final_table_name = "rock_units"
 mask_table_name = "rock_units_masks"
+# TODO if this is going to get reused for other citations it should probably be
+# in packs.py
 citations_table_name = "citations"
 
 # Painful process of removing polygon overlaps
@@ -84,14 +86,16 @@ def load_citation_for_source(source_identifier):
     with open(citation_json_path) as f:
       citation_json = json.loads(f.read())
       c = citation_json[0]
-      authorship = ""
-      for idx, author in enumerate(c["author"]):
-        if idx != 0:
-          if idx == len(c["author"]) - 1:
-            authorship += ", & "
-          else:
-            authorship += ", "
-        authorship += ", ".join([piece for piece in [author.get("family"), author.get("given")] if piece is not None])
+      authorship = None
+      if "author" in c:
+        authorship = ""
+        for idx, author in enumerate(c["author"]):
+          if idx != 0:
+            if idx == len(c["author"]) - 1:
+              authorship += ", & "
+            else:
+              authorship += ", "
+          authorship += ", ".join([piece for piece in [author.get("family"), author.get("given")] if piece is not None])
       pieces = [
         authorship,
         f"({c['issued']['date-parts'][0][0]})",
@@ -102,10 +106,10 @@ def load_citation_for_source(source_identifier):
       ]
       citation = ". ".join([piece for piece in pieces if piece])
       citation = re.sub(r"\.+", ".", citation)
-      util.run_sql(f"CREATE TABLE IF NOT EXISTS {citations_table_name} (source VARCHAR(10), citation TEXT)")
       existing = util.run_sql(f"DELETE FROM {citations_table_name} WHERE source = '{source_identifier}'")
       util.log(f"Loading citation for {source_identifier}: {citation}")
-      util.run_sql(f"INSERT INTO {citations_table_name} VALUES ('{source_identifier}', '{citation}')")
+      util.run_sql(f"INSERT INTO {citations_table_name} VALUES (%s, %s)",
+        interpolations=(source_identifier, citation))
 
 # Run the source scripts and load their data into the database
 def process_source(source_identifier, clean=False):
@@ -193,7 +197,7 @@ def clip_source_polygons_by_mask(source_table_name):
       OR ST_NPoints(geom) = 0
   """)
 
-def load_units(sources, clean=False):
+def load_units(sources, clean=False, procs=NUM_PROCESSES):
   """Load geological units into the database from the specified sources
   
   Parameters
@@ -202,7 +206,7 @@ def load_units(sources, clean=False):
     Names of sources to load
   """
   # Drop existing units and masks tables
-  for table_name in [final_table_name, mask_table_name]:
+  for table_name in [final_table_name, mask_table_name, citations_table_name]:
     util.run_sql("DROP TABLE IF EXISTS {} CASCADE".format(table_name), dbname=DBNAME)
 
   # Create the units table
@@ -232,8 +236,15 @@ def load_units(sources, clean=False):
     )
   """.format(mask_table_name, SRID))
 
+  # Create the citations table
+  util.run_sql(f"""
+    CREATE TABLE IF NOT EXISTS {citations_table_name} (
+      source VARCHAR(255),
+      citation TEXT)
+  """)
+
   # Creaate a processing pool to max out 4 processors
-  pool = Pool(processes=NUM_PROCESSES)
+  pool = Pool(processes=procs)
   # Since I'm almost certainly going to forget how this works,
   # pool.map(process_source, sources) would run process_source() on each item in
   # sources, so if sources is ['foo', 'bar'], it would run process_source('foo')
@@ -376,10 +387,10 @@ def make_mbtiles(path="./rocks.mbtiles"):
     index_column="source")
   return os.path.abspath(path)
 
-def make_rocks(sources, clean=False, path="./rocks.mbtiles"):
+def make_rocks(sources, clean=False, path="./rocks.mbtiles", procs=NUM_PROCESSES):
   if clean:
     clean_sources(sources)
-  load_units(sources, clean=clean)
+  load_units(sources, clean=clean, procs=procs)
   mbtiles_path = make_mbtiles(path=path)
   return mbtiles_path
 
