@@ -280,56 +280,9 @@ def load_units(sources, clean=False, procs=NUM_PROCESSES):
     util.log("Updating {}...".format(mask_table_name))
     # Remove slivers and make it valid
     if idx == 0:
-      util.run_sql("""
-        INSERT INTO {} (source, geom)
-        SELECT
-          '{}',
-          ST_Multi(
-            ST_Buffer(
-              ST_Buffer(
-                ST_MakeValid(
-                  ST_Union(geom)
-                ),
-                0.01,
-                'join=mitre'
-              ),
-              -0.01,
-              'join=mitre'
-            )
-          )
-        FROM {}
-      """.format(
-        mask_table_name, source_identifier, source_table_name
-      ))
+      util.initialize_masks_table(mask_table_name, source_table_name)
     else:
-      util.run_sql("""
-        UPDATE {} m SET geom = ST_Multi(
-          ST_Union(
-            m.geom,
-            ST_MakePolygon(
-              ST_ExteriorRing(
-                (
-                  SELECT
-                    ST_Buffer(
-                      ST_Buffer(
-                        ST_MakeValid(
-                          ST_Union(s.geom)
-                        ),
-                        0.01,
-                        'join=mitre'
-                      ),
-                      -0.01,
-                      'join=mitre'
-                    )
-                  FROM {} s
-                )
-              )
-            )
-          )
-        )
-      """.format(
-        mask_table_name, source_table_name
-      ))
+      util.update_masks_table(mask_table_name, source_table_name)
 
   util.log("Database {} created with table {}".format(DBNAME, final_table_name))
 
@@ -396,10 +349,7 @@ def make_rocks(sources, clean=False, path="./rocks.mbtiles", procs=NUM_PROCESSES
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description="Make an MBTiles of geologic units from given source(s)")
-  parser.add_argument("source", type=str, help="Source(s)")
+  parser.add_argument("source", type=str, nargs="+", help="Source(s)")
   parser.add_argument("--clean", action="store_true", help="Clean cached data before running")
   args = parser.parse_args()
-  if sys.argv[0] == __file__:
-    make_rocks(sys.argv[1:])
-  else:
-    make_rocks(sys.argv)
+  make_rocks(args.source, clean=args.clean)

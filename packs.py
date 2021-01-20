@@ -15,6 +15,7 @@ from elevation import make_contours
 from glob import glob
 from osm import make_ways
 from rocks import make_rocks
+from water import make_water
 from sources import util
 from urllib.parse import urlparse
 import argparse
@@ -63,8 +64,8 @@ def make_manifest():
         json.dump(manifest, manifest_f)
 
 
-def make_pack(pack_name, clean=False, clean_rocks=False, clean_ways=False,
-              clean_contours=False, procs=2):
+def make_pack(pack_name, clean=False, clean_rocks=False, clean_water=False,
+              clean_ways=False, clean_contours=False, procs=2):
     make_database()
     pack = PACKS[pack_name]
     build_dir = get_build_dir()
@@ -80,6 +81,15 @@ def make_pack(pack_name, clean=False, clean_rocks=False, clean_ways=False,
             procs=procs)
     elif os.path.isfile(rocks_mbtiles_path):
         print(f"{rocks_mbtiles_path} exists, skipping...")
+    water_mbtiles_path = os.path.join(pack_dir, "water.mbtiles")
+    if clean or clean_water or not os.path.isfile(water_mbtiles_path):
+        make_water(
+            pack["water"],
+            bbox=pack["bbox"],
+            clean=(clean or clean_water),
+            path=water_mbtiles_path)
+    elif os.path.isfile(water_mbtiles_path):
+        print(f"{water_mbtiles_path} exists, skipping...")
     ways_mbtiles_path = os.path.join(pack_dir, "ways.mbtiles")
     if clean or clean_ways or not os.path.isfile(ways_mbtiles_path):
         make_ways(
@@ -120,14 +130,38 @@ def make_pack(pack_name, clean=False, clean_rocks=False, clean_ways=False,
             base_dir=os.path.basename(pack_dir))
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Make a data pack for Underfoot")
-    parser.add_argument("pack", metavar="PACK_NAME",
-        type=str, help="Make the specified pack. Use `list` to list available packs")
-    parser.add_argument("--clean", action="store_true", help="Clean all cached files before building")
-    parser.add_argument("--clean-rocks", action="store_true", help="Clean all cached files for geologic data before building")
-    parser.add_argument("--clean-ways", action="store_true", help="Clean all cached files for ways before building")
-    parser.add_argument("--clean-contours", action="store_true", help="Clean all cached files for contours before building")
-    parser.add_argument("--procs", type=int, default=2, help="Number of processes to run in parallel when multiprocessing")
+    parser = argparse.ArgumentParser(
+        description="Make a data pack for Underfoot")
+    parser.add_argument(
+        "pack",
+        metavar="PACK_NAME",
+        type=str,
+        help="Make the specified pack. Use `list` to list available packs")
+    parser.add_argument(
+        "--clean",
+        action="store_true",
+        help="Clean all cached files before building")
+    parser.add_argument(
+        "--clean-rocks",
+        action="store_true",
+        help="Clean all cached files for geologic data before building")
+    parser.add_argument(
+        "--clean-water",
+        action="store_true",
+        help="Clean all cached files for hydrologic data before building")
+    parser.add_argument(
+        "--clean-ways",
+        action="store_true",
+        help="Clean all cached files for ways before building")
+    parser.add_argument(
+        "--clean-contours",
+        action="store_true",
+        help="Clean all cached files for contours before building")
+    parser.add_argument(
+        "--procs",
+        type=int,
+        default=2,
+        help="Number of processes to run in parallel when multiprocessing")
     args = parser.parse_args()
 
     if args.pack == "list":
@@ -137,8 +171,13 @@ if __name__ == "__main__":
         make_manifest()
     else:
         print("making pack: {}".format(args.pack))
-        pack_path = make_pack(args.pack, clean=args.clean,
-            clean_rocks=args.clean_rocks, clean_ways=args.clean_ways,
-            clean_contours=args.clean_contours, procs=args.procs)
+        pack_path = make_pack(
+            args.pack,
+            clean=args.clean,
+            clean_rocks=args.clean_rocks,
+            clean_water=args.clean_water,
+            clean_ways=args.clean_ways,
+            clean_contours=args.clean_contours,
+            procs=args.procs)
         make_manifest()
         print(f"Pack available at {pack_path}")

@@ -1001,3 +1001,137 @@ def fill_in_custom_metadata_from_met(met_path, metadata_path):
             row[col] = met_row[col]
           writer.writerow(row)
     os.rename(outfile_path, metadata_path)
+
+def initialize_masks_table(mask_table_name, source_table_name, buff=0.01):
+  """
+    Creates the first row in a table intended to hold a single MULTIPOLYGON
+    geometry that acts as a mask. This assumes that both tables have
+    MULTIPOLYGON geom columns themselves.
+  """
+  run_sql(f"""
+    INSERT INTO {mask_table_name} (geom)
+    SELECT
+      ST_Multi(
+        ST_Buffer(
+          ST_Buffer(
+            ST_MakeValid(
+              ST_Union(geom)
+            ),
+            {buff},
+            'join=mitre'
+          ),
+          -{buff},
+          'join=mitre'
+        )
+      )
+    FROM {source_table_name}
+  """)
+
+
+def update_masks_table(mask_table_name, source_table_name, buff=0.01):
+    """
+      Updates an existing masks table with geometries from another table.
+      Again, the assumption is that all tables have geom columns. This also
+      assumes no holes: it just takes the exterior ring from all the geoms in
+      the source.
+    """
+    run_sql(f"""
+        UPDATE {mask_table_name} m SET geom = ST_Multi(
+          ST_Union(
+            m.geom,
+            ST_Multi(
+              (
+                SELECT
+                  ST_Buffer(
+                    ST_Buffer(
+                      ST_MakeValid(
+                        ST_Union(s.geom)
+                      ),
+                      {buff},
+                      'join=mitre'
+                    ),
+                    -{buff},
+                    'join=mitre'
+                  )
+                FROM {source_table_name} s
+              )
+            )
+          )
+        )
+    """)
+
+
+def process_omca_creeks_source(url, dir_name, waterways_shp_path,
+                               watersheds_shp_path, waterways_name_col,
+                               watersheds_name_col, srs):
+    # Download the data
+    download_path = os.path.basename(url)
+    if not os.path.isfile(download_path):
+        print("DOWNLOADING {}".format(url))
+        call_cmd(["curl", "-OL", url])
+
+    # Unpack
+    dir_path = dir_name
+    if not os.path.isdir(dir_path):
+        print("EXTRACTING ARCHIVE...")
+        call_cmd(["unzip", download_path])
+
+    # Project into EPSG 4326 along with name, type, and natural attributes
+    waterways_gpkg_path = "waterways.gpkg"
+    if os.path.isfile(waterways_gpkg_path):
+        log("{waterways_gpkg_path} exists, skipping...")
+    else:
+        lyr_name = extless_basename(waterways_shp_path)
+        sql = f"""
+            SELECT
+                null as waterway_id,
+                {waterways_name_col} as name,
+                LTYPE as type,
+                (LTYPE = 'Creek') AS natural,
+                geometry AS geom
+            FROM '{lyr_name}'
+        """
+        sql = re.sub(r'\s+', " ", sql)
+        cmd = f"""
+            ogr2ogr \
+              -s_srs '{srs}' \
+              -t_srs '{SRS}' \
+              -overwrite \
+              {waterways_gpkg_path} \
+              {waterways_shp_path} \
+              -dialect sqlite \
+              -nln waterways \
+              -nlt MULTILINESTRING \
+              -sql "{sql}"
+        """
+        call_cmd(cmd, shell=True, check=True)
+    watersheds_gpkg_path = "watersheds.gpkg"
+    if os.path.isfile(watersheds_gpkg_path):
+        log("{watersheds_gpkg_path} exists, skipping...")
+    else:
+        lyr_name = extless_basename(watersheds_shp_path)
+        sql = f"""
+            SELECT
+                OID AS source_id,
+                'OID' AS source_id_attr,
+                {watersheds_name_col} as name,
+                geometry AS geom
+            FROM '{lyr_name}'
+            WHERE
+                {watersheds_name_col} IS NOT NULL
+                AND {watersheds_name_col} != ''
+        """
+        sql = re.sub(r'\s+', " ", sql)
+        cmd = f"""
+        ogr2ogr \
+          -s_srs '{srs}' \
+          -t_srs '{SRS}' \
+          -overwrite \
+          {watersheds_gpkg_path} \
+          {watersheds_shp_path} \
+          -dialect sqlite \
+          -nln watersheds \
+          -nlt MULTIPOLYGON \
+          -sql "{sql}"
+        """
+        call_cmd(cmd, shell=True, check=True)
