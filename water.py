@@ -120,16 +120,17 @@ def load_waterways(sources, clean=False):
                 geom
             )
             SELECT
-                name,
+                max(name),
                 '{source}',
-                source_id_attr,
+                max(source_id_attr),
                 source_id,
-                type,
-                is_natural,
-                permanence,
-                surface,
-                geom
+                max(type),
+                max(is_natural),
+                max(permanence),
+                max(surface),
+                ST_Collect(ST_SimplifyPreserveTopology(geom, 0.00001)) AS geom
             FROM {source_table_name}
+            GROUP BY source_id
         """)
 
 def load_waterbodies(sources, clean=False):

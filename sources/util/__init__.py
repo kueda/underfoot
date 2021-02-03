@@ -17,6 +17,7 @@ from datetime import datetime as dt
 
 WEB_MERCATOR_PROJ4 = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +over +no_defs"
 NAD27_UTM10_PROJ4 = "+proj=utm +zone=10 +datum=NAD27 +units=m +no_defs"
+GRS80_LONGLAT = "+proj=longlat +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +no_defs"
 EPSG_4326_PROJ4 = "+proj=longlat +datum=WGS84 +no_defs"
 SRS = EPSG_4326_PROJ4
 METADATA_COLUMN_NAMES = [
@@ -539,6 +540,8 @@ def extless_basename(path):
   return os.path.split(path)[-1]
 
 def call_cmd(*args, **kwargs):
+  if 'check' not in kwargs or kwargs['check'] is None:
+    kwargs['check'] = True
   if isinstance(args[0], str) and len(args) == 1:
     print(f"Calling `{args[0]}` with kwargs: {kwargs}")
     return run(args[0], **kwargs)
@@ -826,7 +829,7 @@ def join_polygons_and_metadata(
     metadata_join_col
   )
   # print("sql: {}".format(sql))
-  call_cmd(["rm", output_path])
+  call_cmd(["rm", "-f", output_path])
   call_cmd([
     "ogr2ogr",
     "-sql", sql.replace("\n", " "),
@@ -1133,5 +1136,181 @@ def process_omca_creeks_source(url, dir_name, waterways_shp_path,
           -nln watersheds \
           -nlt MULTIPOLYGON \
           -sql "{sql}"
+        """
+        call_cmd(cmd, shell=True, check=True)
+
+
+def process_nhdplus_hr_source(
+        base_path,
+        url,
+        dir_name,
+        gdb_name,
+        srs=GRS80_LONGLAT):
+    work_path = make_work_dir(os.path.realpath(__file__))
+    os.chdir(work_path)
+    # Download the data
+    download_path = os.path.basename(url)
+    if os.path.isfile(download_path):
+        log(f"Download exists at {download_path}, skipping...")
+    else:
+        log(f"DOWNLOADING {url}")
+        call_cmd(["curl", "-OL", url])
+
+    # Unpack the waterways data
+    gdb_path = gdb_name
+    if os.path.isdir(gdb_path):
+        log(f"Archive already extracted at {gdb_path}, skipping...")
+    else:
+        log("EXTRACTING ARCHIVE...")
+        call_cmd(["unzip", "-o", download_path])
+
+    # Project into EPSG 4326 along with name, type, and natural attributes
+    waterways_gpkg_path = "waterways.gpkg"
+    if os.path.isfile(waterways_gpkg_path):
+        log(f"{waterways_gpkg_path} exists, skipping...")
+    else:
+        sql = """
+            SELECT
+              GNIS_ID AS waterway_id,
+              GNIS_Name AS name,
+              NHDPlusID AS source_id,
+              'NHDPlusID' AS source_id_attr,
+              CASE
+              WHEN NHDFlowline.FCode = 42813 THEN 'siphon'
+              WHEN NHDFlowline.FCode IN (33601, 42801, 42804) THEN 'aqueduct'
+              WHEN NHDFlowline.FTYPE = 336 THEN 'canal/ditch'
+              WHEN NHDFlowline.FTYPE = 558 THEN 'artificial'
+              WHEN NHDFlowline.FTYPE = 334 THEN 'connector'
+              ELSE
+                'stream'
+              END AS type,
+              (
+                (NHDFlowline.FCode BETWEEN 39000 AND 39012)
+                OR (NHDFlowline.FCode IN (
+                  31200,
+                  36400,
+                  43100,
+                  43400,
+                  44100,
+                  44101,
+                  44102,
+                  44500,
+                  48400,
+                  48700,
+                  49300,
+                  53700,
+                  56600,
+                  56700
+                ))
+                OR (NHDFlowline.FCode BETWEEN 45800 AND 46602)
+              ) AS is_natural,
+              LOWER(
+                COALESCE(
+                  NULLIF(NHDFCode.RelationshipToSurface, ' '),
+                  'surface'
+                )
+              ) AS surface,
+              LOWER(
+                COALESCE(
+                  NULLIF(NHDFCode.HydrographicCategory, ' '),
+                  'perennial'
+                )
+              ) AS permanence,
+              Shape AS geom
+            FROM
+              NHDFlowline
+                JOIN NHDFcode ON NHDFcode.FCode = NHDFlowline.FCode
+            WHERE
+              NHDFlowLine.FCode NOT IN (56600, 56700)
+        """
+        sql = re.sub(r'\s+', " ", sql)
+        cmd = f"""
+            ogr2ogr \
+              -s_srs '{srs}' \
+              -t_srs '{SRS}' \
+              -overwrite \
+              {waterways_gpkg_path} \
+              {gdb_path} \
+              -dialect sqlite \
+              -nln waterways \
+              -nlt MULTILINESTRING \
+              -sql "{sql}"
+        """
+        call_cmd(cmd, shell=True, check=True)
+
+    waterbodies_gpkg_path = "waterbodies.gpkg"
+    if os.path.isfile(waterbodies_gpkg_path):
+        log(f"{waterbodies_gpkg_path} exists, skipping...")
+    else:
+        sql = """
+            SELECT
+              GNIS_ID AS waterbody_id,
+              GNIS_ID AS source_id,
+              'GNIS_ID' AS source_id_attr,
+              GNIS_Name AS name,
+              CASE
+              WHEN NHDWaterbody.FCode = 43624 THEN 'treatment'
+              WHEN NHDWaterbody.FCode = 43613 THEN 'storage'
+              WHEN NHDWaterbody.FCode = 43607 THEN 'evaporator'
+              WHEN NHDWaterbody.FCode = 46600 THEN 'swamp/marsh'
+              WHEN NHDWaterbody.FType = 436 THEN 'reservoir'
+              ELSE 'lake/pond'
+              END AS type,
+              NOT (
+                GNIS_Name LIKE '%reservoir%'
+                OR NHDFcode.Description LIKE '%reservoir%'
+              ) AS is_natural,
+              LOWER(
+                COALESCE(
+                  NULLIF(NHDFCode.HydrographicCategory, ' '),
+                  'perennial'
+                )
+              ) AS permanence,
+              Shape AS geom
+            FROM
+              NHDWaterbody
+                JOIN NHDFcode ON NHDFcode.FCode = NHDWaterbody.FCode
+            WHERE
+              NHDWaterbody.FCode NOT IN (56600, 56700)
+        """
+        sql = re.sub(r'\s+', " ", sql)
+        cmd = f"""
+            ogr2ogr \
+              -s_srs '{srs}' \
+              -t_srs '{SRS}' \
+              -overwrite \
+              {waterbodies_gpkg_path} \
+              {gdb_path} \
+              -dialect sqlite \
+              -nln waterbodies \
+              -nlt MULTIPOLYGON \
+              -sql "{sql}"
+        """
+        call_cmd(cmd, shell=True, check=True)
+
+    watersheds_gpkg_path = "watersheds.gpkg"
+    if os.path.isfile(watersheds_gpkg_path):
+        log(f"{watersheds_gpkg_path} exists, skipping...")
+    else:
+        sql = """
+            SELECT
+                Name AS name,
+                HUC10 AS source_id,
+                'HUC10' AS source_id_attr,
+                Shape AS geom
+            FROM WBDHU10
+        """
+        sql = re.sub(r'\s+', " ", sql)
+        cmd = f"""
+            ogr2ogr \
+              -s_srs '{srs}' \
+              -t_srs '{SRS}' \
+              -overwrite \
+              {watersheds_gpkg_path} \
+              {gdb_path} \
+              -dialect sqlite \
+              -nln watersheds \
+              -nlt MULTIPOLYGON \
+              -sql "{sql}"
         """
         call_cmd(cmd, shell=True, check=True)
