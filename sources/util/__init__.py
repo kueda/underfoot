@@ -1146,7 +1146,7 @@ def process_nhdplus_hr_source(
         dir_name,
         gdb_name,
         srs=GRS80_LONGLAT):
-    work_path = make_work_dir(os.path.realpath(__file__))
+    work_path = make_work_dir(os.path.realpath(base_path))
     os.chdir(work_path)
     # Download the data
     download_path = os.path.basename(url)
@@ -1259,6 +1259,10 @@ def process_nhdplus_hr_source(
               NOT (
                 GNIS_Name LIKE '%reservoir%'
                 OR NHDFcode.Description LIKE '%reservoir%'
+                OR NHDWaterbody.FType = 436
+                OR NHDWaterbody.FCode = 43607
+                OR NHDWaterbody.FCode = 43613
+                OR NHDWaterbody.FCode = 43624
               ) AS is_natural,
               LOWER(
                 COALESCE(
