@@ -16,7 +16,6 @@ from glob import glob
 from osm import make_ways
 from rocks import make_rocks
 from water import make_water
-from sources import util
 from urllib.parse import urlparse
 import argparse
 import json
@@ -28,7 +27,10 @@ import re
 from datetime import datetime
 
 PACKS = {}
-pack_glob = os.path.join(pathlib.Path(__file__).parent.absolute(), "packs/*.json")
+pack_glob = os.path.join(
+    pathlib.Path(__file__).parent.absolute(),
+    "packs/*.json"
+)
 for pack_path in glob(pack_glob):
     with open(pack_path) as pack_f:
         pack = json.load(pack_f)
@@ -41,12 +43,15 @@ for pack_path in glob(pack_glob):
                 pack["geojson"] = json.load(geojson_f)
         PACKS[os.path.basename(os.path.splitext(pack_path)[0])] = pack
 
+
 def list_packs():
     for pack_name in PACKS:
         print("\t{}: {}".format(pack_name, PACKS[pack_name]["description"]))
 
+
 def get_build_dir():
-    return os.path.join(pathlib.Path(__file__).parent.absolute(), "build" )
+    return os.path.join(pathlib.Path(__file__).parent.absolute(), "build")
+
 
 def make_manifest():
     build_dir = get_build_dir()
@@ -128,6 +133,7 @@ def make_pack(pack_name, clean=False, clean_rocks=False, clean_water=False,
             format="zip",
             root_dir=build_dir,
             base_dir=os.path.basename(pack_dir))
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

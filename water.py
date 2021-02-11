@@ -133,6 +133,7 @@ def load_waterways(sources, clean=False):
             GROUP BY source_id
         """)
 
+
 def load_waterbodies(sources, clean=False):
     util.run_sql(
         f"DROP TABLE IF EXISTS {WATERBODIES_TABLE_NAME}", dbname=DBNAME)
