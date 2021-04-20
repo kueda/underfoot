@@ -18,6 +18,7 @@ WATERBODIES_TABLE_NAME = "waterbodies"
 WATERBODIES_MASK_TABLE_NAME = "waterbodies_mask"
 WATERSHEDS_TABLE_NAME = "watersheds"
 WATERSHEDS_MASK_TABLE_NAME = "watersheds_mask"
+WATERWAYS_NETWORK_TABLE_NAME = "waterways_network"
 
 
 def clean_sources(sources):
@@ -76,11 +77,28 @@ def process_source(source, clean=False, cleandb=False, cleanfiles=False):
                 SET geom = ST_MakeValid(geom)
                 WHERE NOT ST_IsValid(geom)
                 """)
+    network_path = os.path.join(work_path, "waterways-network.csv")
+    if os.path.isfile(network_path):
+        network_table_name = f"{source}_waterways_network"
+        util.run_sql(f"DROP TABLE IF EXISTS {network_table_name}")
+        util.run_sql(
+            f"""
+                CREATE TABLE {network_table_name} (
+                    source_id VARCHAR(32),
+                    to_source_id VARCHAR(32),
+                    from_source_id VARCHAR(32)
+                )
+            """,
+            dbname=DBNAME
+        )
+        util.run_sql(f"DELETE FROM {network_table_name}")
+        util.call_cmd(f"""
+            psql {DBNAME} -c "\\copy {network_table_name} FROM '{network_path}' WITH CSV HEADER"
+            """, shell=True)
 
 
 def process_sources(sources, clean=False, cleandb=False, cleanfiles=False):
     pool = Pool(processes=NUM_PROCESSES)
-    # pool.map(process_source, sources)
     pool.starmap(
         process_source,
         [[src, clean, cleandb, cleanfiles] for src in sources])
@@ -290,42 +308,42 @@ def load_watersheds(sources, clean=False):
                     GROUP BY name, source_id_attr, source_id
                 """)
                 util.run_sql(f"DROP TABLE {source_table_name}_dump")
-                # util.run_sql(f"""
-                #     INSERT INTO {WATERSHEDS_TABLE_NAME} (
-                #         name,
-                #         source,
-                #         source_id_attr,
-                #         source_id,
-                #         geom
-                #     )
-                #     SELECT
-                #         name,
-                #         '{source}',
-                #         source_id_attr,
-                #         source_id,
-                #         ST_Multi(
-                #             ST_Difference(
-                #                 geom,
-                #                 (SELECT geom FROM {WATERSHEDS_MASK_TABLE_NAME})
-                #             )
-                #         )
-                #     FROM {source_table_name}
-                # """)
-                # # Remove the units that are entirely within a small buffer of the existing mask
-                # util.run_sql(f"""
-                #     DELETE FROM {WATERSHEDS_TABLE_NAME}
-                #     WHERE source = '{source}'
-                #     AND ST_Contains(
-                #         (SELECT st_buffer(geom, 0.01) FROM {WATERSHEDS_MASK_TABLE_NAME}),
-                #         geom
-                #     )
-                # """) 
                 # Update the mask
                 util.update_masks_table(
                     WATERSHEDS_MASK_TABLE_NAME, source_table_name, buff=0.0001)
             except psycopg2.errors.UndefinedTable:
                 util.log(f"{source_table_name} doesn't exist, skipping...")
                 continue
+
+
+def load_networks(sources, clean=False):
+    """Combine waterways networks from multiple sources into a single network
+    """
+    # TODO Create the table
+    util.run_sql(f"DROP TABLE IF EXISTS {WATERWAYS_NETWORK_TABLE_NAME}", dbname=DBNAME)
+    util.run_sql(
+        f"""
+            CREATE TABLE {WATERWAYS_NETWORK_TABLE_NAME} (
+                source VARCHAR(32),
+                source_id VARCHAR(32),
+                to_source_id VARCHAR(32),
+                from_source_id VARCHAR(32)
+            )
+        """,
+        dbname=DBNAME
+    )
+    for source in sources:
+        source_table_name = f"{source}_waterways_network"
+        # just merge in the source table and use the original source_ids
+        util.run_sql(f"""
+            INSERT INTO {WATERWAYS_NETWORK_TABLE_NAME}
+            SELECT
+                '{source}' AS source,
+                source_id,
+                to_source_id,
+                from_source_id
+            FROM {source_table_name}
+            """)
 
 
 def make_mbtiles(path="./water.mbtiles", bbox=None):
@@ -447,6 +465,12 @@ def make_mbtiles(path="./water.mbtiles", bbox=None):
         -dsco CONF='{json.dumps(conf)}'
     """
     util.call_cmd(re.sub(r'\s+', " ", cmd).strip(), shell=True)
+    util.add_table_from_query_to_mbtiles(
+        table_name=WATERWAYS_NETWORK_TABLE_NAME,
+        dbname=DBNAME,
+        query=f"SELECT * FROM {WATERWAYS_NETWORK_TABLE_NAME}",
+        mbtiles_path=path,
+        index_columns=["source_id", "to_source_id", "from_source_id"])
 
 
 def make_water(
@@ -460,6 +484,7 @@ def make_water(
     load_waterways(sources, clean=clean)
     load_waterbodies(sources, clean=clean)
     load_watersheds(sources, clean=clean)
+    load_networks(sources, clean=clean)
     mbtiles_path = make_mbtiles(path=path, bbox=bbox)
     return mbtiles_path
 

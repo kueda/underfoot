@@ -293,25 +293,6 @@ def clean_sources(sources):
     work_path = util.make_work_dir(path)
     shutil.rmtree(work_path)
 
-def add_table_from_query_to_mbtiles(table_name, query, path, index_column=None):
-  csv_path = f"{os.path.basename(path)}.csv"
-  # columns = ["id"] + util.METADATA_COLUMN_NAMES + ["source"]
-  # sql = "SELECT {} FROM {}".format(", ".join(columns), final_table_name)
-  util.call_cmd(f"psql {DBNAME} -c \"COPY ({query}) TO STDOUT WITH CSV HEADER\" > {csv_path}", shell=True, check=True)
-  shutil.rmtree(csv_path, ignore_errors=True)
-  util.call_cmd([
-    "sqlite3",
-    "-csv",
-    path,
-    f".import {csv_path} {table_name}"
-  ])
-  if index_column:
-    util.call_cmd([
-      "sqlite3",
-      path,
-      f"CREATE INDEX {table_name}_{index_column} ON {table_name}({index_column})"
-    ], check=True)
-
 def make_mbtiles(path="./rocks.mbtiles"):
   """Export rock units into am MBTiles file"""
   mbtiles_cmd = [
@@ -328,16 +309,18 @@ def make_mbtiles(path="./rocks.mbtiles"):
   ]
   util.call_cmd(mbtiles_cmd)
   columns = ["id"] + util.METADATA_COLUMN_NAMES + ["source"]
-  add_table_from_query_to_mbtiles(
+  util.add_table_from_query_to_mbtiles(
     table_name=f"{final_table_name}_attrs",
+    dbname=DBNAME,
     query=f"SELECT {', '.join(columns)} FROM {final_table_name}",
-    path=path,
-    index_column="id")
-  add_table_from_query_to_mbtiles(
+    mbtiles_path=path,
+    index_columns=["id"])
+  util.add_table_from_query_to_mbtiles(
     table_name=citations_table_name,
+    dbname=DBNAME,
     query=f"SELECT * FROM {citations_table_name}",
-    path=path,
-    index_column="source")
+    mbtiles_path=path,
+    index_columns=["source"])
   return os.path.abspath(path)
 
 def make_rocks(sources, clean=False, path="./rocks.mbtiles", procs=NUM_PROCESSES):
