@@ -12,7 +12,7 @@ srs = (
 work_path = util.make_work_dir(os.path.realpath(__file__))
 os.chdir(work_path)
 util.process_omca_creeks_source(
-    url="http://explore.museumca.org/creeks/GIS/WesternAlamedaCoCreeksGIS-1.0.zip",
+    url="http://explore.museumca.org/creeks/GIS/WesternAlamedaCoCreeksGIS-1.0.zip",  # noqa: E501
     dir_name="WAC_Creek_Map_GIS_ver_1.0",
     waterways_shp_path=os.path.join(
         "WAC_Creek_Map_GIS_ver_1.0", "Shapefiles",

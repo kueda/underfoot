@@ -15,7 +15,7 @@ os.chdir(work_path)
 
 regions = {
     "WestContraCosta": {
-        "url": "http://explore.museumca.org/creeks/GIS/WestContraCostaCreeksGIS.zip",
+        "url": "http://explore.museumca.org/creeks/GIS/WestContraCostaCreeksGIS.zip",  # noqa: E501
         "dir_name": "WestContraCostaCreeksGIS",
         "waterways_shp_path": os.path.join(
             "WestContraCostaCreeksGIS", "RICH_Creek_Map_ver1.0", "Shapefiles",
@@ -29,7 +29,7 @@ regions = {
         "watersheds_name_col": "NAME1"
     },
     "WestAlameda": {
-        "url": "http://explore.museumca.org/creeks/GIS/WesternAlamedaCoCreeksGIS-1.0.zip",
+        "url": "http://explore.museumca.org/creeks/GIS/WesternAlamedaCoCreeksGIS-1.0.zip",  # noqa: E501
         "dir_name": "WAC_Creek_Map_GIS_ver_1.0",
         "waterways_shp_path": os.path.join(
             "WAC_Creek_Map_GIS_ver_1.0", "Shapefiles",

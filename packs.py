@@ -38,7 +38,8 @@ for pack_path in glob(pack_glob):
             parsed_uri = urlparse(pack["geojson"]["$ref"])
             geojson_path = os.path.join(
                 pathlib.Path(pack_path).parent.absolute(),
-                f"{parsed_uri.netloc}{parsed_uri.path}")
+                f"{parsed_uri.netloc}{parsed_uri.path}"
+            )
             with open(geojson_path) as geojson_f:
                 pack["geojson"] = json.load(geojson_f)
         PACKS[os.path.basename(os.path.splitext(pack_path)[0])] = pack
@@ -64,7 +65,7 @@ def make_manifest():
         mtime = datetime.fromtimestamp(os.path.getmtime(pack_path))
         packs[i]["updated_at"] = datetime.isoformat(mtime)
         packs[i]["path"] = os.path.relpath(pack_path, build_dir)
-    manifest = {"packs": packs, "updated_at": max([p["updated_at"] for p in packs])}
+    manifest = {"packs": packs, "updated_at": max([p["updated_at"] for p in packs])}  # noqa: E501
     with open(os.path.join(build_dir, "manifest.json"), "w") as manifest_f:
         json.dump(manifest, manifest_f)
 
@@ -78,7 +79,10 @@ def make_pack(pack_name, clean=False, clean_rocks=False, clean_water=False,
     if not os.path.isdir(pack_dir):
         os.makedirs(pack_dir)
     rocks_mbtiles_path = os.path.join(pack_dir, "rocks.mbtiles")
-    if clean or clean_rocks == "rocks" or not os.path.isfile(rocks_mbtiles_path):
+    if (
+        clean
+        or clean_rocks == "rocks" or not os.path.isfile(rocks_mbtiles_path)
+    ):
         make_rocks(
             pack["rock"],
             clean=(clean or clean_rocks),
@@ -127,12 +131,12 @@ def make_pack(pack_name, clean=False, clean_rocks=False, clean_water=False,
                 procs=procs)
     elif os.path.isfile(contours_mbtiles_path):
         print(f"{contours_mbtiles_path} exists, skipping...")
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        return shutil.make_archive(
-            pack_dir,
-            format="zip",
-            root_dir=build_dir,
-            base_dir=os.path.basename(pack_dir))
+    # with tempfile.TemporaryDirectory() as tmpdirname:  # noqa: F841
+    return shutil.make_archive(
+        pack_dir,
+        format="zip",
+        root_dir=build_dir,
+        base_dir=os.path.basename(pack_dir))
 
 
 if __name__ == "__main__":
