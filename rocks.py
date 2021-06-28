@@ -10,19 +10,16 @@ import shutil
 import re
 import psycopg2
 import time
-import json
 from multiprocessing import Pool
 
 from sources import util
+from sources.util.citations import load_citation_for_source, citations_table_name
 from database import DBNAME, SRID
 
 NUM_PROCESSES = 4
 
 final_table_name = "rock_units"
 mask_table_name = "rock_units_masks"
-# TODO if this is going to get reused for other citations it should probably be
-# in packs.py
-citations_table_name = "citations"
 
 
 # Painful process of removing polygon overlaps
@@ -106,44 +103,6 @@ def remove_polygon_overlaps(source_table_name):
             source_table_name
         )
     )
-
-
-def load_citation_for_source(source_identifier):
-    path = os.path.join("sources", "{}.py".format(source_identifier))
-    work_path = util.make_work_dir(path)
-    citation_json_path = os.path.join(work_path, "citation.json")
-    if os.path.isfile(citation_json_path):
-        with open(citation_json_path) as f:
-            citation_json = json.loads(f.read())
-            c = citation_json[0]
-            authorship = None
-            if "author" in c:
-                authorship = ""
-                for idx, author in enumerate(c["author"]):
-                    if idx != 0:
-                        if idx == len(c["author"]) - 1:
-                            authorship += ", & "
-                        else:
-                            authorship += ", "
-                    authorship += ", ".join([piece for piece in [author.get(
-                        "family"), author.get("given")] if piece is not None])
-            pieces = [
-              authorship,
-              f"({c['issued']['date-parts'][0][0]})",
-              c.get("title"),
-              c.get("container-title"),
-              c.get("publisher"),
-              c.get("URL")
-            ]
-            citation = ". ".join([piece for piece in pieces if piece])
-            citation = re.sub(r"\.+", ".", citation)
-            util.run_sql(
-                f"DELETE FROM {citations_table_name} WHERE source = '{source_identifier}'"  # noqa: E501
-            )
-            util.log(f"Loading citation for {source_identifier}: {citation}")
-            util.run_sql(
-                f"INSERT INTO {citations_table_name} VALUES (%s, %s)",
-                interpolations=(source_identifier, citation))
 
 
 # Run the source scripts and load their data into the database
@@ -274,7 +233,7 @@ def load_units(sources, clean=False, procs=NUM_PROCESSES):
       Names of sources to load
     """
     # Drop existing units and masks tables
-    tables = [final_table_name, mask_table_name, citations_table_name]
+    tables = [final_table_name, mask_table_name]
     for table_name in tables:
         util.run_sql(
             "DROP TABLE IF EXISTS {} CASCADE".format(table_name),
@@ -307,13 +266,6 @@ def load_units(sources, clean=False, procs=NUM_PROCESSES):
         geom geometry(MULTIPOLYGON, {})
       )
     """.format(mask_table_name, SRID))
-  
-    # Create the citations table
-    util.run_sql(f"""
-      CREATE TABLE IF NOT EXISTS {citations_table_name} (
-        source VARCHAR(255),
-        citation TEXT)
-    """)
   
     # Creaate a processing pool to max out 4 processors
     pool = Pool(processes=procs)
@@ -369,7 +321,7 @@ def clean_sources(sources):
         shutil.rmtree(work_path)
 
 
-def make_mbtiles(path="./rocks.mbtiles"):
+def make_mbtiles(sources, path="./rocks.mbtiles"):
     """Export rock units into am MBTiles file"""
     mbtiles_cmd = [
         "ogr2ogr",
@@ -391,10 +343,14 @@ def make_mbtiles(path="./rocks.mbtiles"):
         query=f"SELECT {', '.join(columns)} FROM {final_table_name}",
         mbtiles_path=path,
         index_columns=["id"])
+    sources_sql = ",".join([f"'{s}'" for s in sources])
     util.add_table_from_query_to_mbtiles(
         table_name=citations_table_name,
         dbname=DBNAME,
-        query=f"SELECT * FROM {citations_table_name}",
+        query=f"""
+            SELECT * FROM {citations_table_name}
+            WHERE source IN ({sources_sql})
+        """,
         mbtiles_path=path,
         index_columns=["source"])
     return os.path.abspath(path)
@@ -409,7 +365,7 @@ def make_rocks(
     if clean:
         clean_sources(sources)
     load_units(sources, clean=clean, procs=procs)
-    mbtiles_path = make_mbtiles(path=path)
+    mbtiles_path = make_mbtiles(sources, path=path)
     return mbtiles_path
 
 

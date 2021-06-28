@@ -9,6 +9,7 @@ from multiprocessing import Pool
 
 from database import DBNAME, SRID, make_database
 from sources import util
+from sources.util.citations import load_citation_for_source, citations_table_name
 
 
 NUM_PROCESSES = 4
@@ -39,6 +40,7 @@ def process_source(source, clean=False, cleandb=False, cleanfiles=False):
             util.log(f"Deleting {f}...")
             os.remove(f)
     util.call_cmd(["python", path], check=True)
+    load_citation_for_source(source)
     for layer in ["waterways", "waterbodies", "watersheds"]:
         gpkg_path = os.path.join(work_path, f"{layer}.gpkg")
         source_table_name = f"{source}_{layer}"
@@ -190,7 +192,7 @@ def load_waterbodies(sources, clean=False):
                 source_id_attr,
                 source_id,
                 type,
-                is_natural,
+                is_natural::int,
                 permanence,
                 geom
             FROM {source_table_name}
@@ -319,7 +321,6 @@ def load_watersheds(sources, clean=False):
 def load_networks(sources, clean=False):
     """Combine waterways networks from multiple sources into a single network
     """
-    # TODO Create the table
     util.run_sql(f"DROP TABLE IF EXISTS {WATERWAYS_NETWORK_TABLE_NAME}", dbname=DBNAME)
     util.run_sql(
         f"""
@@ -346,7 +347,7 @@ def load_networks(sources, clean=False):
             """)
 
 
-def make_mbtiles(path="./water.mbtiles", bbox=None):
+def make_mbtiles(sources, path="./water.mbtiles", bbox=None):
     """Export water into am MBTiles file"""
     if os.path.exists(path):
         os.remove(path)
@@ -471,6 +472,16 @@ def make_mbtiles(path="./water.mbtiles", bbox=None):
         query=f"SELECT * FROM {WATERWAYS_NETWORK_TABLE_NAME}",
         mbtiles_path=path,
         index_columns=["source_id", "to_source_id", "from_source_id"])
+    sources_sql = ",".join([f"'{s}'" for s in sources])
+    util.add_table_from_query_to_mbtiles(
+        table_name=citations_table_name,
+        dbname=DBNAME,
+        query=f"""
+            SELECT * FROM {citations_table_name}
+            WHERE source IN ({sources_sql})
+        """,
+        mbtiles_path=path,
+        index_columns=["source"])
 
 
 def make_water(
@@ -485,7 +496,7 @@ def make_water(
     load_waterbodies(sources, clean=clean)
     load_watersheds(sources, clean=clean)
     load_networks(sources, clean=clean)
-    mbtiles_path = make_mbtiles(path=path, bbox=bbox)
+    mbtiles_path = make_mbtiles(sources, path=path, bbox=bbox)
     return mbtiles_path
 
 

@@ -4,6 +4,7 @@
 """
 
 from subprocess import call, run
+import json
 import os
 import re
 import shutil
@@ -1470,6 +1471,43 @@ def process_nhdplus_hr_source_waterways_network(gdb_path):
         )
 
 
+def process_nhdplus_hr_source_citation(url):
+    citation_json_path = "citation.json"
+    if os.path.isfile(citation_json_path):
+        return
+    globs = glob("*_GDB.xml")
+    if len(globs) == 0:
+        log("No metadata XML found, skipping citation generation...")
+        return
+    tree = ET.parse(globs[0])
+    citeinfo = tree.find("./idinfo/citation/citeinfo")
+    pubdate = citeinfo.find("pubdate").text
+    pubyear = pubdate[0:4]
+    pubmonth = pubdate[4:6]
+    pubday = pubdate[6:8]
+    title = citeinfo.find("title").text
+    citation_json = [{
+        "id": url,
+        "title": title,
+        "container-title": "USGS National Hydrography Dataset Plus High Resolution",  # noqa: E501
+        "URL": url,
+        "author": [
+            {"family": "U.S. Geological Survey"}
+        ],
+        "issued": {
+            "date-parts": [
+                [
+                    pubyear,
+                    pubmonth,
+                    pubday
+                ]
+            ]
+        }
+    }]
+    with open("citation.json", 'w') as outfile:
+        json.dump(citation_json, outfile)
+
+
 def process_nhdplus_hr_source(
         base_path,
         url,
@@ -1496,6 +1534,7 @@ def process_nhdplus_hr_source(
     process_nhdplus_hr_source_waterbodies(gdb_path, srs)
     process_nhdplus_hr_source_watersheds(gdb_path, srs)
     process_nhdplus_hr_source_waterways_network(gdb_path)
+    process_nhdplus_hr_source_citation(url)
 
 
 def add_table_from_query_to_mbtiles(
