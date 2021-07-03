@@ -96,7 +96,7 @@ def process_source(source, clean=False, cleandb=False, cleanfiles=False):
         util.run_sql(f"DELETE FROM {network_table_name}")
         util.call_cmd(f"""
             psql {DBNAME} -c "\\copy {network_table_name} FROM '{network_path}' WITH CSV HEADER"
-            """, shell=True)
+        """, shell=True)
 
 
 def process_sources(sources, clean=False, cleandb=False, cleanfiles=False):
@@ -127,7 +127,7 @@ def load_waterways(sources, clean=False):
     )
     for source in sources:
         source_table_name = f"{source}_waterways"
-        util.run_sql(f"""
+        sql = f"""
             INSERT INTO {WATERWAYS_TABLE_NAME} (
                 name,
                 source,
@@ -151,7 +151,11 @@ def load_waterways(sources, clean=False):
                 ST_Collect(ST_SimplifyPreserveTopology(geom, 0.00001)) AS geom
             FROM {source_table_name}
             GROUP BY source_id
-        """)
+        """
+        try:
+            util.run_sql(sql)
+        except psycopg2.errors.UndefinedTable:
+            util.log(f"{source_table_name} doesn't exist, skipping...")
 
 
 def load_waterbodies(sources, clean=False):
@@ -336,15 +340,18 @@ def load_networks(sources, clean=False):
     for source in sources:
         source_table_name = f"{source}_waterways_network"
         # just merge in the source table and use the original source_ids
-        util.run_sql(f"""
-            INSERT INTO {WATERWAYS_NETWORK_TABLE_NAME}
-            SELECT
-                '{source}' AS source,
-                source_id,
-                to_source_id,
-                from_source_id
-            FROM {source_table_name}
-            """)
+        try:
+            util.run_sql(f"""
+                INSERT INTO {WATERWAYS_NETWORK_TABLE_NAME}
+                SELECT
+                    '{source}' AS source,
+                    source_id,
+                    to_source_id,
+                    from_source_id
+                FROM {source_table_name}
+                """)
+        except psycopg2.errors.UndefinedTable:
+            util.log(f"{source_table_name} doesn't exist, skipping...")
 
 
 def make_mbtiles(sources, path="./water.mbtiles", bbox=None):

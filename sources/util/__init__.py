@@ -1287,23 +1287,44 @@ def process_nhdplus_hr_source_waterways(gdb_path, srs):
             'stream'
           END AS type,
           (
+            -- LAKE/POND
             (NHDFlowline.FCode BETWEEN 39000 AND 39012)
             OR (NHDFlowline.FCode IN (
+              -- BAY/INLET
               31200,
+              -- PLAYA
+              36100,
+              -- FORESHORE
               36400,
+              -- RAPIDS
               43100,
+              -- REEF
               43400,
+              -- ROCK
               44100,
+              -- ROCK
               44101,
+              -- ROCK
               44102,
+              -- SEA/OCEAN
               44500,
+              -- WASH
               48400,
+              -- WATERFALL
               48700,
+              -- ESTUARY
               49300,
+              -- AREA OF COMPLEX CHANNELS
               53700,
+              -- COASTLINE
               56600,
+              -- ???
               56700
             ))
+            -- SPRING/SEEP
+            -- STREAM/RIVER
+            -- SUBMERGED STREAM
+            -- SWAMP/MARSH
             OR (NHDFlowline.FCode BETWEEN 45800 AND 46602)
           ) AS is_natural,
           LOWER(
