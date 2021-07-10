@@ -45,6 +45,7 @@ def load_citation_for_source(source_identifier):
                         authorship += ", "
                 authorship += ", ".join([piece for piece in [author.get(
                     "family"), author.get("given")] if piece is not None])
+        log(f"Loading citation for {source_identifier}, path: {citation_json_path}")
         pieces = [
           authorship,
           f"({c['issued']['date-parts'][0][0]})",

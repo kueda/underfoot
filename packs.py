@@ -84,6 +84,7 @@ def make_pack(pack_name, clean=False, clean_rocks=False, clean_water=False,
     ):
         make_rocks(
             pack["rock"],
+            bbox=pack["bbox"],
             clean=(clean or clean_rocks),
             path=rocks_mbtiles_path,
             procs=procs)

@@ -321,7 +321,7 @@ def clean_sources(sources):
         shutil.rmtree(work_path)
 
 
-def make_mbtiles(sources, path="./rocks.mbtiles"):
+def make_mbtiles(sources, path="./rocks.mbtiles", bbox=None):
     """Export rock units into am MBTiles file"""
     mbtiles_cmd = [
         "ogr2ogr",
@@ -335,6 +335,14 @@ def make_mbtiles(sources, path="./rocks.mbtiles"):
         "-dsco", "MAXZOOM=14",
         "-dsco", "DESCRIPTION=\"Geological units\""
     ]
+    if bbox:
+        mbtiles_cmd += [
+            "-clipdst",
+            str(bbox["left"]),
+            str(bbox["bottom"]),
+            str(bbox["right"]),
+            str(bbox["top"])
+        ]
     util.call_cmd(mbtiles_cmd)
     columns = ["id"] + util.METADATA_COLUMN_NAMES + ["source"]
     util.add_table_from_query_to_mbtiles(
@@ -360,12 +368,13 @@ def make_rocks(
     sources,
     clean=False,
     path="./rocks.mbtiles",
-    procs=NUM_PROCESSES
+    procs=NUM_PROCESSES,
+    bbox=None
 ):
     if clean:
         clean_sources(sources)
     load_units(sources, clean=clean, procs=procs)
-    mbtiles_path = make_mbtiles(sources, path=path)
+    mbtiles_path = make_mbtiles(sources, path=path, bbox=bbox)
     return mbtiles_path
 
 

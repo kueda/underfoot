@@ -441,12 +441,12 @@ def make_mbtiles(sources, path="./water.mbtiles", bbox=None):
     conf = {
         WATERWAYS_TABLE_NAME: {
             "target_name": WATERWAYS_TABLE_NAME,
-            "minzoom": 11,
+            "minzoom": 9,
             "maxzoom": 14
         },
         WATERBODIES_TABLE_NAME: {
             "target_name": WATERBODIES_TABLE_NAME,
-            "minzoom": 11,
+            "minzoom": 9,
             "maxzoom": 14
         },
         WATERSHEDS_TABLE_NAME: {
@@ -457,12 +457,12 @@ def make_mbtiles(sources, path="./water.mbtiles", bbox=None):
         waterways_overview_table_name: {
             "target_name": waterways_overview_table_name,
             "minzoom": 7,
-            "maxzoom": 10
+            "maxzoom": 8
         },
         waterbodies_overview_table_name: {
             "target_name": waterbodies_overview_table_name,
             "minzoom": 7,
-            "maxzoom": 10
+            "maxzoom": 8
         }
     }
     cmd = f"""

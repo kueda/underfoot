@@ -1,0 +1,22 @@
+{
+    "bbox": {
+        "bottom": 37.4,
+        "left": -120,
+        "right": -119,
+        "top": 38.3
+    },
+    "description": "Yosemite National Park and surrounding areas of the Sierra Nevada mountains",
+    "geojson": {
+        "$ref": "file://./us-ca-yosemite.geojson"
+    },
+    "osm": "http://download.geofabrik.de/north-america/us/california/norcal-latest.osm.pbf",
+    "rock": [
+        "i1874",
+        "of2005_1305"
+    ],
+    "water": [
+        "nhdplus_h_1804_hu4",
+        "nhdplus_h_1809_hu4",
+        "tiger_ca_water"
+    ]
+}

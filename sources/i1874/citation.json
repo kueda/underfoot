@@ -1,0 +1,26 @@
+[
+	{
+		"id": "http://zotero.org/users/2632539/items/KM9SFGRK",
+		"type": "webpage",
+		"abstract": "This digital map database represents the general distribution of bedrock and surficial deposits of the Yosemite National Park vicinity. It was produced directly from the file used to create the print version in 1989. The Yosemite National Park region is comprised of portions of 15 7.5 minute quadrangles. The original publication of the map in 1989 included the map, described map units and provided correlations, as well as a geologic summary and references, all on the same sheet. The database delineates map units that are identified by general age and lithology following the stratigraphic nomenclature of the U.S. Geological Survey. The scale of the source maps limits the spatial resolution (scale) of the database to 1:125,000 or smaller.\n\nPurpose:\nThe database for this map was created to provide access to the data contained on this previously published map via the web. This database and the accompanying PDF file depict the distribution of geologic materials and structures at a regional (1:125,000) scale. The PDF file of the map was created by scanning the existing paper map, and it is not intended as a cartographic product.",
+		"container-title": "USGS Publications Warehouse",
+		"title": "Geologic Map of Yosemite National Park and Vicinity, California: a digital database",
+		"URL": "https://pubs.usgs.gov/imap/i1874/",
+		"issued": {
+			"date-parts": [
+				[
+					"2003"
+				]
+			]
+		},
+		"accessed": {
+			"date-parts": [
+				[
+					"2021",
+					7,
+					8
+				]
+			]
+		}
+	}
+]

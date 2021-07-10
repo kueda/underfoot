@@ -977,7 +977,9 @@ def process_usgs_source(
     srs=NAD27_UTM10_PROJ4,
     metadata_csv_path=None,
     skip_polygonize_arcs=False,
-    uncompress_e00=False
+    uncompress_e00=False,
+    # As opposed to gunzip
+    use_unzip=False
 ):
     """Process units from a USGS Arc Info archive given a couple configurations.
   
@@ -1018,6 +1020,8 @@ def process_usgs_source(
             or ".tar.Z" in download_path
         ):
             call_cmd(["tar", "xzvf", download_path])
+        elif use_unzip:
+            call_cmd(["unzip", download_path])
         else:
             copy_path = download_path + "-copy"
             call_cmd(["cp", download_path, copy_path])
@@ -1346,6 +1350,8 @@ def process_nhdplus_hr_source_waterways(gdb_path, srs):
         WHERE
           NHDFlowLine.FCode NOT IN (56600, 56700)
     """
+    # remove comments, ogr doesn't like them
+    sql = re.sub(r'--.+', "", sql)
     sql = re.sub(r'\s+', " ", sql)
     cmd = f"""
         ogr2ogr \
