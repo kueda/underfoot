@@ -80,6 +80,7 @@ LITHOLOGY_PATTERN = re.compile(
     microdiorite|
     monzodiorite|
     monzogranite|
+    moraine|
     mudstone|
     mud|
     mylonite|
@@ -107,7 +108,9 @@ LITHOLOGY_PATTERN = re.compile(
     silica(\-|\s)carbonate|
     siltstone|
     surficial\sdeposit|
+    talus|
     tephrite|
+    till|
     tonalite|
     tuff|
     unconsolidated\smaterial|
@@ -214,7 +217,10 @@ NON_ROCKS = [
   'alluvium',
   'landslide',
   'melange',
-  'sand'
+  'moraine',
+  'sand',
+  'talus',
+  'till'
 ]
 
 GROUPING_PATTERN = re.compile(
