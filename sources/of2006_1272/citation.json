@@ -1,0 +1,52 @@
+[
+	{
+		"id": "http://zotero.org/users/2632539/items/FHYURHIU",
+		"type": "webpage",
+		"container-title": "U.S. Geological Survey",
+		"title": "Preliminary Integrated Geologic Map Databases of the United States: Connecticut, Maine, Massachusetts, New Hampshire, New Jersey, Rhode Island, and Vermont (OFR 2006-1272)",
+		"URL": "https://pubs.usgs.gov/of/2006/1272/#NH",
+		"author": [
+			{
+				"family": "Nicholson",
+				"given": "Suzanne W."
+			},
+			{
+				"family": "Dicken",
+				"given": "Connie L."
+			},
+			{
+				"family": "Horton",
+				"given": "John D."
+			},
+			{
+				"family": "Foose",
+				"given": "Michael P."
+			},
+			{
+				"family": "Mueller",
+				"given": "Julia A.L."
+			},
+			{
+				"family": "Hon",
+				"given": "Rudi"
+			}
+		],
+		"accessed": {
+			"date-parts": [
+				[
+					"2021",
+					7,
+					20
+				]
+			]
+		},
+		"issued": {
+			"date-parts": [
+				[
+					"2007",
+					12
+				]
+			]
+		}
+	}
+]

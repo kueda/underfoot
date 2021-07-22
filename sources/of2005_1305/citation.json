@@ -1,0 +1,73 @@
+[
+  {
+    "id": "http://zotero.org/users/2632539/items/4CWCNIFE",
+    "type": "webpage",
+    "title": "Preliminary Integrated Geologic Map Databases of the United States: The Western States: California, Nevada, Arizona, Washington, Idaho, Utah (OFR 2005-1305)",  # noqa: E501
+    "container-title": "United States Geological Survey",
+    "URL": "http://pubs.usgs.gov/of/2005/1305/",
+    "note": "Version 1.3",
+    "language": "English",
+    "author": [
+      {
+        "family": "Ludington",
+        "given": "Steve"
+      },
+      {
+        "family": "Moring",
+        "given": "Barry C."
+      },
+      {
+        "family": "Miller",
+        "given": "Robert J."
+      },
+      {
+        "family": "Stone",
+        "given": "Paul A."
+      },
+      {
+        "family": "Bookstrom",
+        "given": "Arthur A."
+      },
+      {
+        "family": "Bedford",
+        "given": "David R."
+      },
+      {
+        "family": "Evans",
+        "given": "James G."
+      },
+      {
+        "family": "Haxel",
+        "given": "Gordon A."
+      },
+      {
+        "family": "Nutt",
+        "given": "Constance J."
+      },
+      {
+        "family": "Flyn",
+        "given": "Kathryn S."
+      },
+      {
+        "family": "Hopkins",
+        "given": "Melanie J."
+      }
+    ],
+    "issued": {
+      "date-parts": [
+        [
+          "2005"
+        ]
+      ]
+    },
+    "accessed": {
+      "date-parts": [
+        [
+          "2016",
+          10,
+          27
+        ]
+      ]
+    }
+  }
+]

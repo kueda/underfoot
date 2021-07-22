@@ -1,0 +1,23 @@
+{
+    "bbox": {
+        "bottom": 42.6971825959057725,
+        "left": -72.5572657012535842,
+        "right": -70.5423599821770040,
+        "top": 45.3054225668288311
+    },
+    "description": "US state of New Hampshire",
+    "geojson": {
+        "$ref": "file://./us-nh.geojson"
+    },
+    "osm": "http://download.geofabrik.de/north-america/us/new-hampshire-latest.osm.pbf",
+    "rock": [
+        "of2006_1272_nh"
+    ],
+    "water": [
+        "nhdplus_h_0104_hu4",
+        "nhdplus_h_0106_hu4",
+        "nhdplus_h_0107_hu4",
+        "nhdplus_h_0108_hu4",
+        "tiger_nh_water"
+    ]
+}
