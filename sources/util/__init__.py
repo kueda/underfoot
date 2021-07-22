@@ -821,26 +821,51 @@ def controlled_span_from_span(text):
 
 
 def ages_from_span(span):
+    """
+    Parses a text description of a time span using the names of geologic
+    periods, epochs, and other time spans into a list of minimum, maximum, and
+    estimated age in years BCE
+
+    >>> ages_from_span("Cretaceous")
+    (66000000.0, 145000000.0, 105500000)
+    """
+    if ";" in span:
+        for piece in span.split(";"):
+            ages = ages_from_span(piece)
+            if ages and None not in ages:
+                return ages
     min_age = None
     max_age = None
     est_age = None
-    if span and len(span) > 0:
-        span = span.lower()
-        span = span.replace('undivided', '')
-        span = span.replace(r'\(.+\)', '')
-        ages = SPANS.get(span)
-        if ages:
-            max_age = ages[0]
-            min_age = ages[1]
-        else:
-            matches = re.findall(r'(\w+)\s+?(to|\-)\s+?(\w+)', span)
-            if len(matches) > 0:
-                min_ages = SPANS.get(matches[0][0])
-                max_ages = SPANS.get(matches[0][2])
-                if min_ages:
-                    min_age = min_ages[0]
-                if max_ages:
-                    max_age = max_ages[0]
+    span_to_span_pattern = r'(\w+)\s+?(to|\-)\s+?(\w+)'
+    part_to_part_span_pattern = r'(?P<part1>\w+)\s+?(to|\-)\s+?(?P<part2>\w+)\s+(?P<span>\w+)'  # noqa: E501
+    if span is None:
+        return (min_age, max_age, est_age)
+    span = span.lower()
+    span = span.replace('undivided', '')
+    span = re.sub(r'\(.+\)', '', span).strip()
+    span = span.replace('?', '')
+    if len(span) == 0:
+        return (min_age, max_age, est_age)
+    ages = SPANS.get(span)
+    if ages:
+        max_age = ages[0]
+        min_age = ages[1]
+    else:
+        min_ages = None
+        max_ages = None
+        if match := re.match(part_to_part_span_pattern, span):
+            part1 = f"{match.group('part1')} {match.group('span')}".lower()
+            part2 = f"{match.group('part2')} {match.group('span')}".lower()
+            min_ages = SPANS.get(part1)
+            max_ages = SPANS.get(part2)
+        elif match := re.match(span_to_span_pattern, span):
+            min_ages = SPANS.get(match[1])
+            max_ages = SPANS.get(match[3])
+        if min_ages:
+            min_age = min_ages[1]
+        if max_ages:
+            max_age = max_ages[0]
     if min_age is not None and max_age is not None:
         est_age = int((min_age + max_age) / 2.0)
     return (min_age, max_age, est_age)
