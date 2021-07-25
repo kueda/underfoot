@@ -1,6 +1,7 @@
 import csv
 import os
 import pandas as pd
+import re
 from . import (
     ages_from_span,
     call_cmd,
@@ -58,22 +59,26 @@ def schemify_attributes(attributes_path):
             )
             writer.writeheader()
             for row in reader:
-                row['code'] = row['ORIG_LABEL']
-                row['title'] = row['UNIT_NAME']
-                row['description'] = ". ".join(
-                    [row['UNITDESC'], row['UNIT_COM']]
+                row["code"] = row["ORIG_LABEL"]
+                row["title"] = row["UNIT_NAME"]
+                joiner = ". "
+                if re.search(r'\.\s*$', row["UNITDESC"]):
+                    joiner = " "
+                row['description'] = joiner.join(
+                    [row['UNITDESC'], row["UNIT_COM"]]
                 )
-                row['lithology'] = row['ROCKTYPE1']
-                row['rock_type'] = rock_type_from_lithology(
-                    row['ROCKTYPE1']
+                row["description"] = re.sub(r"\s+", " ", row["description"])
+                row["lithology"] = row['ROCKTYPE1']
+                row["rock_type"] = rock_type_from_lithology(
+                    row["ROCKTYPE1"]
                 )
-                row['span'] = row['UNIT_AGE']
-                if not row['span']:
-                    row['span'] = span_from_lithology(row['lithology'])
-                row['controlled_span'] = controlled_span_from_span(
-                    row['span']
+                row["span"] = row["UNIT_AGE"]
+                if not row["span"]:
+                    row["span"] = span_from_lithology(row["lithology"])
+                row["controlled_span"] = controlled_span_from_span(
+                    row["span"]
                 )
-                row['min_age'], row['max_age'], row['est_age'] = ages_from_span(row['span'])  # noqa: E501
+                row["min_age"], row["max_age"], row["est_age"] = ages_from_span(row["span"])  # noqa: E501
                 writer.writerow(row)
     return os.path.realpath(outfile_path)
 
@@ -139,7 +144,7 @@ def process_usgs_states(
     os.chdir(work_path)
     shape_paths = [download_shapes(state, base_url) for state in states]
     single_shapefile_path = merge_shapes(shape_paths)
-    attribute_paths = [download_attributes(state, base_url) for state in states]
+    attribute_paths = [download_attributes(state, base_url) for state in states]  # noqa: E501
     single_attributes_path = merge_attributes(attribute_paths)
     schemified_attributes_path = schemify_attributes(single_attributes_path)
     join_polygons_and_metadata(

@@ -239,11 +239,13 @@ WIKI_SPANS = {
       "mesoarchean": [3200, 2800],
       "neoarchean": [2800, 2500],
     "proterozoic": [2500, 541.0],
+      "early proterozoic": [2500, 1600],
       "paleoproterozoic": [2500, 1600],
         "siderian": [2500, 2300],  # noqa: E131
         "rhyacian": [2300, 2050],
         "orosirian": [2050, 1800],
         "statherian": [1800, 1600],
+      "middle proterozoic": [1600, 1000],
       "mesoproterozoic": [1600, 1000],
         "calymmian": [1600, 1400],
         "ectasian": [1400, 1200],
@@ -252,6 +254,7 @@ WIKI_SPANS = {
           "mayanian": [1100, 1050],  # noqa: E131
           "sinian": [1050, 1000],
           "sturtian": [1050, 1000],
+      "late proterozoic": [1000, 541.0],
       "neoproterozoic": [1000, 541.0],
         "tonian": [1000, 850],
         "baikalian": [850, 720],
@@ -837,14 +840,18 @@ def ages_from_span(span):
     min_age = None
     max_age = None
     est_age = None
-    span_to_span_pattern = r'(\w+)\s+?(to|\-)\s+?(\w+)'
+    span_to_span_pattern = r'(.+)\s+?(to|\-)\s+?(.+)'
     part_to_part_span_pattern = r'(?P<part1>\w+)\s+?(to|\-)\s+?(?P<part2>\w+)\s+(?P<span>\w+)'  # noqa: E501
     if span is None:
         return (min_age, max_age, est_age)
     span = span.lower()
     span = span.replace('undivided', '')
     span = re.sub(r'\(.+\)', '', span).strip()
+    span = span.replace('?-', ' -')
     span = span.replace('?', '')
+    span = re.sub(r"\-\s*$", "", span)
+    span = re.sub(r"^\s*-", "", span)
+    span = span.strip()
     if len(span) == 0:
         return (min_age, max_age, est_age)
     ages = SPANS.get(span)
@@ -854,14 +861,15 @@ def ages_from_span(span):
     else:
         min_ages = None
         max_ages = None
-        if match := re.match(part_to_part_span_pattern, span):
-            part1 = f"{match.group('part1')} {match.group('span')}".lower()
-            part2 = f"{match.group('part2')} {match.group('span')}".lower()
-            min_ages = SPANS.get(part1)
-            max_ages = SPANS.get(part2)
-        elif match := re.match(span_to_span_pattern, span):
+        if match := re.match(span_to_span_pattern, span):
             min_ages = SPANS.get(match[1])
             max_ages = SPANS.get(match[3])
+        if not min_ages or not max_ages:
+            if match := re.match(part_to_part_span_pattern, span):
+                part1 = f"{match.group('part1')} {match.group('span')}".lower()
+                part2 = f"{match.group('part2')} {match.group('span')}".lower()
+                min_ages = SPANS.get(part1)
+                max_ages = SPANS.get(part2)
         if min_ages:
             min_age = min_ages[1]
         if max_ages:

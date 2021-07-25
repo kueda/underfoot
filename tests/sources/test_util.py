@@ -19,15 +19,19 @@ def test_ages_from_span_parses_middle_dash_upper_ordovician():
 
 def test_ages_from_span_parses_dash_separated_spans_with_question_marks():
     assert_ages_from_span_parses_span("Devonian? - Silurian?")
+    assert_ages_from_span_parses_span("Ordovician? - Late Proterozoic?")
+    assert_ages_from_span_parses_span("Upper Cambrian? - Lower Ordovician?")
+    assert_ages_from_span_parses_span("Lower?- Middle? Silurian")
 
 
 def test_ages_from_span_uses_one_of_semicolon_separated_spans():
     assert_ages_from_span_parses_span("Lower Devonian; Siegenian")
 
 
-def test_ages_from_span_uses_one_of_semicolon_separated_spans_when_first_is_garbage():
+def test_ages_from_span_uses_one_of_semicolon_separated_spans_when_first_is_garbage():  # noqa: E501
     assert_ages_from_span_parses_span("balderdash; Lower Devonian; Siegenian")
 
 
 def test_ages_from_span_ignores_parentheses():
     assert_ages_from_span_parses_span("Lower Silurian (Llandoverian)")
+    assert_ages_from_span_parses_span("Upper Silurian - (Pridolian and Ludlovian)")
