@@ -44,12 +44,15 @@ LITHOLOGY_PATTERN = re.compile(
     alluvial\sfan|
     andesite|
     andesitic|
+    ankaramite|
     aplite|
     arkose|
     artificial|
     basaltic andesite|
     basaltic|
     basalt|
+    basanite|
+    benmoreite|
     chert|
     claystone|
     clay|
@@ -67,6 +70,8 @@ LITHOLOGY_PATTERN = re.compile(
     gravel|
     graywacke|
     greenstone|
+    hawaiite|
+    icelandite|
     keratophyre|
     landslide|
     levee|
@@ -83,12 +88,14 @@ LITHOLOGY_PATTERN = re.compile(
     moraine|
     mudstone|
     mud|
+    mugearite|
     mylonite|
     orthogneiss|
     paragneiss|
     pegmatite|
     pelit(e|ic)|
     peridotite|
+    picrite|
     pyroxenite|
     quartz(\-lithic)?\sarenite|
     quartz\sdiorite|
@@ -106,19 +113,24 @@ LITHOLOGY_PATTERN = re.compile(
     serpentinite|
     shale|
     silica(\-|\s)carbonate|
+    (?# Placing after silica carbonate so it doesn't take precedence)
+    carbonate rock|
     siltstone|
     surficial\sdeposit|
     talus|
     tephrite|
     till|
     tonalite|
+    trachyte|
     tuff|
     unconsolidated\smaterial|
     volcanoclastic\sbreccia|
     water|
     metasedimentary|
     sedimentary|
-    volcanic
+    volcanic|
+    (?# Very short so putting it at the end so others don't match)
+    fill
   )''', flags=re.MULTILINE),
   flags=re.VERBOSE | re.I
 )
@@ -129,6 +141,7 @@ LITHOLOGY_SYNONYMS = {
   'basaltic': 'basalt',
   'dolostone': 'dolomite',
   'dolostone (dolomite)': 'dolomite',
+  'fill': 'artificial',
   'gneissic': 'gneiss',
   'granitic': 'granite',
   'listwanite': 'silica-carbonate',
@@ -141,6 +154,7 @@ LITHOLOGY_SYNONYMS = {
   'orthogneiss': 'gneiss',
   'paragneiss': 'gneiss',
   'pelitic': 'pelite',
+  'picrobasalt': 'picrite',
   'quartz-lithic arenite': 'quartz arenite',
   'rhyolitic': 'rhyolite',
   'sedimentary': 'sedimentary rock',
@@ -157,18 +171,23 @@ IGNEOUS_ROCKS = [
   'basalt',
   'basaltic andesite',
   'basanite',
+  'benmoreite'
   'dacite',
   'diabase',
   'gabbro',
   'granite',
   'granitoid',
   'granodiorite',
+  'hawaiite',
+  'icelandite',
   'keratophyre',
   'microdiorite',
   'monzodiorite',
   'monzogranite',
+  'mugearite',
   'pegmatite',
   'peridotite',
+  'picrite',
   'pyroxenite',
   'quartz diorite',
   'quartz keratophyre',
@@ -178,6 +197,7 @@ IGNEOUS_ROCKS = [
   'rhyolite',
   'tephrite',
   'tonalite',
+  'trachyte',
   'tuff',
   'volcanoclastic breccia',
   'volcanic rock'
@@ -196,6 +216,7 @@ METAMORPHIC_ROCKS = [
 
 SEDIMENTARY_ROCKS = [
   'arkose',
+  'carbonate rock',
   'chert',
   'clay',
   'claystone',
@@ -840,7 +861,7 @@ def ages_from_span(span):
     min_age = None
     max_age = None
     est_age = None
-    span_to_span_pattern = r'(.+)\s+?(to|\-)\s+?(.+)'
+    span_to_span_pattern = r'(.+)\s+?(to|\-|and)\s+?(.+)'
     part_to_part_span_pattern = r'(?P<part1>\w+)\s+?(to|\-)\s+?(?P<part2>\w+)\s+(?P<span>\w+)'  # noqa: E501
     if span is None:
         return (min_age, max_age, est_age)
@@ -879,9 +900,47 @@ def ages_from_span(span):
     return (min_age, max_age, est_age)
 
 
+def span_from_usgs_code(code):
+    """
+    Derive a span from a USGS geologic map unit code
+
+    USGS geologic data has a convention of using the first letter (or two) to
+    indiciate the age of the unit, roughly corresponding to the symbols at
+    https://ngmdb.usgs.gov/fgdc_gds/geolsymstd/fgdc-geolsym-sec32.pdf
+    """
+    mapping = {
+        "Cz": "cenozoic",
+        "Q": "quaternary",
+        "T": "tertiary",
+        "N": "neogene",
+        "Pe": "paleogene",
+        "Mz": "mesozoic",
+        "K": "cretaceous",
+        "J": "jurassic",
+        "Tr": "triassic",
+        "Pz": "paleozoic",
+        "P": "permian",
+        "C": "carboniferous",
+        # "P": "pennsylvanian", # not sure how to render this symbol
+        "M": "mississippian",
+        "D": "devonian",
+        "S": "silurian",
+        "O": "ordovician",
+        # "C": "Cambrian"
+        "pC": "precambrian",
+        # "P": "proterozoic",
+        "Z": "late proterozoic",
+        "Y": "middle proterozoic",
+        "Y3": "late middle proterozoic",
+        "Y2": "middle middle proterozoic"
+    }
+    for prefix, span in mapping.items():
+        if re.match(rf"^{prefix}", code):
+            return span
+
 def metadata_from_usgs_met(path):
     """Parse metadata from a USGS met file
-  
+
     USGS geologic databases seem to come with a somewhat machine-readable
     document with a .met extension that contains information about the
     geological units in the database. This method tries to convert that

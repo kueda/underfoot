@@ -33,7 +33,7 @@ pack_glob = os.path.join(
 for pack_path in glob(pack_glob):
     with open(pack_path) as pack_f:
         pack = json.load(pack_f)
-        if pack["geojson"] and pack["geojson"]["$ref"]:
+        if "geojson" in pack and "$ref" in pack["geojson"]:
             parsed_uri = urlparse(pack["geojson"]["$ref"])
             geojson_path = os.path.join(
                 pathlib.Path(pack_path).parent.absolute(),
@@ -110,7 +110,7 @@ def make_pack(pack_name, clean=False, clean_rocks=False, clean_water=False,
         print(f"{ways_mbtiles_path} exists, skipping...")
     contours_mbtiles_path = os.path.join(pack_dir, "contours.mbtiles")
     if clean or clean_contours or not os.path.isfile(contours_mbtiles_path):
-        if pack["geojson"]:
+        if "geojson" in pack:
             make_contours(
                 12,
                 geojson=pack["geojson"],

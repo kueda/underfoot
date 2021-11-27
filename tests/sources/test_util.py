@@ -35,3 +35,12 @@ def test_ages_from_span_uses_one_of_semicolon_separated_spans_when_first_is_garb
 def test_ages_from_span_ignores_parentheses():
     assert_ages_from_span_parses_span("Lower Silurian (Llandoverian)")
     assert_ages_from_span_parses_span("Upper Silurian - (Pridolian and Ludlovian)")
+
+
+def test_ages_from_span_parses_and_separated_spans():
+    assert_ages_from_span_parses_span("Pliocene and Miocene")
+
+
+def test_span_from_usgs_code():
+    assert util.span_from_usgs_code("Tapl") == "tertiary"
+    assert util.span_from_usgs_code("Kpaf") == "cretaceous"

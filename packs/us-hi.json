@@ -1,0 +1,27 @@
+{
+    "bbox": {
+        "bottom": 16,
+        "left": -179.8,
+        "right": -152,
+        "top": 31
+    },
+    "description": "US state of Hawaii",
+    "geojson": {
+        "$ref": "file://./us-hi.geojson"
+    },
+    "osm": "http://download.geofabrik.de/north-america/us/hawaii-latest.osm.pbf",
+    "rock": [
+        "sim3143"
+    ],
+    "water": [
+        "nhdplus_h_2001_hu4",
+        "nhdplus_h_2002_hu4",
+        "nhdplus_h_2003_hu4",
+        "nhdplus_h_2004_hu4",
+        "nhdplus_h_2005_hu4",
+        "nhdplus_h_2006_hu4",
+        "nhdplus_h_2007_hu4",
+        "nhdplus_h_2008_hu4",
+        "tiger_hi_water"
+    ]
+}
