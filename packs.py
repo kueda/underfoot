@@ -10,20 +10,23 @@ Which *should* create all the necessary files and wrap them up in a zip archive
 
 """
 
-from database import make_database
-from elevation import make_contours
+from datetime import datetime
 from glob import glob
-from osm import make_ways
-from rocks import make_rocks
-from water import make_water
 from urllib.parse import urlparse
+from urllib.request import urlopen
 import argparse
+import xml.etree.ElementTree as ET
 import json
 import os
 import pathlib
 import shutil
 import re
-from datetime import datetime
+
+from database import make_database
+from elevation import make_contours
+from osm import make_ways
+from rocks import make_rocks
+from water import make_water
 
 PACKS = {}
 pack_glob = os.path.join(
@@ -31,7 +34,7 @@ pack_glob = os.path.join(
     "packs/*.json"
 )
 for pack_path in glob(pack_glob):
-    with open(pack_path) as pack_f:
+    with open(pack_path, encoding="utf-8") as pack_f:
         pack = json.load(pack_f)
         if "geojson" in pack and "$ref" in pack["geojson"]:
             parsed_uri = urlparse(pack["geojson"]["$ref"])
@@ -39,38 +42,87 @@ for pack_path in glob(pack_glob):
                 pathlib.Path(pack_path).parent.absolute(),
                 f"{parsed_uri.netloc}{parsed_uri.path}"
             )
-            with open(geojson_path) as geojson_f:
+            with open(geojson_path, encoding="utf-8") as geojson_f:
                 pack["geojson"] = json.load(geojson_f)
         PACKS[os.path.basename(os.path.splitext(pack_path)[0])] = pack
 
 
 def list_packs():
-    for pack_name in PACKS:
-        print("\t{}: {}".format(pack_name, PACKS[pack_name]["description"]))
+    """Print a list of all possible packs"""
+    for pack_name, pack in PACKS.items():
+        print(f"\t{pack_name}: {pack['description']}")
 
 
 def get_build_dir():
+    """Return absolute path to the directory where pack files will be written"""
     return os.path.join(pathlib.Path(__file__).parent.absolute(), "build")
 
 
-def make_manifest():
+def make_manifest(manifest_url=None, s3_bucket_url=None):
+    """
+    Make a JSON file that describes all generated packs, optionall including
+    packs from a remote manifest or remote s3 bucket in the definition
+    of "all"
+    """
     build_dir = get_build_dir()
-    built_packs = [
-        os.path.basename(re.sub(r"\.zip$", "", path))
-        for path in glob(os.path.join(build_dir, "*.zip"))]
-    packs = [{**PACKS[pack], **{"name": pack}} for pack in built_packs]
-    for i, pack in enumerate(packs):
-        pack_path = os.path.join(build_dir, "{}.zip".format(pack["name"]))
-        mtime = datetime.fromtimestamp(os.path.getmtime(pack_path))
-        packs[i]["updated_at"] = datetime.isoformat(mtime)
-        packs[i]["path"] = os.path.relpath(pack_path, build_dir)
-    manifest = {"packs": packs, "updated_at": max([p["updated_at"] for p in packs])}  # noqa: E501
-    with open(os.path.join(build_dir, "manifest.json"), "w") as manifest_f:
+    remote_packs = remote_built_packs(manifest_url) if manifest_url else {}
+    s3_packs = s3_built_packs(s3_bucket_url) if s3_bucket_url else {}
+    local_packs = local_built_packs()
+    merged_packs = {**s3_packs, **remote_packs, **local_packs}
+    final_packs = [pack for pack_name, pack in merged_packs.items()]
+    manifest = {"packs": final_packs, "updated_at": max([p["updated_at"] for p in final_packs])}  # noqa: E501
+    with open(os.path.join(build_dir, "manifest.json"), "w", encoding="utf-8") as manifest_f:
         json.dump(manifest, manifest_f)
+
+
+def local_built_packs():
+    """List locally built packs"""
+    build_dir = get_build_dir()
+    packs = {}
+    for path in glob(os.path.join(build_dir, "*.zip")):
+        pack_name = os.path.basename(re.sub(r"\.zip$", "", path))
+        pack_path = os.path.join(build_dir, f"{pack_name}.zip")
+        packs[pack_name] = {
+            "name": pack_name,
+            "path": os.path.relpath(pack_path, build_dir),
+            "updated_at": datetime.isoformat(
+                datetime.fromtimestamp(
+                    os.path.getmtime(pack_path)
+                )
+            )
+        }
+    return packs
+
+
+def remote_built_packs(manifest_url):
+    """List packs from a remote manifest.json"""
+    with urlopen(manifest_url) as response:
+        remote_json = json.loads(response.read().decode())
+        return {pack["name"]: pack for pack in remote_json["packs"]}
+
+
+def s3_built_packs(s3_bucket_url):
+    """List packs from a publicly-accessible S3 bucket"""
+    packs = {}
+    s3ns = {"s3": "http://s3.amazonaws.com/doc/2006-03-01/"}
+    with urlopen(s3_bucket_url) as response:
+        xml = ET.fromstring(response.read())
+        for file in xml.findall("s3:Contents", s3ns):
+            file_name = file.find("s3:Key", s3ns).text
+            if not file_name.endswith(".zip"):
+                continue
+            pack_name = os.path.basename(os.path.splitext(file_name)[0])
+            packs[pack_name] = {
+                "name": pack_name,
+                "path": file_name,
+                "updated_at": file.find("s3:LastModified", s3ns).text
+            }
+    return packs
 
 
 def make_pack(pack_name, clean=False, clean_rocks=False, clean_water=False,
               clean_ways=False, clean_contours=False, procs=2):
+    """Generate a pack and write it to the build directory"""
     make_database()
     pack = PACKS[pack_name]
     build_dir = get_build_dir()
@@ -172,15 +224,26 @@ if __name__ == "__main__":
         type=int,
         default=2,
         help="Number of processes to run in parallel when multiprocessing")
+    parser.add_argument(
+        "--manifest-url",
+        type=str,
+        help="""
+            URL of an existing manifest.json to merge any new local packs into when the local
+            manifest gets generated
+        """)
+    parser.add_argument(
+        "--s3-bucket-url",
+        type=str,
+        help="URL of an existing s3 bucket to use when generating the manifest")
     args = parser.parse_args()
 
     if args.pack == "list":
         print("Available packs:")
         list_packs()
     elif args.pack == "manifest":
-        make_manifest()
+        make_manifest(manifest_url=args.manifest_url, s3_bucket_url=args.s3_bucket_url)
     else:
-        print("making pack: {}".format(args.pack))
+        print(f"Making pack: {args.pack}")
         pack_path = make_pack(
             args.pack,
             clean=args.clean,
@@ -189,5 +252,5 @@ if __name__ == "__main__":
             clean_ways=args.clean_ways,
             clean_contours=args.clean_contours,
             procs=args.procs)
-        make_manifest()
+        make_manifest(manifest_url=args.manifest_url, s3_bucket_url=args.s3_bucket_url)
         print(f"Pack available at {pack_path}")
