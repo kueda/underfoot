@@ -1,0 +1,28 @@
+{
+    "bbox": {
+        "left": -84.8201590000000039,
+        "bottom": 38.4032020000000003,
+        "right": -80.5186929999999990,
+        "top": 41.9775229999999979
+    },
+    "description": "US state of Ohio",
+    "geojson": {
+        "$ref": "file://./us-oh.geojson"
+    },
+    "osm": "http://download.geofabrik.de/north-america/us/ohio-latest.osm.pbf",
+    "rock": [
+        "of2005_1324_oh"
+    ],
+    "water": [
+        "nhdplus_h_0410_hu4",
+        "nhdplus_h_0411_hu4",
+        "nhdplus_h_0412_hu4",
+        "nhdplus_h_0503_hu4",
+        "nhdplus_h_0504_hu4",
+        "nhdplus_h_0506_hu4",
+        "nhdplus_h_0508_hu4",
+        "nhdplus_h_0509_hu4",
+        "nhdplus_h_0512_hu4",
+        "tiger_oh_water"
+    ]
+}

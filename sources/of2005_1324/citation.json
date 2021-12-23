@@ -1,0 +1,52 @@
+[
+  {
+    "id": "http://zotero.org/users/local/b90sdi4a/items/EE4JDDEX",
+    "type": "webpage",
+    "container-title": "USGS Publications Warehouse",
+    "title": "Preliminary Integrated Geologic Map Databases of the United States: Kentury, Ohio, Tennessee, West Virginia (OFR 2004-1324)",
+    "URL": "https://pubs.usgs.gov/of/2005/1324/",
+    "author": [
+      {
+        "family": "Nicholson",
+        "given": "Suzanne W."
+      },
+      {
+        "family": "Dicken",
+        "given": "Connie L."
+      },
+      {
+        "family": "Horton",
+        "given": "John D."
+      },
+      {
+        "family": "Labay",
+        "given": "Keith A."
+      },
+      {
+        "family": "Foose",
+        "given": "Michael P."
+      },
+      {
+        "family": "Mueller",
+        "given": "Julia A.L."
+      }
+    ],
+    "accessed": {
+      "date-parts": [
+        [
+          "2021",
+          12,
+          21
+        ]
+      ]
+    },
+    "issued": {
+      "date-parts": [
+        [
+          "2007",
+          12
+        ]
+      ]
+    }
+  }
+]
