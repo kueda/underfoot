@@ -1,0 +1,22 @@
+{
+    "bbox": {
+        "left": -73.7277749999999941,
+        "bottom": 40.9851710000000011,
+        "right": -71.7869940000000071,
+        "top": 42.0505870000000002
+    },
+    "description": "US state of Connecticut",
+    "geojson": {
+        "$ref": "file://./us-ct.geojson"
+    },
+    "osm": "http://download.geofabrik.de/north-america/us/connecticut-latest.osm.pbf",
+    "rock": [
+        "of2006_1272_ct"
+    ],
+    "water": [
+        "nhdplus_h_0108_hu4",
+        "nhdplus_h_0109_hu4",
+        "nhdplus_h_0110_hu4",
+        "tiger_ct_water"
+    ]
+}

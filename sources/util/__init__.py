@@ -59,6 +59,7 @@ LITHOLOGY_PATTERN = re.compile(
     conglomerate|
     dacite|
     diabase|
+    dolerite|
     dolomite|
     gabbro|
     gneiss|
@@ -140,6 +141,7 @@ LITHOLOGY_SYNONYMS = {
   'andesitic': 'andesite',
   'basaltic': 'basalt',
   'dolostone': 'dolomite',
+  'dolerite': 'diabase',
   'dolostone (dolomite)': 'dolomite',
   'fill': 'artificial',
   'gneissic': 'gneiss',
@@ -174,6 +176,7 @@ IGNEOUS_ROCKS = [
   'benmoreite'
   'dacite',
   'diabase',
+  'dolerite',
   'gabbro',
   'granite',
   'granitoid',
