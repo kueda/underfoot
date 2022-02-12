@@ -9,7 +9,7 @@ from multiprocessing import Pool
 
 from database import DBNAME, SRID, make_database
 from sources import util
-from sources.util.citations import load_citation_for_source, citations_table_name
+from sources.util.citations import load_citation_for_source, CITATIONS_TABLE_NAME
 
 
 NUM_PROCESSES = 4
@@ -481,19 +481,21 @@ def make_mbtiles(sources, path="./water.mbtiles", bbox=None):
         index_columns=["source_id", "to_source_id", "from_source_id"])
     sources_sql = ",".join([f"'{s}'" for s in sources])
     util.add_table_from_query_to_mbtiles(
-        table_name=citations_table_name,
+        table_name=CITATIONS_TABLE_NAME,
         dbname=DBNAME,
         query=f"""
-            SELECT * FROM {citations_table_name}
+            SELECT * FROM {CITATIONS_TABLE_NAME}
             WHERE source IN ({sources_sql})
         """,
         mbtiles_path=path,
         index_columns=["source"])
+    return path
 
 
 def make_water(
         sources, clean=False, cleandb=False, cleanfiles=False, bbox=None,
         path="./water.mbtiles"):
+    """Process and load all water sources and write them to a MBTiles file"""
     util.log(f"make_water, sources: {sources}")
     make_database()
     if clean:
@@ -503,8 +505,7 @@ def make_water(
     load_waterbodies(sources, clean=clean)
     load_watersheds(sources, clean=clean)
     load_networks(sources, clean=clean)
-    mbtiles_path = make_mbtiles(sources, path=path, bbox=bbox)
-    return mbtiles_path
+    return make_mbtiles(sources, path=path, bbox=bbox)
 
 
 if __name__ == "__main__":

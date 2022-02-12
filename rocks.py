@@ -13,7 +13,7 @@ import time
 from multiprocessing import Pool
 
 from sources import util
-from sources.util.citations import load_citation_for_source, citations_table_name
+from sources.util.citations import load_citation_for_source, CITATIONS_TABLE_NAME
 from database import DBNAME, SRID
 
 NUM_PROCESSES = 4
@@ -353,10 +353,10 @@ def make_mbtiles(sources, path="./rocks.mbtiles", bbox=None):
         index_columns=["id"])
     sources_sql = ",".join([f"'{s}'" for s in sources])
     util.add_table_from_query_to_mbtiles(
-        table_name=citations_table_name,
+        table_name=CITATIONS_TABLE_NAME,
         dbname=DBNAME,
         query=f"""
-            SELECT * FROM {citations_table_name}
+            SELECT * FROM {CITATIONS_TABLE_NAME}
             WHERE source IN ({sources_sql})
         """,
         mbtiles_path=path,
