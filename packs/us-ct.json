@@ -1,4 +1,6 @@
 {
+    "admin1": "United States",
+    "admin2": "Connecticut",
     "bbox": {
         "left": -73.7277749999999941,
         "bottom": 40.9851710000000011,
@@ -9,6 +11,8 @@
     "geojson": {
         "$ref": "file://./us-ct.geojson"
     },
+    "id": "us-ct",
+    "name": "Connecticut (state)",
     "osm": "http://download.geofabrik.de/north-america/us/connecticut-latest.osm.pbf",
     "rock": [
         "of2006_1272_ct"

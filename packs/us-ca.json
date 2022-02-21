@@ -1,4 +1,6 @@
 {
+    "admin1": "United States",
+    "admin2": "California",
     "bbox": {
         "bottom": 32.0806698774044,
         "left": -126.306731125084,
@@ -9,6 +11,8 @@
     "geojson": {
         "$ref": "file://./us-ca.geojson"
     },
+    "id": "us-ca",
+    "name": "California (state)",
     "osm": "http://download.geofabrik.de/north-america/us/california-latest.osm.pbf",
     "rock": [
         "mf2342c",

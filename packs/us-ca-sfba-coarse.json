@@ -1,11 +1,15 @@
 {
+    "id": "us-ca-sfba-coarse",
+    "name": "San Francisco Bay Area, coarse",
+    "description": "SF Bay Area, coarse boundary, for testing",
+    "admin1": "United States",
+    "admin2": "California",
     "bbox": {
         "bottom": 36.851146697998,
         "left": -123.75,
         "right": -121.207077026367,
         "top": 38.875
     },
-    "description": "SF Bay Area, coarse, for testing",
     "geojson": {
         "$ref": "file://./us-ca-sfba.geojson"
     },

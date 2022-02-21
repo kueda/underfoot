@@ -1,4 +1,6 @@
 {
+    "admin1": "United States",
+    "admin2": "California",
     "bbox": {
         "bottom": 36.851146697998,
         "left": -123.75,
@@ -9,6 +11,8 @@
     "geojson": {
         "$ref": "file://./us-ca-sfba.geojson"
     },
+    "id": "us-ca-sfba",
+    "name": "San Francisco Bay Area, CA, USA",
     "osm": "http://download.geofabrik.de/north-america/us/california/norcal-latest.osm.pbf",
     "rock": [
         "mf2342c",

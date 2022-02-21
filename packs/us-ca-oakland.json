@@ -1,11 +1,15 @@
 {
+    "id": "us-ca-oakland",
+    "name": "Oakland, CA, USA",
+    "description": "Oakland, CA, USA. Mostly for testing some place small.",
+    "admin1": "United States",
+    "admin2": "California",
     "bbox": {
         "bottom": 37.6249329829376,
         "left": -122.37608299613,
         "right": -122.00107120948,
         "top": 37.9999225069647
     },
-    "description": "Oakland, CA, USA. Mostly for testing some place small.",
     "geojson": {
         "$ref": "file://./us-ca-oakland.geojson"
     },

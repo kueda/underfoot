@@ -73,7 +73,7 @@ def process_source(source, clean=False, cleandb=False, cleanfiles=False):
             -a_srs EPSG:{SRID}
         """
         util.call_cmd(cmd, shell=True, check=True)
-        if layer == "watersheds" or layer == "waterbodies":
+        if layer in ("watersheds", "waterbodies"):
             util.run_sql(f"""
                 UPDATE {source_table_name}
                 SET geom = ST_MakeValid(geom)

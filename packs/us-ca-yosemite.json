@@ -1,4 +1,6 @@
 {
+    "admin1": "United States",
+    "admin2": "California",
     "bbox": {
         "bottom": 37.4,
         "left": -120,
@@ -9,6 +11,8 @@
     "geojson": {
         "$ref": "file://./us-ca-yosemite.geojson"
     },
+    "id": "us-ca-yosemite",
+    "name": "Yosemite National Park and surrounding area, CA, USA",
     "osm": "http://download.geofabrik.de/north-america/us/california/norcal-latest.osm.pbf",
     "rock": [
         "i1874",

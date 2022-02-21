@@ -1,4 +1,6 @@
 {
+    "admin1": "United States",
+    "admin2": "Hawaii",
     "bbox": {
         "bottom": 16,
         "left": -179.8,
@@ -9,6 +11,8 @@
     "geojson": {
         "$ref": "file://./us-hi.geojson"
     },
+    "id": "us-hi",
+    "name": "Hawaii (state)",
     "osm": "http://download.geofabrik.de/north-america/us/hawaii-latest.osm.pbf",
     "rock": [
         "sim3143"

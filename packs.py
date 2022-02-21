@@ -28,6 +28,27 @@ from osm import make_ways
 from rocks import make_rocks
 from water import make_water
 
+REQUIRED_ATTRIBUTES = [
+    "admin1",
+    "id",
+    "name"
+]
+
+ATTRIBUTES_FOR_METADATA = [
+    "admin1",
+    "admin2",
+    "description",
+    "id",
+    "name"
+]
+
+
+def validate_pack(path, pack):
+    """Validate a pack"""
+    for attribute in REQUIRED_ATTRIBUTES:
+        if attribute not in pack or not pack[attribute]:
+            raise Exception(f"{path} is not valid: missing {attribute}")
+
 PACKS = {}
 pack_glob = os.path.join(
     pathlib.Path(__file__).parent.absolute(),
@@ -36,6 +57,7 @@ pack_glob = os.path.join(
 for pack_path in glob(pack_glob):
     with open(pack_path, encoding="utf-8") as pack_f:
         pack = json.load(pack_f)
+        validate_pack(pack_path, pack)
         if "geojson" in pack and "$ref" in pack["geojson"]:
             parsed_uri = urlparse(pack["geojson"]["$ref"])
             geojson_path = os.path.join(
@@ -49,13 +71,23 @@ for pack_path in glob(pack_glob):
 
 def list_packs():
     """Print a list of all possible packs"""
-    for pack_name, pack in PACKS.items():
-        print(f"\t{pack_name}: {pack['description']}")
+    for pack_id, pack in PACKS.items():
+        print(f"\t{pack_id}: {pack['description']}")
 
 
 def get_build_dir():
     """Return absolute path to the directory where pack files will be written"""
     return os.path.join(pathlib.Path(__file__).parent.absolute(), "build")
+
+
+def add_metadata_to_pack(pack):
+    """Augments a pack dict that has info about a specific file with descriptive static metadata"""
+    full_pack = PACKS[pack["id"]]
+    filtered = dict((k, full_pack[k]) for k in ATTRIBUTES_FOR_METADATA if k in full_pack)
+    return {
+        **pack,
+        **filtered
+    }
 
 
 def make_manifest(manifest_url=None, s3_bucket_url=None):
@@ -69,7 +101,7 @@ def make_manifest(manifest_url=None, s3_bucket_url=None):
     s3_packs = s3_built_packs(s3_bucket_url) if s3_bucket_url else {}
     local_packs = local_built_packs()
     merged_packs = {**s3_packs, **remote_packs, **local_packs}
-    final_packs = [pack for pack_name, pack in merged_packs.items()]
+    final_packs = [add_metadata_to_pack(pack) for pack_id, pack in merged_packs.items()]
     manifest = {"packs": final_packs, "updated_at": max([p["updated_at"] for p in final_packs])}  # noqa: E501
     with open(os.path.join(build_dir, "manifest.json"), "w", encoding="utf-8") as manifest_f:
         json.dump(manifest, manifest_f)
@@ -80,10 +112,10 @@ def local_built_packs():
     build_dir = get_build_dir()
     packs = {}
     for path in glob(os.path.join(build_dir, "*.zip")):
-        pack_name = os.path.basename(re.sub(r"\.zip$", "", path))
-        pack_path = os.path.join(build_dir, f"{pack_name}.zip")
-        packs[pack_name] = {
-            "name": pack_name,
+        pack_id = os.path.basename(re.sub(r"\.zip$", "", path))
+        pack_path = os.path.join(build_dir, f"{pack_id}.zip")
+        packs[pack_id] = {
+            "id": pack_id,
             "path": os.path.relpath(pack_path, build_dir),
             "updated_at": datetime.isoformat(
                 datetime.fromtimestamp(
@@ -98,7 +130,7 @@ def remote_built_packs(manifest_url):
     """List packs from a remote manifest.json"""
     with urlopen(manifest_url) as response:
         remote_json = json.loads(response.read().decode())
-        return {pack["name"]: pack for pack in remote_json["packs"]}
+        return {pack["id"]: pack for pack in remote_json["packs"]}
 
 
 def s3_built_packs(s3_bucket_url):
@@ -111,22 +143,22 @@ def s3_built_packs(s3_bucket_url):
             file_name = file.find("s3:Key", s3ns).text
             if not file_name.endswith(".zip"):
                 continue
-            pack_name = os.path.basename(os.path.splitext(file_name)[0])
-            packs[pack_name] = {
-                "name": pack_name,
+            pack_id = os.path.basename(os.path.splitext(file_name)[0])
+            packs[pack_id] = {
+                "id": pack_id,
                 "path": file_name,
                 "updated_at": file.find("s3:LastModified", s3ns).text
             }
     return packs
 
 
-def make_pack(pack_name, clean=False, clean_rocks=False, clean_water=False,
+def make_pack(pack_id, clean=False, clean_rocks=False, clean_water=False,
               clean_ways=False, clean_contours=False, procs=2):
     """Generate a pack and write it to the build directory"""
     make_database()
-    pack = PACKS[pack_name]
+    pack = PACKS[pack_id]
     build_dir = get_build_dir()
-    pack_dir = os.path.join(build_dir, pack_name)
+    pack_dir = os.path.join(build_dir, pack_id)
     if not os.path.isdir(pack_dir):
         os.makedirs(pack_dir)
     rocks_mbtiles_path = os.path.join(pack_dir, "rocks.mbtiles")
@@ -147,6 +179,9 @@ def make_pack(pack_name, clean=False, clean_rocks=False, clean_water=False,
         make_water(
             pack["water"],
             bbox=pack["bbox"],
+            # TODO make pack options to clip water / rocks / ways by the bbox
+            # or not. sometimes it makes more sense to include everythign in
+            # the sources
             clean=(clean or clean_water),
             path=water_mbtiles_path)
     elif os.path.isfile(water_mbtiles_path):
@@ -196,7 +231,7 @@ if __name__ == "__main__":
         description="Make a data pack for Underfoot")
     parser.add_argument(
         "pack",
-        metavar="PACK_NAME",
+        metavar="pack_id",
         type=str,
         help="Make the specified pack. Use `list` to list available packs")
     parser.add_argument(

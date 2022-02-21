@@ -1,4 +1,6 @@
 {
+    "admin1": "United States",
+    "admin2": "New Hampshire",
     "bbox": {
         "bottom": 42.6971825959057725,
         "left": -72.5572657012535842,
@@ -9,6 +11,8 @@
     "geojson": {
         "$ref": "file://./us-nh.geojson"
     },
+    "id": "us-nh",
+    "name": "New Hampshire (state)",
     "osm": "http://download.geofabrik.de/north-america/us/new-hampshire-latest.osm.pbf",
     "rock": [
         "of2006_1272_nh"
