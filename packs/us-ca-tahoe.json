@@ -1,0 +1,28 @@
+{
+    "admin1": "United States",
+    "admin2": "California",
+    "bbox": {
+        "bottom": 38.62,
+        "left": -120.29,
+        "right": -119.87,
+        "top": 39.39
+    },
+    "description": "Lake Tahoe and surrounding areas of the Sierra Nevada mountains",
+    "geojson": {
+        "$ref": "file://./us-ca-tahoe.geojson"
+    },
+    "id": "us-ca-tahoe",
+    "name": "Lake Tahoe and surrounding area, CA, USA",
+    "osm": "http://download.geofabrik.de/north-america/us/california/norcal-latest.osm.pbf",
+    "rock": [
+        "rgm_004",
+        "of2005_1305_ca",
+        "of2005_1305_nv"
+    ],
+    "water": [
+        "nhdplus_h_1605_hu4",
+        "nhdplus_h_1802_hu4",
+        "nhdplus_h_1804_hu4",
+        "tiger_ca_water"
+    ]
+}

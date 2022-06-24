@@ -16,7 +16,7 @@
     "osm": "http://download.geofabrik.de/north-america/us/california/norcal-latest.osm.pbf",
     "rock": [
         "i1874",
-        "of2005_1305"
+        "of2005_1305_ca"
     ],
     "water": [
         "nhdplus_h_1605_hu4",

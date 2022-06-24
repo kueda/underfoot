@@ -203,7 +203,8 @@ IGNEOUS_ROCKS = [
   'trachyte',
   'tuff',
   'volcanoclastic breccia',
-  'volcanic rock'
+  'volcanic rock',
+  'breccia'
 ]
 
 METAMORPHIC_ROCKS = [
@@ -1083,11 +1084,11 @@ def process_usgs_source(
     use_unzip=False
 ):
     """Process units from a USGS Arc Info archive given a couple configurations.
-  
+
     Most USGS map databases seem to be in the form of a gzipped tarbal
     containing Arc Info coverages, so this method just wraps up some of the
     code I keep repeating.
-  
+
     Args:
       base_path: path to the source module's __init__.py
       url: URL of the gzipped tarball

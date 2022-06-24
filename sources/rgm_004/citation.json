@@ -1,0 +1,36 @@
+[
+	{
+		"id": "http://zotero.org/users/local/b90sdi4a/items/U3XKXGKT",
+		"type": "map",
+		"collection-title": "California Regional Geologic Maps",
+		"edition": "Version 1.0",
+		"event-place": "Sacramento, California",
+		"publisher": "Department of Conservation, California Geological Survey",
+		"publisher-place": "Sacramento, California",
+		"scale": "1:100000",
+		"title": "Geologic Map of the Lake Tahoe Basin, California and Nevada",
+		"URL": "https://www.conservation.ca.gov/cgs/Documents/Publications/Regional-Geologic-Maps/RGM_004/RGM_004-Tahoe-Basin-2005-100k-GIS.zip",
+		"author": [
+			{
+				"family": "Saucedo",
+				"given": "George J."
+			}
+		],
+		"accessed": {
+			"date-parts": [
+				[
+					"2022",
+					6,
+					21
+				]
+			]
+		},
+		"issued": {
+			"date-parts": [
+				[
+					"2005"
+				]
+			]
+		}
+	}
+]

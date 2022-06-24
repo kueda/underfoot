@@ -86,7 +86,7 @@ def schemify_attributes(attributes_path):
 def merge_shapes(paths):
     print("MERGING SHAPEFILES...")
     merged_path = "merged_units.shp"
-    call_cmd(["ogr2ogr", "-overwrite", merged_path, paths.pop()])
+    call_cmd(["ogr2ogr", "-overwrite", merged_path, paths.pop()], check=True)
     for path in paths:
         call_cmd(["ogr2ogr", "-update", "-append", merged_path, path])
     print("DISSOLVING SHAPES AND REPROJECTING...")
@@ -99,7 +99,7 @@ def merge_shapes(paths):
         "-overwrite",
         "-dialect", "sqlite",
         "-sql", "SELECT UNIT_LINK, ST_Union(geometry) as geometry FROM 'merged_units' GROUP BY UNIT_LINK"  # noqa: E501
-    ])
+    ], check=True)
     return dissolved_path
 
 

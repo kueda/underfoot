@@ -21,7 +21,7 @@ def run():
         util.call_cmd(["unzip", download_path])
   
     # In this case we're converting the existing shapefile to JSON and
-    # trnaslating some coded data into a usable form in one step
+    # translating some coded data into a usable form in one step
     units_path = "units.geojson"
     if not os.path.isfile(units_path):
         schema = { 
@@ -160,7 +160,7 @@ def run():
                       },
                       'geometry': unit['geometry']
                     })
-  
+
     # Copy over the citation JSON
     util.call_cmd([
         "cp",
