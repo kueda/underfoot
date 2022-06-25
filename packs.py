@@ -82,6 +82,8 @@ def get_build_dir():
 
 def add_metadata_to_pack(pack):
     """Augments a pack dict that has info about a specific file with descriptive static metadata"""
+    if pack["id"] not in PACKS:
+        return pack
     full_pack = PACKS[pack["id"]]
     filtered = dict((k, full_pack[k]) for k in ATTRIBUTES_FOR_METADATA if k in full_pack)
     return {
@@ -102,7 +104,7 @@ def make_manifest(manifest_url=None, s3_bucket_url=None):
     local_packs = local_built_packs()
     merged_packs = {**s3_packs, **remote_packs, **local_packs}
     final_packs = [add_metadata_to_pack(pack) for pack_id, pack in merged_packs.items()]
-    manifest = {"packs": final_packs, "updated_at": max([p["updated_at"] for p in final_packs])}  # noqa: E501
+    manifest = {"packs": final_packs, "updated_at": max([p["updated_at"] for p in final_packs])}
     with open(os.path.join(build_dir, "manifest.json"), "w", encoding="utf-8") as manifest_f:
         json.dump(manifest, manifest_f)
 
