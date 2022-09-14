@@ -17,6 +17,7 @@ from datetime import datetime as dt
 
 WEB_MERCATOR_PROJ4 = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +over +no_defs"  # noqa: E501
 NAD27_UTM10_PROJ4 = "+proj=utm +zone=10 +datum=NAD27 +units=m +no_defs"
+NAD27_UTM11_PROJ4 = "+proj=utm +zone=11 +datum=NAD27 +units=m +no_defs"
 GRS80_LONGLAT = "+proj=longlat +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +no_defs"
 EPSG_4326_PROJ4 = "+proj=longlat +datum=WGS84 +no_defs"
 SRS = EPSG_4326_PROJ4
@@ -1078,6 +1079,7 @@ def process_usgs_source(
     polygon_pattern=None,
     srs=NAD27_UTM10_PROJ4,
     metadata_csv_path=None,
+    polygons_join_col="PTYPE",
     skip_polygonize_arcs=False,
     uncompress_e00=False,
     # As opposed to gunzip
@@ -1099,6 +1101,8 @@ def process_usgs_source(
         Default is NAD27 UTM Zone 10
       metadata_csv_path: Full path to a CSV containing transcribed metadata for
         the map units. Default behavior is to try and import unit titles
+      polygons_join_col: Name of the column to dissolve polygons by and to join
+        them to the units column in the metadata
       skip_polygonize_arcs: If ogr2ogr successfully creates a useable polygon
         shapefile in PAL.shp, then we don't need to polygonize arcs, but this
         usually isn't the case. Default value is false.
@@ -1110,9 +1114,9 @@ def process_usgs_source(
     download_path = os.path.basename(url)
     # download the file if necessary
     if not os.path.isfile(download_path):
-        print("DOWNLOADING {}".format(url))
+        print(f"DOWNLOADING {url}")
         call_cmd(["curl", "-OL", url])
-  
+
     # extract the archive if necessary
     if len(glob(e00_path)) == 0:
         print("EXTRACTING ARCHIVE...")
@@ -1130,7 +1134,7 @@ def process_usgs_source(
             call_cmd(["gunzip", download_path])
             call_cmd(["cp", copy_path, download_path])
             call_cmd(["rm", copy_path])
-  
+
     # convert the Arc Info coverages to shapefiles
     polygons_path = "e00_polygons.shp"
     if not os.path.isfile(polygons_path):
@@ -1149,7 +1153,7 @@ def process_usgs_source(
                     path = uncompressed_e00_path
             print("\tExtracting e00...")
             shapefiles_path = extract_e00(path)
-            print("\tshapefiles_path: {}".format(shapefiles_path))
+            print(f"\tshapefiles_path: {shapefiles_path}")
             print("\tPolygonizing arcs...")
             if skip_polygonize_arcs:
                 polygon_paths.append(os.path.join(shapefiles_path, "PAL.shp"))
@@ -1164,8 +1168,8 @@ def process_usgs_source(
         call_cmd(["ogr2ogr", "-overwrite", polygons_path, polygon_paths.pop()])
         for path in polygon_paths:
             call_cmd(["ogr2ogr", "-update", "-append", polygons_path, path])
-  
-    # dissolve all the shapes by PTYPE and project them into Google Mercator
+
+    # dissolve all the shapes by polygons_join_col and project them into Google Mercator
     print("DISSOLVING SHAPES AND REPROJECTING...")
     final_polygons_path = "polygons.shp"
     call_cmd([
@@ -1176,9 +1180,11 @@ def process_usgs_source(
         "-overwrite",
         "-dialect", "sqlite",
         "-sql",
-        "SELECT PTYPE,ST_Union(geometry) as geometry FROM 'e00_polygons' GROUP BY PTYPE"  # noqa: E501
+        # pylint: disable=line-too-long
+        f"SELECT {polygons_join_col},ST_Union(geometry) as geometry FROM 'e00_polygons' GROUP BY {polygons_join_col}"
+        # pylint: enable=line-too-long
     ])
-  
+
     print("EXTRACTING METADATA...")
     metadata_path = "data.csv"
     globs = glob(os.path.join(os.path.dirname(e00_path), "*.met"))
@@ -1189,17 +1195,18 @@ def process_usgs_source(
             fill_in_custom_metadata_from_met(met_path, metadata_path)
     elif met_path:
         data = metadata_from_usgs_met(met_path)
-        with open(metadata_path, 'w') as f:
-            csv.writer(f).writerows(data)
+        with open(metadata_path, 'w') as metadata_file:
+            csv.writer(metadata_file).writerows(data)
     else:
         # write an empty metadata csv file
         data = [METADATA_COLUMN_NAMES]
-        with open(metadata_path, 'w') as f:
-            csv.writer(f).writerows(data)
-  
+        with open(metadata_path, 'w') as metadata_file:
+            csv.writer(metadata_file).writerows(data)
+
     print("JOINING METADATA...")
-    join_polygons_and_metadata(final_polygons_path, metadata_path)
-  
+    join_polygons_and_metadata(final_polygons_path, metadata_path,
+      polygons_join_col=polygons_join_col)
+
     print("COPYING CITATION")
     call_cmd([
       "cp",

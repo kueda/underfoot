@@ -1,0 +1,31 @@
+[
+	{
+		"id": "http://zotero.org/users/local/b90sdi4a/items/KE8SYBE7",
+		"type": "map",
+		"collection-title": "U.S. Geological Survey Open-File Report",
+		"edition": "Version 1.0, 2005",
+		"event-place": "Menlo Park, California",
+		"language": "English",
+		"publisher": "U.S. Geological Survey",
+		"publisher-place": "Menlo Park, California",
+		"scale": "1:100000",
+		"title": "Preliminary Geologic Map of the Los Angeles 30' x 60' Quadrangle, Southern California",
+		"URL": "https://pubs.usgs.gov/of/2005/1019/",
+		"accessed": {
+			"date-parts": [
+				[
+					"2022",
+					9,
+					13
+				]
+			]
+		},
+		"issued": {
+			"date-parts": [
+				[
+					"2005"
+				]
+			]
+		}
+	}
+]

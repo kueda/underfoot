@@ -1,0 +1,25 @@
+{
+    "admin1": "United States",
+    "admin2": "California",
+    "bbox": {
+        "bottom": 33.384,
+        "left": -119.0009889137974000,
+        "right": -116.892,
+        "top": 34.4999944920713446
+    },
+    "description": "Los Angeles area roughly from Simi Valley to Temecula",
+    "geojson": {
+        "$ref": "file://./us-ca-la.geojson"
+    },
+    "id": "us-ca-la",
+    "name": "Los Angeles Area, CA, USA",
+    "osm": "http://download.geofabrik.de/north-america/us/california/socal-latest.osm.pbf",
+    "rock": [
+        "of2005_1019",
+        "of2005_1305_ca"
+    ],
+    "water": [
+        "nhdplus_h_1807_hu4",
+        "tiger_ca_water"
+    ]
+}
