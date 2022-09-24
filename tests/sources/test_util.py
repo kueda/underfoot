@@ -1,3 +1,5 @@
+# pylint: disable=missing-function-docstring
+"""Tests for sources util"""
 from numbers import Number
 from sources import util
 
@@ -44,3 +46,39 @@ def test_ages_from_span_parses_and_separated_spans():
 def test_span_from_usgs_code():
     assert util.span_from_usgs_code("Tapl") == "tertiary"
     assert util.span_from_usgs_code("Kpaf") == "cretaceous"
+
+def test_lithology_from_text_extracts_alluvial_fan():
+    assert util.lithology_from_text("an alluvial fan is nice") == "alluvial fan"
+
+def test_lithology_from_text_extracts_alluvial_hyphen_fan():
+    assert util.lithology_from_text("an alluvial-fan is nice") == "alluvial fan"
+
+def test_lithology_from_text_extracts_plutonic_rock():
+    assert util.lithology_from_text("some plutonic rock sandwich") == "plutonic rock"
+
+def test_lithology_from_text_extracts_arenaceous_as_sand():
+    assert util.lithology_from_text("this is so arenaceous") == "sand"
+
+def test_lithology_from_text_extracts_silt():
+    assert util.lithology_from_text("what a load of silt") == "silt"
+
+def test_lithology_from_text_extracts_siltstone_before_silt():
+    assert util.lithology_from_text("some silt and some siltstone") == "siltstone"
+
+def test_lithology_from_text_extracts_calcerenite():
+    assert util.lithology_from_text("some quartz-bearing calcerenites") == "calcerenite"
+
+def test_lithology_from_text_extracts_colluvium():
+    assert util.lithology_from_text("some very fine colluvium") == "colluvium"
+
+def test_lithology_from_text_extracts_syenite():
+    assert util.lithology_from_text("some syenite, oh boy") == "syenite"
+
+def test_lithology_from_text_extracts_everything_before_water():
+    assert util.lithology_from_text("watery sandstone") == "sandstone"
+    assert util.lithology_from_text("did you know granite needs water to form?") == "granite"
+
+def test_infer_metadata_from_csv_row_uses_lithology_column_over_inferred_lithology():
+    row = {"lithology": "plutonic rock", "title": "granite"}
+    inferred_row = util.infer_metadata_from_csv_row(row)
+    assert inferred_row["lithology"] == row["lithology"]

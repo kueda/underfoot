@@ -42,18 +42,18 @@ LITHOLOGY_PATTERN = re.compile(
   re.sub(r'\s+', '', r'''(
     agglomerate|
     alluvium|
-    alluvial\sfan|
+    alluvial.fan|
     andesite|
     andesitic|
     ankaramite|
     aplite|
     arkose|
-    artificial|
     basaltic andesite|
     basaltic|
     basalt|
     basanite|
     benmoreite|
+    calcerenite|
     chert|
     claystone|
     clay|
@@ -62,6 +62,7 @@ LITHOLOGY_PATTERN = re.compile(
     diabase|
     dolerite|
     dolomite|
+    fanglomerate|
     gabbro|
     gneiss|
     gneissic|
@@ -75,8 +76,6 @@ LITHOLOGY_PATTERN = re.compile(
     hawaiite|
     icelandite|
     keratophyre|
-    landslide|
-    levee|
     limestone|
     listwanite|
     listvenite|
@@ -89,7 +88,6 @@ LITHOLOGY_PATTERN = re.compile(
     monzogranite|
     moraine|
     mudstone|
-    mud|
     mugearite|
     mylonite|
     orthogneiss|
@@ -98,6 +96,7 @@ LITHOLOGY_PATTERN = re.compile(
     pelit(e|ic)|
     peridotite|
     picrite|
+    plutonic\srock|
     pyroxenite|
     quartz(\-lithic)?\sarenite|
     quartz\sdiorite|
@@ -109,24 +108,39 @@ LITHOLOGY_PATTERN = re.compile(
     rhyolite|
     rhyolitic|
     sandstone|
-    sand|
     schist|
     serpentine|
     serpentinite|
     shale|
     silica(\-|\s)carbonate|
-    (?# Placing after silica carbonate so it doesn't take precedence)
-    carbonate rock|
     siltstone|
     surficial\sdeposit|
+    syenite|
     talus|
     tephrite|
     till|
     tonalite|
     trachyte|
     tuff|
+    volcanoclastic\sbreccia
+  )''', flags=re.MULTILINE),
+  flags=re.VERBOSE | re.I
+)
+
+# Words that should take lower precedence when trying to parse a lithology
+# from text
+LOW_PRIORITY_LITHOLOGY_PATTERN = re.compile(
+  re.sub(r'\s+', '', r'''(
+    arenaceous|
+    artificial|
+    carbonate rock|
+    colluvium|
+    landslide|
+    levee|
+    mud|
+    sand|
+    silt|
     unconsolidated\smaterial|
-    volcanoclastic\sbreccia|
     water|
     metasedimentary|
     sedimentary|
@@ -138,12 +152,14 @@ LITHOLOGY_PATTERN = re.compile(
 )
 
 LITHOLOGY_SYNONYMS = {
-  'alluvial fan': 'alluvium',
+  'alluvial-fan': 'alluvial fan',
   'andesitic': 'andesite',
+  'arenaceous': 'sand',
   'basaltic': 'basalt',
   'dolostone': 'dolomite',
   'dolerite': 'diabase',
   'dolostone (dolomite)': 'dolomite',
+  'fanglomerate': 'alluvial fan',
   'fill': 'artificial',
   'gneissic': 'gneiss',
   'granitic': 'granite',
@@ -175,6 +191,7 @@ IGNEOUS_ROCKS = [
   'basaltic andesite',
   'basanite',
   'benmoreite'
+  'breccia',
   'dacite',
   'diabase',
   'dolerite',
@@ -192,6 +209,7 @@ IGNEOUS_ROCKS = [
   'pegmatite',
   'peridotite',
   'picrite',
+  'plutonic rock',
   'pyroxenite',
   'quartz diorite',
   'quartz keratophyre',
@@ -199,18 +217,19 @@ IGNEOUS_ROCKS = [
   'quartz monzonite',
   'rhyodacite',
   'rhyolite',
+  'syenite',
   'tephrite',
   'tonalite',
   'trachyte',
   'tuff',
-  'volcanoclastic breccia',
   'volcanic rock',
-  'breccia'
+  'volcanoclastic breccia'
 ]
 
 METAMORPHIC_ROCKS = [
   'gneiss',
   'greenstone',
+  'marble',
   'mylonite',
   'quartzite',
   'schist',
@@ -222,6 +241,7 @@ METAMORPHIC_ROCKS = [
 SEDIMENTARY_ROCKS = [
   'arkose',
   'carbonate rock',
+  'calcerenite',
   'chert',
   'clay',
   'claystone',
@@ -241,6 +261,8 @@ SEDIMENTARY_ROCKS = [
 
 NON_ROCKS = [
   'alluvium',
+  'alluvial fan',
+  'colluvium',
   'landslide',
   'melange',
   'moraine',
@@ -676,12 +698,12 @@ def polygonize_arcs(
 ):
     """Convert shapefile arcs from an extracted ArcINFO coverage and convert
     them to polygons.
-  
+
     More often than not ArcINFO coverages seem to include arcs but not polygons
     when converted to shapefiles using ogr. A PAL.shp file gets created, but it
     only has polygon IDs, not geometries. This method will walk through all the
     arcs and combine them into their relevant polygons.
-  
+
     Why is it in its own python script and not in this library? For reasons as
     mysterious as they are maddening, when you import fiona into this module,
     it causes subproccess calls to ogr2ogr to ignore the "+nadgrids=@null" proj
@@ -727,16 +749,20 @@ def met2xml(path):
 
 
 def lithology_from_text(text):
+    """Extract normalized lithology from free text"""
     if not text:
         return
     lithology_matches = LITHOLOGY_PATTERN.search(text)
+    if not lithology_matches:
+        lithology_matches = LOW_PRIORITY_LITHOLOGY_PATTERN.search(text)
     lithology = (lithology_matches[0] if lithology_matches else '').lower()
-    if lithology in LITHOLOGY_SYNONYMS.keys():
+    if lithology in LITHOLOGY_SYNONYMS:
         return LITHOLOGY_SYNONYMS[lithology]
     return lithology
 
 
 def formation_from_text(text):
+    """Extract normalized formation from free text"""
     if not text:
         return
     # basically any proper nouns
@@ -746,6 +772,7 @@ def formation_from_text(text):
 
 
 def grouping_from_text(text):
+    """Extract normalized grouping from free text"""
     if not text:
         return
     grouping_matches = GROUPING_PATTERN.search(text)
@@ -754,6 +781,7 @@ def grouping_from_text(text):
 
 
 def rock_type_from_lithology(lithology):
+    """Extract rock type from normalized lithology"""
     rock_type = ''
     if lithology in IGNEOUS_ROCKS:
         rock_type = 'igneous'
@@ -762,9 +790,10 @@ def rock_type_from_lithology(lithology):
     elif lithology in SEDIMENTARY_ROCKS:
         rock_type = 'sedimentary'
     return rock_type
-  
+
 
 def span_from_text(text):
+    """Extract normalized geologic time span from free text"""
     if not text:
         return
     span_matches = SPAN_PATTERN.search(text.lower())
@@ -773,11 +802,13 @@ def span_from_text(text):
 
 
 def span_from_lithology(lithology):
-    if lithology and (lithology == "artificial" or lithology == "water"):
+    """Extract normalized geologic time span from normalized lithology"""
+    if lithology in ("artificial", "water"):
         return "present"
 
 
 def span_from_code(code):
+    """Extract normalized geologic time span from map unit / code"""
     if code and len(code) <= 4:
         if code[0] == "K":
             return "cretaceous"
@@ -791,6 +822,12 @@ def span_from_code(code):
 
 
 def controlled_span_from_span(text):
+    """
+    Extract controlled geologic time span from free text.
+
+    Unlike span_from_text, this attempts to make reasonable guesses about the
+    meaning of terms like "early" or "upper"
+    """
     if not text:
         return
     key = re.sub(r'\(.+?\)', "", text)
@@ -800,27 +837,27 @@ def controlled_span_from_span(text):
     synonyms = {
       'present': 'holocene'
     }
-    if key in synonyms.keys() and synonyms[key] in WIKI_SPANS:
+    if key in synonyms and synonyms[key] in WIKI_SPANS:
         return synonyms[key]
-    if key in WIKI_SPANS.keys():
+    if key in WIKI_SPANS:
         return key
     key_sans_x_to_y = re.sub(
         r'(early|middle|late) to (early|middle|late)', "",
         key
     ).strip()
-    if key_sans_x_to_y in WIKI_SPANS.keys():
+    if key_sans_x_to_y in WIKI_SPANS:
         return key_sans_x_to_y
     key_sans_lower = re.sub(r'early\s+', "lower ", key).strip()
-    if key_sans_lower in WIKI_SPANS.keys():
+    if key_sans_lower in WIKI_SPANS:
         return key_sans_lower
     key_sans_upper = re.sub(r'late\s+', "upper ", key).strip()
-    if key_sans_upper in WIKI_SPANS.keys():
+    if key_sans_upper in WIKI_SPANS:
         return key_sans_upper
     key_sans_subspan = re.sub(
         r'(upper|middle|lower|early|late)\s+', "",
         key
     ).strip()
-    if key_sans_subspan in WIKI_SPANS.keys():
+    if key_sans_subspan in WIKI_SPANS:
         return key_sans_subspan
     # Split on (to|\-)
     matches = re.findall(r'([\s\w]+)\s+(to|\-|or|and\/or)\s+([\s\w]+)', key)
@@ -1029,11 +1066,42 @@ def join_polygons_and_metadata(
     return output_path
 
 
+def infer_metadata_from_csv_row(row):
+    """Infer metadata from a row in a metadata file"""
+    if not row.get('lithology') or len(row['lithology']) == 0:
+        row['lithology'] = lithology_from_text(row['title'])
+    if not row.get('lithology') or len(row['lithology']) == 0:
+        row['lithology'] = lithology_from_text(row['description'])
+    row['span'] = span_from_text(row['title'])
+    if not row['span'] and row['lithology']:
+        row['span'] = span_from_lithology(row['lithology'])
+    if not row.get('span') and row.get('code'):
+        row['span'] = span_from_code(row['code'])
+    row['controlled_span'] = controlled_span_from_span(row['span'])
+    row['formation'] = formation_from_text(row['title'])
+    if row['lithology']:
+        row['rock_type'] = rock_type_from_lithology(
+            row['lithology']
+        )
+    if row['span']:
+        min_age, max_age, est_age = ages_from_span(row['span'])
+        row['min_age'] = min_age
+        row['max_age'] = max_age
+        row['est_age'] = est_age
+    return row
+
+
 def infer_metadata_from_csv(infile_path):
+    """Fill in missing metadata columns in a CSV
+
+    The metadata file *can* have every column, but in general it just has the
+    info that can't be inferred and we infer the rest from the title and
+    description.
+    """
     outfile_path = "data.csv"
-    with open(infile_path) as infile:
+    with open(infile_path, encoding="utf-8") as infile:
         reader = csv.DictReader(infile)
-        with open(outfile_path, 'w') as outfile:
+        with open(outfile_path, 'w', encoding="utf-8") as outfile:
             writer = csv.DictWriter(
                 outfile,
                 fieldnames=METADATA_COLUMN_NAMES,
@@ -1041,26 +1109,7 @@ def infer_metadata_from_csv(infile_path):
             )
             writer.writeheader()
             for row in reader:
-                if not row.get('lithology') or len(row['lithology']) == 0:
-                    row['lithology'] = lithology_from_text(row['title'])
-                if not row.get('lithology') or len(row['lithology']) == 0:
-                    row['lithology'] = lithology_from_text(row['description'])
-                row['span'] = span_from_text(row['title'])
-                if not row['span'] and row['lithology']:
-                    row['span'] = span_from_lithology(row['lithology'])
-                if not row['span'] and row['code']:
-                    row['span'] = span_from_code(row['code'])
-                row['controlled_span'] = controlled_span_from_span(row['span'])
-                row['formation'] = formation_from_text(row['title'])
-                if row['lithology']:
-                    row['rock_type'] = rock_type_from_lithology(
-                        row['lithology']
-                    )
-                if row['span']:
-                    min_age, max_age, est_age = ages_from_span(row['span'])
-                    row['min_age'] = min_age
-                    row['max_age'] = max_age
-                    row['est_age'] = est_age
+                row = infer_metadata_from_csv_row(row)
                 writer.writerow(row)
                 uncertain_row = row.copy()
                 uncertain_row['code'] = "{}?".format(row['code'])

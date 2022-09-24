@@ -166,7 +166,7 @@ def make_pack(pack_id, clean=False, clean_rocks=False, clean_water=False,
     rocks_mbtiles_path = os.path.join(pack_dir, "rocks.mbtiles")
     if (
         clean
-        or clean_rocks == "rocks" or not os.path.isfile(rocks_mbtiles_path)
+        or clean_rocks or not os.path.isfile(rocks_mbtiles_path)
     ):
         make_rocks(
             pack["rock"],
