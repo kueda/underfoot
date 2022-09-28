@@ -226,7 +226,7 @@ def clip_source_polygons_by_mask(source_table_name):
 
 def load_units(sources, clean=False, procs=NUM_PROCESSES):
     """Load geological units into the database from the specified sources
-    
+
     Parameters
     ----------
     sources : list
@@ -239,7 +239,7 @@ def load_units(sources, clean=False, procs=NUM_PROCESSES):
             "DROP TABLE IF EXISTS {} CASCADE".format(table_name),
             dbname=DBNAME
         )
-  
+
     # Create the units table
     column_names = ['id'] + util.METADATA_COLUMN_NAMES + ['source', 'geom']
     column_defs = [
@@ -258,7 +258,7 @@ def load_units(sources, clean=False, procs=NUM_PROCESSES):
       final_table_name,
       ", ".join(column_defs)
     ))
-  
+
     # Create the masks table
     util.run_sql("""
       CREATE TABLE {} (
@@ -266,7 +266,7 @@ def load_units(sources, clean=False, procs=NUM_PROCESSES):
         geom geometry(MULTIPOLYGON, {})
       )
     """.format(mask_table_name, SRID))
-  
+
     # Creaate a processing pool to max out 4 processors
     pool = Pool(processes=procs)
     # Since I'm almost certainly going to forget how this works, pool.map
@@ -276,7 +276,7 @@ def load_units(sources, clean=False, procs=NUM_PROCESSES):
     # except the second arg is an iterable of iterables, if it's ['foo', true],
     # it will run process_source('foo', true)
     pool.starmap(process_source, [[src, clean] for src in sources])
-  
+
     for idx, source_identifier in enumerate(sources):
         source_table_name = re.sub(r"\W", "_", source_identifier)
         work_source_table_name = "work_{}".format(source_table_name)

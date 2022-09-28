@@ -1,12 +1,13 @@
 import csv
 import os
-import pandas as pd
 import re
+import pandas as pd
 from . import (
     ages_from_span,
     call_cmd,
     controlled_span_from_span,
     join_polygons_and_metadata,
+    log,
     make_work_dir,
     METADATA_COLUMN_NAMES,
     rock_type_from_lithology,
@@ -16,37 +17,43 @@ from . import (
 
 SRS = "+proj=longlat +datum=NAD27 +no_defs"
 
-
 def download_shapes(state, base_url):
-    print("DOWNLOADING SHAPEFILES FOR {}...".format(state))
+    """Download and extract shapefiles"""
+    log(f"DOWNLOADING SHAPEFILES FOR {state}...")
     url = os.path.join(base_url, f"{state}geol_dd.zip")
     download_path = os.path.basename(url)
     if not os.path.isfile(download_path):
-        print("DOWNLOADING {}".format(url))
+        log(f"DOWNLOADING {url}")
         call_cmd(["curl", "-OL", url])
-    shp_path = "{}geol_poly_dd.shp".format(state.lower())
+    shp_path = f"{state.lower()}geol_poly_dd.shp"
     if not os.path.isfile(shp_path):
-        print("EXTRACTING ARCHIVE...")
+        log("EXTRACTING ARCHIVE...")
         call_cmd(["unzip", download_path])
     return os.path.realpath(shp_path)
 
 
 def download_attributes(state, base_url):
-    print("DOWNLOADING ATTRIBUTES FOR {}...".format(state))
+    """Download and extract attributes for state"""
+    log(f"DOWNLOADING ATTRIBUTES FOR {state}...")
     url = os.path.join(base_url, f"{state}csv.zip")
     download_path = os.path.basename(url)
     if not os.path.isfile(download_path):
-        print("DOWNLOADING {}".format(url))
+        log(f"DOWNLOADING {url}")
         call_cmd(["curl", "-OL", url])
-    csv_path = "{}units.csv".format(state)
+    csv_path = f"{state}units.csv"
     if not os.path.isfile(csv_path):
-        print("EXTRACTING ARCHIVE...")
+        log("EXTRACTING ARCHIVE...")
         call_cmd(["unzip", download_path])
+    if not os.path.isfile(csv_path):
+        csv_path = re.sub(f'^{state}', state.lower(), csv_path)
+    if not os.path.isfile(csv_path):
+        raise FileNotFoundError(f"Could not find attributes CSV in {url}")
     return os.path.realpath(csv_path)
 
 
 def schemify_attributes(attributes_path):
-    print("SCHEMIFYING ATTRIBUTES for {}...".format(attributes_path))
+    """Convert metadata attributes to the Underfoot schema"""
+    log(f"SCHEMIFYING ATTRIBUTES for {attributes_path}...")
     outfile_path = "units.csv"
     with open(attributes_path) as f:
         reader = csv.DictReader(f)
@@ -78,18 +85,19 @@ def schemify_attributes(attributes_path):
                 row["controlled_span"] = controlled_span_from_span(
                     row["span"]
                 )
-                row["min_age"], row["max_age"], row["est_age"] = ages_from_span(row["span"])  # noqa: E501
+                row["min_age"], row["max_age"], row["est_age"] = ages_from_span(row["span"])
                 writer.writerow(row)
     return os.path.realpath(outfile_path)
 
 
 def merge_shapes(paths):
-    print("MERGING SHAPEFILES...")
+    """Merge and dissolve multiple shapefiles into a single shapefile"""
+    log("MERGING SHAPEFILES...")
     merged_path = "merged_units.shp"
     call_cmd(["ogr2ogr", "-overwrite", merged_path, paths.pop()], check=True)
     for path in paths:
         call_cmd(["ogr2ogr", "-update", "-append", merged_path, path])
-    print("DISSOLVING SHAPES AND REPROJECTING...")
+    log("DISSOLVING SHAPES AND REPROJECTING...")
     dissolved_path = "dissolved_units.shp"
     call_cmd([
         "ogr2ogr",
@@ -98,13 +106,15 @@ def merge_shapes(paths):
         dissolved_path, merged_path,
         "-overwrite",
         "-dialect", "sqlite",
-        "-sql", "SELECT UNIT_LINK, ST_Union(geometry) as geometry FROM 'merged_units' GROUP BY UNIT_LINK"  # noqa: E501
+        "-sql",
+        "SELECT UNIT_LINK, ST_Union(geometry) as geometry FROM 'merged_units' GROUP BY UNIT_LINK"
     ], check=True)
     return dissolved_path
 
 
 def merge_attributes(paths):
-    print("MERGING SHAPEFILES...")
+    """Merge multiple CSV attributes paths into a single file"""
+    log("MERGING SHAPEFILES...")
     merged_path = "merged_units.csv"
     merged = pd.concat([
         pd.read_csv(path, encoding="ISO-8859-1") for path in paths
@@ -122,7 +132,8 @@ def merge_attributes(paths):
 
 
 def copy_citation(base_path, work_path):
-    print("COPYING CITATION")
+    """Copy citation file to the work path"""
+    log("COPYING CITATION")
     call_cmd([
       "cp",
       os.path.join(os.path.dirname(base_path), "citation.json"),
@@ -140,6 +151,7 @@ def process_usgs_states(
     # Path to the source script that output files are being made for
     source_path
 ):
+    """Download and process files for states from of2006_1272"""
     work_path = make_work_dir(base_path)
     os.chdir(work_path)
     shape_paths = [download_shapes(state, base_url) for state in states]
