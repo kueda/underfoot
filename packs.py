@@ -24,7 +24,7 @@ import re
 
 from database import make_database
 from elevation import make_contours
-from osm import make_ways
+from osm import make_ways, make_context
 from rocks import make_rocks
 from water import make_water
 from sources import util
@@ -153,7 +153,8 @@ def s3_built_packs(s3_bucket_url):
 
 
 def make_pack(pack_id, clean=False, clean_rocks=False, clean_water=False,
-              clean_ways=False, clean_contours=False, procs=2):
+              clean_ways=False, clean_context=False, clean_contours=False,
+              procs=2):
     """Generate a pack and write it to the build directory"""
     make_database()
     pack = PACKS[pack_id]
@@ -195,6 +196,15 @@ def make_pack(pack_id, clean=False, clean_rocks=False, clean_water=False,
             path=ways_mbtiles_path)
     elif os.path.isfile(ways_mbtiles_path):
         util.log(f"{ways_mbtiles_path} exists, skipping...")
+    context_mbtiles_path = os.path.join(pack_dir, "context.mbtiles")
+    if clean or clean_context or not os.path.isfile(context_mbtiles_path):
+        make_context(
+            pack["osm"],
+            bbox=pack["bbox"],
+            clean=(clean or clean_context),
+            path=context_mbtiles_path)
+    elif os.path.isfile(context_mbtiles_path):
+        util.log(f"{context_mbtiles_path} exists, skipping...")
     contours_mbtiles_path = os.path.join(pack_dir, "contours.mbtiles")
     if clean or clean_contours or not os.path.isfile(contours_mbtiles_path):
         if "geojson" in pack:
@@ -251,6 +261,10 @@ if __name__ == "__main__":
         action="store_true",
         help="Clean all cached files for ways before building")
     parser.add_argument(
+        "--clean-context",
+        action="store_true",
+        help="Clean all cached files for context before building")
+    parser.add_argument(
         "--clean-contours",
         action="store_true",
         help="Clean all cached files for contours before building")
@@ -289,6 +303,7 @@ if __name__ == "__main__":
                     clean_rocks=args.clean_rocks,
                     clean_water=args.clean_water,
                     clean_ways=args.clean_ways,
+                    clean_context=args.clean_context,
                     clean_contours=args.clean_contours,
                     procs=args.procs)
                 util.log(f"Pack available at {pack_path}")
@@ -310,6 +325,7 @@ if __name__ == "__main__":
             clean_rocks=args.clean_rocks,
             clean_water=args.clean_water,
             clean_ways=args.clean_ways,
+            clean_context=args.clean_context,
             clean_contours=args.clean_contours,
             procs=args.procs)
         make_manifest(manifest_url=args.manifest_url, s3_bucket_url=args.s3_bucket_url)
