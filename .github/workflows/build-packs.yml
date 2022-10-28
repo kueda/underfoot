@@ -23,9 +23,9 @@ jobs:
           POSTGRES_USER: underfoot
           POSTGRES_PASSWORD: underfoot
           POSTGRES_DB: underfoot
-        # ports:
-        #   - 5432:5432
-        # options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
     strategy:
       matrix:
         packs: ${{ fromJson(needs.list-packs.outputs.matrix) }}
@@ -37,7 +37,7 @@ jobs:
           sudo add-apt-repository ppa:ubuntugis/ppa
           sudo add-apt-repository ppa:deadsnakes/ppa
           sudo apt-get update
-          sudo apt-get install -y build-essential git virtualenv python3.8 python3.8-dev python3-gdal gdal-bin libgdal-dev postgis unzip osmosis sqlite3
+          sudo apt-get install -y build-essential git virtualenv python3.8 python3.8-dev python3-gdal gdal-bin libgdal-dev unzip osmosis sqlite3
 
       - name: Set up Python dependencies
         run: python setup.py
