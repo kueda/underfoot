@@ -37,7 +37,16 @@ jobs:
           sudo add-apt-repository ppa:ubuntugis/ppa
           sudo add-apt-repository ppa:deadsnakes/ppa
           sudo apt-get update
-          sudo apt-get install -y build-essential git virtualenv python3.8 python3.8-dev python3-gdal gdal-bin libgdal-dev unzip osmosis sqlite3
+          sudo apt-get install -y \
+            build-essential \
+            gdal-bin \
+            libgdal-dev \
+            osmosis \
+            python3-gdal \
+            python3.8 \
+            python3.8-dev \
+            sqlite3 \
+            unzip
 
       - name: Set up Python dependencies
         run: python setup.py
@@ -48,3 +57,26 @@ jobs:
           PGHOST: 0.0.0.0
           PGUSER: underfoot
           PGPASSWORD: underfoot
+
+      - name: Set up s3cmd for Digital Ocean
+        uses: s3-actions/s3cmd@v1.2.0
+        with:
+          provider: digitalocean
+          region: sfo2
+          access_key: ${{ secrets.DO_SPACES_KEY }}
+          secret_key: ${{ secrets.DO_SPACES_SECRET }}
+
+      - name: Post pack to Digital Ocean
+        run: |
+          s3cmd put build/manifest.json s3://underfoot2/manifest.json
+          s3cmd setacl s3://underfoot2/manifest.json --acl-public
+          s3cmd put build/${{ matrix.packs }}.zip s3://underfoot2/${{ matrix.packs }}.zip
+          s3cmd setacl s3://underfoot2/${{ matrix.packs }}.zip --acl-public
+
+      - name: Set up doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DO_ACCESS_TOKEN }}
+
+      - name: Flush the CDN cache
+        run: doctl compute cdn flush ee6a9baf-c5bd-423d-bbcf-305e3a3f5e40
