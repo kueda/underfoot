@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - id: set-matrix
-        run: echo "::set-output name=matrix::$(ls packs/*.json | xargs -I'{}' basename {} .json | jq -R -s -c 'split("\n")[:-1]')"
+        run: echo "::set-output name=matrix::$(ls packs/us-ca-*.json | xargs -I'{}' basename {} .json | jq -R -s -c 'split("\n")[:-1]')"
 
   build:
     needs: list-packs
@@ -34,10 +34,10 @@ jobs:
 
       - name: Install dependencies
         run: |
-          add-apt-repository ppa:ubuntugis/ppa
-          add-apt-repository ppa:deadsnakes/ppa
-          apt-get update
-          apt-get install -y build-essential git virtualenv python3.8 python3.8-dev python3-gdal gdal-bin libgdal-dev postgis unzip osmosis sqlite3
+          sudo add-apt-repository ppa:ubuntugis/ppa
+          sudo add-apt-repository ppa:deadsnakes/ppa
+          sudo apt-get update
+          sudo apt-get install -y build-essential git virtualenv python3.8 python3.8-dev python3-gdal gdal-bin libgdal-dev postgis unzip osmosis sqlite3
 
       - name: Set up Python dependencies
         run: python setup.py
