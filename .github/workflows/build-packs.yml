@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - id: set-matrix
-        run: echo "::set-output name=matrix::$(ls packs/us-ca-*.json | xargs -I'{}' basename {} .json | jq -R -s -c 'split("\n")[:-1]')"
+        run: echo "::set-output name=matrix::$(ls packs/us-ca-oak*.json | xargs -I'{}' basename {} .json | jq -R -s -c 'split("\n")[:-1]')"
 
   build:
     needs: list-packs
@@ -30,7 +30,7 @@ jobs:
       matrix:
         packs: ${{ fromJson(needs.list-packs.outputs.matrix) }}
     steps:
-      - uses: actions/checkout@v2 
+      - uses: actions/checkout@v2
 
       - name: Install dependencies
         run: |
@@ -41,10 +41,10 @@ jobs:
 
       - name: Set up Python dependencies
         run: python setup.py
-        env:
-          PGPASSWORD: underfoot
 
       - name: Build pack
         run: python packs.py ${{ matrix.packs }} --s3-bucket-url https://static.underfoot.rocks
         env:
+          PGHOST: 0.0.0.0
+          PGUSER: underfoot
           PGPASSWORD: underfoot
