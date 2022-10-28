@@ -5,6 +5,7 @@ on: workflow_dispatch
 jobs:
   # https://code.dblock.org/2021/09/03/generating-task-matrix-by-looping-over-repo-files-with-github-actions.html
   list-packs:
+    name: List packs
     runs-on: ubuntu-20.04
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
@@ -13,7 +14,8 @@ jobs:
       - id: set-matrix
         run: echo "::set-output name=matrix::$(ls packs/us-ca-*.json | xargs -I'{}' basename {} .json | jq -R -s -c 'split("\n")[:-1]')"
 
-  build:
+  build-pack:
+    name: Build & upload pack
     needs: list-packs
     runs-on: ubuntu-20.04
     services:
@@ -32,7 +34,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Install dependencies
+      - name: Install system dependencies
         run: |
           sudo add-apt-repository ppa:ubuntugis/ppa
           sudo add-apt-repository ppa:deadsnakes/ppa
@@ -48,7 +50,7 @@ jobs:
             sqlite3 \
             unzip
 
-      - name: Set up Python dependencies
+      - name: Install Python and other dependencies
         run: python setup.py
 
       - name: Cache source work
@@ -73,7 +75,7 @@ jobs:
           access_key: ${{ secrets.DO_SPACES_KEY }}
           secret_key: ${{ secrets.DO_SPACES_SECRET }}
 
-      - name: Post pack to Digital Ocean
+      - name: Upload pack to Digital Ocean
         run: |
           s3cmd put build/manifest.json s3://underfoot2/manifest.json
           s3cmd setacl s3://underfoot2/manifest.json --acl-public
