@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - id: set-matrix
-        run: echo "::set-output name=matrix::$(ls packs/us-ca-oak*.json | xargs -I'{}' basename {} .json | jq -R -s -c 'split("\n")[:-1]')"
+        run: echo "::set-output name=matrix::$(ls packs/us-ca-*.json | xargs -I'{}' basename {} .json | jq -R -s -c 'split("\n")[:-1]')"
 
   build:
     needs: list-packs
@@ -28,7 +28,7 @@ jobs:
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
     strategy:
       matrix:
-        packs: ${{ fromJson(needs.list-packs.outputs.matrix) }}
+        pack: ${{ fromJson(needs.list-packs.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v2
 
@@ -51,8 +51,15 @@ jobs:
       - name: Set up Python dependencies
         run: python setup.py
 
+      - name: Cache source work
+        id: cache-source-work
+        uses: actions/cache@v3
+        with:
+          path: sources/work-*
+          key: cache-source-work-${{ matrix.pack }}-${{ hashFiles(format('packs/{0}.json', matrix.pack)) }}
+
       - name: Build pack
-        run: python packs.py ${{ matrix.packs }} --s3-bucket-url https://static.underfoot.rocks
+        run: python packs.py ${{ matrix.pack }} --s3-bucket-url https://static.underfoot.rocks
         env:
           PGHOST: 0.0.0.0
           PGUSER: underfoot
@@ -70,8 +77,8 @@ jobs:
         run: |
           s3cmd put build/manifest.json s3://underfoot2/manifest.json
           s3cmd setacl s3://underfoot2/manifest.json --acl-public
-          s3cmd put build/${{ matrix.packs }}.zip s3://underfoot2/${{ matrix.packs }}.zip
-          s3cmd setacl s3://underfoot2/${{ matrix.packs }}.zip --acl-public
+          s3cmd put build/${{ matrix.pack }}.zip s3://underfoot2/${{ matrix.pack }}.zip
+          s3cmd setacl s3://underfoot2/${{ matrix.pack }}.zip --acl-public
 
       - name: Set up doctl
         uses: digitalocean/action-doctl@v2
