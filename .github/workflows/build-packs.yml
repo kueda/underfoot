@@ -41,6 +41,10 @@ jobs:
 
       - name: Set up Python dependencies
         run: python setup.py
+        env:
+          PGPASSWORD: underfoot
 
       - name: Build pack
         run: python packs.py ${{ matrix.packs }} --s3-bucket-url https://static.underfoot.rocks
+        env:
+          PGPASSWORD: underfoot
