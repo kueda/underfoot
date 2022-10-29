@@ -61,6 +61,22 @@ jobs:
           path: sources/work-*
           key: cache-source-work-${{ matrix.pack }}-${{ hashFiles(format('packs/{0}.json', matrix.pack)) }}
 
+      - name: Get current year week
+        id: calc-year-week
+        run: echo "::set-output name=year-week::$(date +'%Y-%U')"
+
+      # - name: Get OSM URL
+      #   id: calc-osm-url
+      #   run: echo "::set-output name=osm-url::$(jq -c -r .osm packs/${{ matrix.pack }}.json)"
+
+      - name: Cache OSM download
+        id: cache-source-work
+        uses: actions/cache@v3
+        with:
+          path: "*.osm.pbf"
+          # Not great, would prefer to use the filename in the cache key...
+          key: cache-osm-${{ matrix.pack }}-${{ steps.calc-year-week.outputs.year-week }}
+
       - name: Build pack
         run: python packs.py ${{ matrix.pack }} --s3-bucket-url https://static.underfoot.rocks
         env:
