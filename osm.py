@@ -57,7 +57,8 @@ def fetch_data(url, clean=False):
     if os.path.isfile(filename) and not clean:
         pass
     else:
-        util.call_cmd(["curl", "-o", filename, url], check=True)
+        fifteen_mins = 15.0 * 60
+        util.call_cmd(["curl", "-o", filename, "--max-time", fifteen_mins, url], check=True)
     return filename
 
 def load_osm_from_pbf(data_path, bbox=None):

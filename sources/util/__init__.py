@@ -1328,22 +1328,24 @@ def update_masks_table(mask_table_name, source_table_name, buff=0.01):
     run_sql(f"""
         UPDATE {mask_table_name} m SET geom = ST_Multi(
           ST_Union(
-            m.geom,
-            ST_Multi(
-              (
-                SELECT
-                  ST_Buffer(
+            ST_MakeValid(m.geom),
+            ST_MakeValid(
+              ST_Multi(
+                (
+                  SELECT
                     ST_Buffer(
-                      ST_MakeValid(
-                        ST_Union(s.geom)
+                      ST_Buffer(
+                        ST_MakeValid(
+                          ST_Union(ST_MakeValid(s.geom))
+                        ),
+                        {buff},
+                        'join=mitre'
                       ),
-                      {buff},
+                      -{buff},
                       'join=mitre'
-                    ),
-                    -{buff},
-                    'join=mitre'
-                  )
-                FROM {source_table_name} s
+                    )
+                  FROM {source_table_name} s
+                )
               )
             )
           )
