@@ -70,7 +70,7 @@ jobs:
       #   run: echo "::set-output name=osm-url::$(jq -c -r .osm packs/${{ matrix.pack }}.json)"
 
       - name: Cache OSM download
-        id: cache-source-work
+        id: cache-osm
         uses: actions/cache@v3
         with:
           path: "*.osm.pbf"
