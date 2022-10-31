@@ -12,7 +12,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - id: set-matrix
-        # run: echo "::set-output name=matrix::$(ls packs/us-ca-*.json | xargs -I'{}' basename {} .json | jq -R -s -c 'split("\n")[:-1]')"
         run: echo "matrix=$(ls packs/us-ca-oak*.json | xargs -I'{}' basename {} .json | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
 
   build-pack:
@@ -64,12 +63,11 @@ jobs:
 
       - name: Get current year week
         id: calc-year-week
-        # run: echo "::set-output name=year-week::$(date +'%Y-%U')"
         run: echo "year-week=$(date +'%Y-%U')" >> $GITHUB_OUTPUT
 
       - name: Get OSM URL
         id: get-osm-url
-        run: UNDERFOOT_PACK=${{ matrix.pack }} && echo "osm-url=$(jq -c -r .osm packs/$UNDERFOOT_PACK.json)"
+        run: UNDERFOOT_PACK=${{ matrix.pack }} && echo "osm-url=$(jq -c -r .osm packs/$UNDERFOOT_PACK.json)" >> $GITHUB_OUTPUT
 
       - name: Cache OSM download
         id: cache-osm
