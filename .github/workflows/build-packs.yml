@@ -12,7 +12,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - id: set-matrix
-        run: echo "::set-output name=matrix::$(ls packs/us-ca-*.json | xargs -I'{}' basename {} .json | jq -R -s -c 'split("\n")[:-1]')"
+        # run: echo "::set-output name=matrix::$(ls packs/us-ca-*.json | xargs -I'{}' basename {} .json | jq -R -s -c 'split("\n")[:-1]')"
+        run: echo "matrix=$(ls packs/us-ca-oak*.json | xargs -I'{}' basename {} .json | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
 
   build-pack:
     name: Build & upload pack
@@ -63,19 +64,19 @@ jobs:
 
       - name: Get current year week
         id: calc-year-week
-        run: echo "::set-output name=year-week::$(date +'%Y-%U')"
+        # run: echo "::set-output name=year-week::$(date +'%Y-%U')"
+        run: echo "year-week=$(date +'%Y-%U')" >> $GITHUB_OUTPUT
 
-      # - name: Get OSM URL
-      #   id: calc-osm-url
-      #   run: echo "::set-output name=osm-url::$(jq -c -r .osm packs/${{ matrix.pack }}.json)"
+      - name: Get OSM URL
+        id: get-osm-url
+        run: UNDERFOOT_PACK=${{ matrix.pack }} && echo "osm-url=$(jq -c -r .osm packs/$UNDERFOOT_PACK.json)"
 
       - name: Cache OSM download
         id: cache-osm
         uses: actions/cache@v3
         with:
           path: "*.osm.pbf"
-          # Not great, would prefer to use the filename in the cache key...
-          key: cache-osm-${{ matrix.pack }}-${{ steps.calc-year-week.outputs.year-week }}
+          key: cache-osm-${{ steps.get-osm-url.outputs.osm-url }}-${{ steps.calc-year-week.outputs.year-week }}
 
       - name: Build pack
         run: python packs.py ${{ matrix.pack }} --s3-bucket-url https://static.underfoot.rocks
