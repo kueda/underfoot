@@ -27,6 +27,9 @@ jobs:
     name: Build & upload pack
     needs: list-packs
     steps:
+      # Can't run a local action before checking out the repo it's in
+      - uses: actions/checkout@v3
+
       - uses: "./.github/actions/build-pack/"
         id: build-pack
         with:

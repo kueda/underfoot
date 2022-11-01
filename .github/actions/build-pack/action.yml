@@ -23,8 +23,6 @@ runs:
     matrix:
       pack: ${{ inputs.packs }}
   steps:
-    - uses: actions/checkout@v3
-
     - name: Install system dependencies
       run: |
         sudo add-apt-repository ppa:ubuntugis/ppa
