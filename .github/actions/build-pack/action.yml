@@ -4,7 +4,7 @@ inputs:
   packs:
     description: An array of pack IDs (e.g. ['us-ca-oakland'])
     required: true
-    default: []
+    default: "[]"
 runs:
   using: docker
   image: ubuntu-20.04
