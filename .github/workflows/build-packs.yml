@@ -27,11 +27,11 @@ jobs:
     name: Build & upload pack
     needs: list-packs
     steps:
-      - uses: "../actions/"
+      - uses: "./github/actions/"
         id: build-pack
         with:
           packs: needs.list-packs.outputs.matrix
-    # runs-on: ubuntu-20.04
+    runs-on: ubuntu-20.04
     # services:
     #   postgres:
     #     image: postgis/postgis:12-2.5
