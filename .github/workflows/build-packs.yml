@@ -31,7 +31,7 @@ jobs:
         pack: ${{ fromJson(needs.list-packs.outputs.matrix) }}
     # steps:
     #   - uses: actions/checkout@v3
-    uses: kueda/underfoot/.github/workflows/build-pack.yml@main
+    uses: kueda/underfoot/.github/workflows/build-pack.yml@gh-actions
     with:
       pack: ${{ matrix.pack }}
     secrets: inherit
