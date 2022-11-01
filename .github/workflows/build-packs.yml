@@ -1,6 +1,15 @@
 name: Build Underfoot packs
 
-on: workflow_dispatch
+# TODO separate build-pack out into a reusable workflow, and then make
+# separate workflows for 1) building all packs manually, 2) building all
+# packs when source processing code changes, and 3) rebuilding cerain packs
+# when their packs change
+
+on:
+  # This would build all packs if *any* packs change, which is not quite what I want
+  # push:
+  #   paths: packs/*.json
+  workflow_dispatch:
 
 jobs:
   # https://code.dblock.org/2021/09/03/generating-task-matrix-by-looping-over-repo-files-with-github-actions.html
@@ -17,91 +26,96 @@ jobs:
   build-pack:
     name: Build & upload pack
     needs: list-packs
-    runs-on: ubuntu-20.04
-    services:
-      postgres:
-        image: postgis/postgis:12-2.5
-        env:
-          POSTGRES_USER: underfoot
-          POSTGRES_PASSWORD: underfoot
-          POSTGRES_DB: underfoot
-        ports:
-          - 5432:5432
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
-    strategy:
-      fail-fast: false
-      matrix:
-        pack: ${{ fromJson(needs.list-packs.outputs.matrix) }}
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Install system dependencies
-        run: |
-          sudo add-apt-repository ppa:ubuntugis/ppa
-          sudo add-apt-repository ppa:deadsnakes/ppa
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential \
-            gdal-bin \
-            libgdal-dev \
-            osmosis \
-            python3-gdal \
-            python3.8 \
-            python3.8-dev \
-            sqlite3 \
-            unzip
-
-      - name: Install Python and other dependencies
-        run: python setup.py
-
-      - name: Cache source work
-        id: cache-source-work
-        uses: actions/cache@v3
+      - uses: "../actions/"
+        id: build-pack
         with:
-          path: sources/work-*
-          key: cache-source-work-${{ matrix.pack }}-${{ hashFiles(format('packs/{0}.json', matrix.pack)) }}
+          packs: needs.list-packs.outputs.matrix
+    # runs-on: ubuntu-20.04
+    # services:
+    #   postgres:
+    #     image: postgis/postgis:12-2.5
+    #     env:
+    #       POSTGRES_USER: underfoot
+    #       POSTGRES_PASSWORD: underfoot
+    #       POSTGRES_DB: underfoot
+    #     ports:
+    #       - 5432:5432
+    #     options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+    # strategy:
+    #   fail-fast: false
+    #   matrix:
+    #     pack: ${{ fromJson(needs.list-packs.outputs.matrix) }}
+    # steps:
+    #   - uses: actions/checkout@v3
 
-      - name: Get current year week
-        id: calc-year-week
-        run: echo "year-week=$(date +'%Y-%U')" >> $GITHUB_OUTPUT
+    #   - name: Install system dependencies
+    #     run: |
+    #       sudo add-apt-repository ppa:ubuntugis/ppa
+    #       sudo add-apt-repository ppa:deadsnakes/ppa
+    #       sudo apt-get update
+    #       sudo apt-get install -y \
+    #         build-essential \
+    #         gdal-bin \
+    #         libgdal-dev \
+    #         osmosis \
+    #         python3-gdal \
+    #         python3.8 \
+    #         python3.8-dev \
+    #         sqlite3 \
+    #         unzip
 
-      - name: Get OSM URL
-        id: get-osm-url
-        run: UNDERFOOT_PACK=${{ matrix.pack }} && echo "osm-url=$(jq -c -r .osm packs/$UNDERFOOT_PACK.json)" >> $GITHUB_OUTPUT
+    #   - name: Install Python and other dependencies
+    #     run: python setup.py
 
-      - name: Cache OSM download
-        id: cache-osm
-        uses: actions/cache@v3
-        with:
-          path: "*.osm.pbf"
-          key: cache-osm-${{ steps.get-osm-url.outputs.osm-url }}-${{ steps.calc-year-week.outputs.year-week }}
+    #   - name: Cache source work
+    #     id: cache-source-work
+    #     uses: actions/cache@v3
+    #     with:
+    #       path: sources/work-*
+    #       key: cache-source-work-${{ matrix.pack }}-${{ hashFiles(format('packs/{0}.json', matrix.pack)) }}
 
-      - name: Build pack
-        run: python packs.py ${{ matrix.pack }} --s3-bucket-url https://static.underfoot.rocks
-        env:
-          PGHOST: 0.0.0.0
-          PGUSER: underfoot
-          PGPASSWORD: underfoot
+    #   - name: Get current year week
+    #     id: calc-year-week
+    #     run: echo "year-week=$(date +'%Y-%U')" >> $GITHUB_OUTPUT
 
-      - name: Set up s3cmd for Digital Ocean
-        uses: s3-actions/s3cmd@v1.2.0
-        with:
-          provider: digitalocean
-          region: sfo2
-          access_key: ${{ secrets.DO_SPACES_KEY }}
-          secret_key: ${{ secrets.DO_SPACES_SECRET }}
+    #   - name: Get OSM URL
+    #     id: get-osm-url
+    #     run: UNDERFOOT_PACK=${{ matrix.pack }} && echo "osm-url=$(jq -c -r .osm packs/$UNDERFOOT_PACK.json)" >> $GITHUB_OUTPUT
 
-      - name: Upload pack to Digital Ocean
-        run: |
-          s3cmd put build/manifest.json s3://underfoot2/manifest.json
-          s3cmd setacl s3://underfoot2/manifest.json --acl-public
-          s3cmd put build/${{ matrix.pack }}.zip s3://underfoot2/${{ matrix.pack }}.zip
-          s3cmd setacl s3://underfoot2/${{ matrix.pack }}.zip --acl-public
+    #   - name: Cache OSM download
+    #     id: cache-osm
+    #     uses: actions/cache@v3
+    #     with:
+    #       path: "*.osm.pbf"
+    #       key: cache-osm-${{ steps.get-osm-url.outputs.osm-url }}-${{ steps.calc-year-week.outputs.year-week }}
 
-      - name: Set up doctl
-        uses: digitalocean/action-doctl@v2
-        with:
-          token: ${{ secrets.DO_ACCESS_TOKEN }}
+    #   - name: Build pack
+    #     run: python packs.py ${{ matrix.pack }} --s3-bucket-url https://static.underfoot.rocks
+    #     env:
+    #       PGHOST: 0.0.0.0
+    #       PGUSER: underfoot
+    #       PGPASSWORD: underfoot
 
-      - name: Flush the CDN cache
-        run: doctl compute cdn flush ee6a9baf-c5bd-423d-bbcf-305e3a3f5e40
+    #   - name: Set up s3cmd for Digital Ocean
+    #     uses: s3-actions/s3cmd@v1.2.0
+    #     with:
+    #       provider: digitalocean
+    #       region: sfo2
+    #       access_key: ${{ secrets.DO_SPACES_KEY }}
+    #       secret_key: ${{ secrets.DO_SPACES_SECRET }}
+
+    #   - name: Upload pack to Digital Ocean
+    #     run: |
+    #       s3cmd put build/manifest.json s3://underfoot2/manifest.json
+    #       s3cmd setacl s3://underfoot2/manifest.json --acl-public
+    #       s3cmd put build/${{ matrix.pack }}.zip s3://underfoot2/${{ matrix.pack }}.zip
+    #       s3cmd setacl s3://underfoot2/${{ matrix.pack }}.zip --acl-public
+
+    #   - name: Set up doctl
+    #     uses: digitalocean/action-doctl@v2
+    #     with:
+    #       token: ${{ secrets.DO_ACCESS_TOKEN }}
+
+    #   - name: Flush the CDN cache
+    #     run: doctl compute cdn flush ee6a9baf-c5bd-423d-bbcf-305e3a3f5e40
