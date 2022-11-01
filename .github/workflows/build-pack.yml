@@ -1,5 +1,4 @@
 name: Build Pack
-description: Build a single pack and upload it to Digital Ocean
 
 on:
   workflow_call:
