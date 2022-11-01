@@ -27,7 +27,7 @@ jobs:
     name: Build & upload pack
     needs: list-packs
     steps:
-      - uses: ".github/actions/build-pack/"
+      - uses: "./.github/actions/build-pack/"
         id: build-pack
         with:
           packs: needs.list-packs.outputs.matrix
