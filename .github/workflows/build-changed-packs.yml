@@ -3,6 +3,7 @@ name: Build changed packs
 on:
   push:
     paths: packs/*.json
+    branches: gh-actions
 
 jobs:
   list-changed-packs:
@@ -15,8 +16,11 @@ jobs:
       - uses: dorny/paths-filter@v2
         id: filter
         with:
+          base: gh-actions
+          list_files: json
           filters: |
-            changed-packs: packs/*.json
+            changed_packs:
+              - added|modified: 'packs/*.json'
 
       # Convert paths into a list of pack IDs
       - id: set-matrix
@@ -24,7 +28,7 @@ jobs:
         # fed to basename via xargs, resulting in just the basenames of all
         # the changed paths
         run: |
-          echo "matrix=$(jq -r '.[]' <<< '${{ steps.filter.outputs.changes }}' | xargs -I'{}' basename {} .json  )" >> $GITHUB_OUTPUT
+          echo '${{ steps.filter.outputs.changed_packs_files }}' && echo "matrix=$(jq -r '.[]' <<< '${{ steps.filter.outputs.changes }}' | xargs -I'{}' basename {} .json  )" >> $GITHUB_OUTPUT
 
   build-packs:
     name: Build packs

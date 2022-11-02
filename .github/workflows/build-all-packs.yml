@@ -9,6 +9,7 @@ on:
   push:
     # Reprocess all packs if anything related to source processing changes
     paths: sources/util/*
+    branches: gh-actions
   workflow_dispatch:
 
 jobs:
