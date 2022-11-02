@@ -3,10 +3,18 @@ name: Build changed packs
 on:
   push:
     paths: packs/*.json
-    branches: gh-actions
+    branches: main
 
 jobs:
+  skip-duplicates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: fkirc/skip-duplicate-actions@master
+        with:
+          github_token: ${{ github.token }}
+
   list-changed-packs:
+    needs: skip-duplicates
     name: List changed packs
     runs-on: ubuntu-latest
     steps:
@@ -16,7 +24,6 @@ jobs:
       - uses: dorny/paths-filter@v2
         id: filter
         with:
-          base: gh-actions
           list-files: shell
           filters: |
             changed:
@@ -38,7 +45,7 @@ jobs:
       fail-fast: false
       matrix:
         pack: ${{ fromJson(needs.list-changed-packs.outputs.matrix) }}
-    uses: kueda/underfoot/.github/workflows/build-pack.yml@gh-actions
+    uses: kueda/underfoot/.github/workflows/build-pack.yml@main
     with:
       pack: ${{ matrix.pack }}
     secrets: inherit
