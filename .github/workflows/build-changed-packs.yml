@@ -27,7 +27,7 @@ jobs:
         # Run basename on the list of changed files then convert the list to
         # JSON
         run: |
-          echo "matrix=$(basename -s .json ${{ steps.filter.outputs.changed_files }}) | | jq -R -s -c 'split("\n")[:-1]') >> $GITHUB_OUTPUT"
+          echo "matrix=$(basename -s .json ${{ steps.filter.outputs.changed_files }} | jq -R -s -c 'split("\n")[:-1]') >> $GITHUB_OUTPUT"
 
   build-packs:
     name: Build packs
