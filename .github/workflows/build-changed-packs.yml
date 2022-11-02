@@ -1,0 +1,39 @@
+name: Build changed packs
+
+on:
+  push:
+    paths: packs/*.json
+
+jobs:
+  list-changed-packs:
+    name: List changed packs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      # Detect changed pack definitions
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            changed-packs: packs/*.json
+
+      # Convert paths into a list of pack IDs
+      - id: set-matrix
+        # jq converts the JSON array in steps.filter.outputs.changes to lines
+        # fed to basename via xargs, resulting in just the basenames of all
+        # the changed paths
+        run: |
+          echo "matrix=$(jq -r '.[]' <<< '${{ steps.filter.outputs.changes }}' | xargs -I'{}' basename {} .json  )" >> $GITHUB_OUTPUT
+
+  build-packs:
+    name: Build packs
+    needs: list-changed-packs
+    strategy:
+      fail-fast: false
+      matrix:
+        pack: ${{ fromJson(needs.list-changed-packs.outputs.matrix) }}
+    uses: kueda/underfoot/.github/workflows/build-pack.yml@gh-actions
+    with:
+      pack: ${{ matrix.pack }}
+    secrets: inherit
