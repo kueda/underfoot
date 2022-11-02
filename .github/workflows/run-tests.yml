@@ -3,8 +3,16 @@ name: Run tests
 on: [push]
 
 jobs:
+  skip-duplicates:
+    name: Skip duplicate runs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: fkirc/skip-duplicate-actions@master
+        with:
+          github_token: ${{ github.token }}
   run-pytest:
     name: Run pytest
+    needs: skip-duplicates
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
