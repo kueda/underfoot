@@ -3,7 +3,8 @@ name: Run tests
 on: [push]
 
 jobs:
-  build:
+  run-pytest:
+    name: Run pytest
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
