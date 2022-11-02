@@ -1,0 +1,51 @@
+name: Build changed packs
+
+on:
+  push:
+    paths: packs/*.json
+    branches: main
+
+jobs:
+  skip-duplicates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: fkirc/skip-duplicate-actions@master
+        with:
+          github_token: ${{ github.token }}
+
+  list-changed-packs:
+    needs: skip-duplicates
+    name: List changed packs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      # Detect changed pack definitions
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          list-files: shell
+          filters: |
+            changed:
+              - added|modified: 'packs/*.json'
+
+      # Convert paths into a list of pack IDs
+      - id: set-matrix
+        name: Set matrix with basenames of changed paths
+        # Run basename on the list of changed files then convert the list to
+        # JSON
+        run: echo "matrix=$(basename -s .json ${{ steps.filter.outputs.changed_files }} | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+
+  build-packs:
+    name: Build packs
+    needs: list-changed-packs
+    strategy:
+      fail-fast: false
+      matrix:
+        pack: ${{ fromJson(needs.list-changed-packs.outputs.matrix) }}
+    uses: kueda/underfoot/.github/workflows/build-pack.yml@main
+    with:
+      pack: ${{ matrix.pack }}
+    secrets: inherit

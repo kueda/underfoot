@@ -1,0 +1,45 @@
+name: Build all packs
+
+# TODO separate build-pack out into a reusable workflow, and then make
+# separate workflows for 1) building all packs manually, 2) building all
+# packs when source processing code changes, and 3) rebuilding cerain packs
+# when their packs change
+
+on:
+  push:
+    # Reprocess all packs if anything related to source processing changes
+    paths: sources/util/*
+    branches: gh-actions
+  workflow_dispatch:
+
+jobs:
+  skip-duplicates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: fkirc/skip-duplicate-actions@master
+        with:
+          github_token: ${{ github.token }}
+
+  # https://code.dblock.org/2021/09/03/generating-task-matrix-by-looping-over-repo-files-with-github-actions.html
+  list-packs:
+    needs: skip-duplicates
+    name: List packs
+    runs-on: ubuntu-20.04
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v3
+      - id: set-matrix
+        run: echo "matrix=$(ls packs/*.json | xargs -I'{}' basename {} .json | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
+
+  build-packs:
+    name: Build packs
+    needs: list-packs
+    strategy:
+      fail-fast: false
+      matrix:
+        pack: ${{ fromJson(needs.list-packs.outputs.matrix) }}
+    uses: kueda/underfoot/.github/workflows/build-pack.yml@main
+    with:
+      pack: ${{ matrix.pack }}
+    secrets: inherit
