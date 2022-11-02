@@ -73,6 +73,13 @@ jobs:
           path: "*.osm.pbf"
           key: cache-osm-${{ steps.get-osm-url.outputs.osm-url }}-${{ steps.calc-year-week.outputs.year-week }}
 
+      - name: Cache elevation tiles
+        id: cache-elevation
+        uses: actions/cache@v3
+        with:
+          path: elevation-tiles
+          key: cache-elevation-${{ inputs.pack }}-${{ hashFiles(format('packs/{0}.json', inputs.pack)) }}
+
       - name: Build pack
         run: python packs.py ${{ inputs.pack }} --s3-bucket-url https://static.underfoot.rocks
         env:
