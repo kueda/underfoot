@@ -17,18 +17,17 @@ jobs:
         id: filter
         with:
           base: gh-actions
-          list-files: json
+          list-files: shell
           filters: |
             changed:
               - added|modified: 'packs/*.json'
 
       # Convert paths into a list of pack IDs
       - id: set-matrix
-        # jq converts the JSON array in steps.filter.outputs.changes to lines
-        # fed to basename via xargs, resulting in just the basenames of all
-        # the changed paths
+        # Run basename on the list of changed files then convert the list to
+        # JSON
         run: |
-          echo "matrix=$(jq -r '.[]' <<< '${{ steps.filter.outputs.changed_files }}' | xargs -I'{}' basename {} .json  )" >> $GITHUB_OUTPUT
+          echo "matrix=$(basename -s .json ${{ steps.filter.outputs.changed_files }}) | | jq -R -s -c 'split("\n")[:-1]') >> $GITHUB_OUTPUT"
 
   build-packs:
     name: Build packs
