@@ -39,8 +39,8 @@ METADATA_COLUMN_NAMES = [
 # Note that you should try to list substrings *after* longer strings, e.g. mud
 # after mudstone, otherwise "mudstone" in text will get matched to "mud"
 LITHOLOGY_PATTERN = re.compile(
+  # agglomerate|
   re.sub(r'\s+', '', r'''(
-    agglomerate|
     alluvium|
     alluvial.fan|
     andesite|
