@@ -1,0 +1,28 @@
+name: Run tests
+
+on: [push]
+
+jobs:
+  skip-duplicates:
+    name: Skip duplicate runs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: fkirc/skip-duplicate-actions@master
+        with:
+          github_token: ${{ github.token }}
+  run-pytest:
+    name: Run pytest
+    needs: skip-duplicates
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.8'
+      - name: Display Python version
+        run: python -c "import sys; print(sys.version)"
+      - name: Install dependencies
+        run: if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      - name: Run pytest
+        run: pytest -v

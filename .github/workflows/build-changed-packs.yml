@@ -31,6 +31,7 @@ jobs:
 
       # Convert paths into a list of pack IDs
       - id: set-matrix
+        if: ${{ steps.filter.outputs.changed == 'true' }}
         name: Set matrix with basenames of changed paths
         # Run basename on the list of changed files then convert the list to
         # JSON
@@ -41,6 +42,7 @@ jobs:
   build-packs:
     name: Build packs
     needs: list-changed-packs
+    if: ${{ needs.list-changed-packs.outputs.matrix }}
     strategy:
       fail-fast: false
       matrix:
