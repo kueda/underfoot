@@ -1,9 +1,11 @@
 import util
 import os
 
+from util.rocks import process_usgs_source
+
 
 def run():
-    util.process_usgs_source(
+    process_usgs_source(
         base_path=os.path.realpath(__file__),
         url="http://pubs.usgs.gov/sim/2004/2858/SIM2858.tar.gz",
         e00_path="mws/mws-geo.e00",

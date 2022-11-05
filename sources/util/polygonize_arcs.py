@@ -1,27 +1,31 @@
-from shapely.geometry import shape, mapping
-from shapely.ops import polygonize
-import fiona
+"""
+Takes a collection of Arc INFO arcs and converts them to polygons
+"""
 import re
 import argparse
 
+from shapely.geometry import shape, mapping
+from shapely.ops import polygonize
+import fiona
+
 parser = argparse.ArgumentParser(
-  description='Convert Arc INFO arcs into polgyons')
-parser.add_argument('output_path', help="Path to output file")
-parser.add_argument('pal_path', help="Path to PAL.shp")
-parser.add_argument('arc_path', help="Path to ARC.shp")
+  description="Convert Arc INFO arcs into polgyons")
+parser.add_argument("output_path", help="Path to output file")
+parser.add_argument("pal_path", help="Path to PAL.shp")
+parser.add_argument("arc_path", help="Path to ARC.shp")
 parser.add_argument(
-    '--polygon-column-pattern',
+    "--polygon-column-pattern",
     default=".+_SP-PY-I$",
     help="Column specifying the ID of the polygons in PAL.shp")
 parser.add_argument(
-    '--debug', '-d', 
-    help="Pretty print results instead of printing CSV", 
+    "--debug", "-d",
+    help="Pretty print results instead of printing CSV",
     action="store_true")
 args = parser.parse_args()
 polygon_pattern = re.compile(args.polygon_column_pattern)
-schema = { 
-  'geometry': 'Polygon', 
-  'properties': { 
+schema = {
+  'geometry': 'Polygon',
+  'properties': {
     'POLY_ID': 'str',
     'PTYPE': 'str'
   }
@@ -44,10 +48,7 @@ with fiona.collection(args.output_path, "w", "ESRI Shapefile", schema) as output
                     print("polygon_id: ", polygon_id)
                     print("ptype: ", ptype)
                 for af in arc:
-                    if (
-                        af["properties"]["LPOLY_"] == polygon_id
-                        or af["properties"]["RPOLY_"] == polygon_id
-                    ):
+                    if polygon_id in (af["properties"]["LPOLY_"], af["properties"]["RPOLY_"]):
                         if args.debug:
                             print("adding line for polygon ", polygon_id)
                         lines.append(shape(af['geometry']))
