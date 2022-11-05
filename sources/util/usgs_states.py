@@ -1,3 +1,7 @@
+"""
+Methods for processing state-wide USGS geology files
+"""
+
 import csv
 import os
 import re
@@ -55,9 +59,9 @@ def schemify_attributes(attributes_path):
     """Convert metadata attributes to the Underfoot schema"""
     log(f"SCHEMIFYING ATTRIBUTES for {attributes_path}...")
     outfile_path = "units.csv"
-    with open(attributes_path) as f:
-        reader = csv.DictReader(f)
-        with open(outfile_path, 'w') as outfile:
+    with open(attributes_path, encoding="utf-8") as attr_f:
+        reader = csv.DictReader(attr_f)
+        with open(outfile_path, "w", encoding="utf-8") as outfile:
             columns = METADATA_COLUMN_NAMES + ['UNIT_LINK']
             writer = csv.DictWriter(
                 outfile,

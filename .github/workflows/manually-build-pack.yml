@@ -1,11 +1,14 @@
-name: Build all packs
+name: Manually build packs
 
 on:
-  push:
-    # Reprocess all packs if anything related to source processing changes
-    paths: sources/util/*~sources/util/_*
-    branches: gh-actions
   workflow_dispatch:
+    inputs:
+      packs:
+        description: |
+          Space-separated list of pack IDs you want to build,
+          e.g. "us-ca-oakland us-ca-la"
+        required: true
+        type: string
 
 jobs:
   skip-duplicates:
@@ -15,20 +18,20 @@ jobs:
         with:
           github_token: ${{ github.token }}
 
-  # https://code.dblock.org/2021/09/03/generating-task-matrix-by-looping-over-repo-files-with-github-actions.html
   list-packs:
     needs: skip-duplicates
     name: List packs
     runs-on: ubuntu-20.04
+    if:  ${{ inputs.packs }}
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
       - uses: actions/checkout@v3
       - id: set-matrix
-        run: echo "matrix=$(ls packs/*.json | xargs -I'{}' basename {} .json | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
+        run: python -c "import sys, json; print(json.dumps('${{ inputs.packs }}'.split()))"  >> $GITHUB_OUTPUT
 
   build-packs:
-    name: Build packs
+    name: Build pack
     needs: list-packs
     strategy:
       fail-fast: false

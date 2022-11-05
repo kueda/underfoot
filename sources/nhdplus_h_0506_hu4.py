@@ -1,14 +1,12 @@
 import os
-import util
+from util import extless_basename
+from util.water import process_nhdplus_hr_source
 
-# EPSG 4269
-url = "https://prd-tnm.s3.amazonaws.com/StagedProducts/Hydrography/NHDPlusHR/Beta/GDB/NHDPLUS_H_0506_HU4_GDB.zip"  # noqa: E501
-dir_name = "NHDPLUS_H_0506_HU4_GDB"
-gdb_name = "NHDPLUS_H_0506_HU4_GDB.gdb"
+NHD_BASENAME = extless_basename(__file__).upper()
 
-util.process_nhdplus_hr_source(
+process_nhdplus_hr_source(
   os.path.realpath(__file__),
-  url,
-  dir_name,
-  gdb_name
+  url="https://prd-tnm.s3.amazonaws.com/StagedProducts/Hydrography/NHDPlusHR/Beta/GDB/"
+      f"{NHD_BASENAME}_GDB.zip",
+  gdb_name=f"{NHD_BASENAME}_GDB.gdb"
 )

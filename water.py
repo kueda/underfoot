@@ -1,11 +1,14 @@
+"""Methods for generating hydrologic data for Underfoot"""
+
 import argparse
 import json
 import os
-import psycopg2
 import re
 import shutil
 from glob import glob
 from multiprocessing import Pool
+
+import psycopg2
 
 from database import DBNAME, SRID, make_database
 from sources import util
@@ -24,21 +27,22 @@ WATERWAYS_NETWORK_TABLE_NAME = "waterways_network"
 
 def clean_sources(sources):
     """Clean any cached data for specified sources"""
-    for idx, source_identifier in enumerate(sources):
-        path = os.path.join("sources", "{}.py".format(source_identifier))
+    for source_identifier in sources:
+        path = os.path.join("sources", f"{source_identifier}.py")
         work_path = util.make_work_dir(path)
         shutil.rmtree(work_path)
 
 
 def process_source(source, clean=False, cleandb=False, cleanfiles=False):
-    path = os.path.join("sources", "{}.py".format(source))
-    source_script_path = os.path.join("sources", "{}.py".format(source))
+    """Process water source"""
+    path = os.path.join("sources", f"{source}.py")
+    source_script_path = os.path.join("sources", f"{source}.py")
     work_path = util.make_work_dir(source_script_path)
     if cleanfiles:
         gpkgs_path = os.path.join(work_path, "*.gpkg")
-        for f in glob(gpkgs_path):
-            util.log(f"Deleting {f}...")
-            os.remove(f)
+        for file_to_delete in glob(gpkgs_path):
+            util.log(f"Deleting {file_to_delete}...")
+            os.remove(file_to_delete)
     util.call_cmd(["python", path], check=True)
     load_citation_for_source(source)
     for layer in ["waterways", "waterbodies", "watersheds"]:
@@ -100,13 +104,15 @@ def process_source(source, clean=False, cleandb=False, cleanfiles=False):
 
 
 def process_sources(sources, clean=False, cleandb=False, cleanfiles=False):
-    pool = Pool(processes=NUM_PROCESSES)
-    pool.starmap(
-        process_source,
-        [[src, clean, cleandb, cleanfiles] for src in sources])
+    """Process multiple sources in parallel processes"""
+    with Pool(processes=NUM_PROCESSES) as pool:
+        pool.starmap(
+            process_source,
+            [[src, clean, cleandb, cleanfiles] for src in sources])
 
 
-def load_waterways(sources, clean=False):
+def load_waterways(sources):
+    """Load waterways into the database"""
     util.run_sql(f"DROP TABLE IF EXISTS {WATERWAYS_TABLE_NAME}", dbname=DBNAME)
     util.run_sql(
         f"""
@@ -158,7 +164,8 @@ def load_waterways(sources, clean=False):
             util.log(f"{source_table_name} doesn't exist, skipping...")
 
 
-def load_waterbodies(sources, clean=False):
+def load_waterbodies(sources):
+    """Load waterbodies into the database"""
     util.run_sql(
         f"DROP TABLE IF EXISTS {WATERBODIES_TABLE_NAME}", dbname=DBNAME)
     util.run_sql(
@@ -203,7 +210,8 @@ def load_waterbodies(sources, clean=False):
         """)
 
 
-def load_watersheds(sources, clean=False):
+def load_watersheds(sources):
+    """Load watersheds into the database"""
     util.run_sql(
         f"DROP TABLE IF EXISTS \"{WATERSHEDS_TABLE_NAME}\"",
         dbname=DBNAME
@@ -322,7 +330,7 @@ def load_watersheds(sources, clean=False):
                 continue
 
 
-def load_networks(sources, clean=False):
+def load_networks(sources):
     """Combine waterways networks from multiple sources into a single network
     """
     util.run_sql(f"DROP TABLE IF EXISTS {WATERWAYS_NETWORK_TABLE_NAME}", dbname=DBNAME)
@@ -501,10 +509,10 @@ def make_water(
     if clean:
         clean_sources(sources)
     process_sources(sources, cleandb=cleandb, cleanfiles=cleanfiles)
-    load_waterways(sources, clean=clean)
-    load_waterbodies(sources, clean=clean)
-    load_watersheds(sources, clean=clean)
-    load_networks(sources, clean=clean)
+    load_waterways(sources)
+    load_waterbodies(sources)
+    load_watersheds(sources)
+    load_networks(sources)
     return make_mbtiles(sources, path=path, bbox=bbox)
 
 

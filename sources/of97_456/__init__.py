@@ -1,9 +1,11 @@
 import util
 import os
 
+from util.rocks import process_usgs_source
+
 
 def run():
-    util.process_usgs_source(
+    process_usgs_source(
         base_path=os.path.realpath(__file__),
         url="http://pubs.usgs.gov/of/1997/of97-456/pr-data.tar.gz",
         e00_path="pr-data/pr-geol.e00",

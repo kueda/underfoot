@@ -5,6 +5,8 @@ import json
 import os
 import time
 import util
+from util.rocks import infer_metadata_from_csv, join_polygons_and_metadata
+
 
 WORK_PATH = util.make_work_dir(os.path.realpath(__file__))
 os.chdir(WORK_PATH)
@@ -45,7 +47,7 @@ def run():
         os.path.dirname(os.path.realpath(__file__)),
         "units.csv"
     )
-    metadata_path = util.infer_metadata_from_csv(metadata_csv_path)
+    metadata_path = infer_metadata_from_csv(metadata_csv_path)
     projected_shp_path = os.path.join(WORK_PATH, "units.shp")
     table_name = util.extless_basename(shp_path)
     util.call_cmd([
@@ -59,7 +61,7 @@ def run():
         "-sql",
         f"SELECT PTYPE,ST_Union(geometry) as geometry FROM '{table_name}' GROUP BY PTYPE"
     ])
-    util.join_polygons_and_metadata(
+    join_polygons_and_metadata(
         projected_shp_path,
         metadata_path,
         polygons_join_col="PTYPE",
