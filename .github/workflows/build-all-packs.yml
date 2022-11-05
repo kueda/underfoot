@@ -2,9 +2,17 @@ name: Build all packs
 
 on:
   push:
-    # Reprocess all packs if anything related to source processing changes
-    paths: sources/util/*~sources/util/_*
-    branches: gh-actions
+    # Reprocess all packs if anything related to source processing changes.
+    # TODO come up with a better way to exclude sources/util/__init__.py
+    paths:
+      - sources/util/c*
+      - sources/util/m*
+      - sources/util/p*
+      - sources/util/r*
+      - sources/util/t*
+      - sources/util/u*
+      - sources/util/w*
+    branches: main
   workflow_dispatch:
 
 jobs:
