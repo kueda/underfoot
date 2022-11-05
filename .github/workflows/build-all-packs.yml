@@ -1,14 +1,13 @@
 name: Build all packs
 
-# TODO separate build-pack out into a reusable workflow, and then make
-# separate workflows for 1) building all packs manually, 2) building all
-# packs when source processing code changes, and 3) rebuilding cerain packs
-# when their packs change
-
 on:
   push:
     # Reprocess all packs if anything related to source processing changes
     paths: sources/util/*
+    paths-ignore:
+      # This file should contain utility methods that should not change the
+      # content of the packs
+      - sources/util/__init__.py
     branches: gh-actions
   workflow_dispatch:
 
