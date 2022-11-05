@@ -1,0 +1,43 @@
+name: Manually build packs
+
+on:
+  workflow_dispatch:
+    inputs:
+      packs:
+        description: |
+          Space-separated list of pack IDs you want to build,
+          e.g. "us-ca-oakland us-ca-la"
+        required: true
+        type: string
+
+jobs:
+  skip-duplicates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: fkirc/skip-duplicate-actions@master
+        with:
+          github_token: ${{ github.token }}
+
+  list-packs:
+    needs: skip-duplicates
+    name: List packs
+    runs-on: ubuntu-20.04
+    if:  ${{ inputs.packs }}
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v3
+      - id: set-matrix
+        run: python -c "import sys, json; print(json.dumps('${{ inputs.packs }}'.split()))"  >> $GITHUB_OUTPUT
+
+  build-packs:
+    name: Build pack
+    needs: list-packs
+    strategy:
+      fail-fast: false
+      matrix:
+        pack: ${{ fromJson(needs.list-packs.outputs.matrix) }}
+    uses: kueda/underfoot/.github/workflows/build-pack.yml@main
+    with:
+      pack: ${{ matrix.pack }}
+    secrets: inherit
