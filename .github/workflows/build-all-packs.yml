@@ -3,11 +3,7 @@ name: Build all packs
 on:
   push:
     # Reprocess all packs if anything related to source processing changes
-    paths: sources/util/*
-    paths-ignore:
-      # This file should contain utility methods that should not change the
-      # content of the packs
-      - sources/util/__init__.py
+    paths: sources/util/*~sources/util/_*
     branches: gh-actions
   workflow_dispatch:
 
