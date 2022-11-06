@@ -11,24 +11,19 @@ on:
         type: string
 
 jobs:
-  skip-duplicates:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: fkirc/skip-duplicate-actions@master
-        with:
-          github_token: ${{ github.token }}
-
   list-packs:
-    needs: skip-duplicates
     name: List packs
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     if:  ${{ inputs.packs }}
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
       - uses: actions/checkout@v3
+      # Set the matrix output to a JSON array from a space-separated string
+      # from the workflow_dispatch input
       - id: set-matrix
-        run: python -c "import sys, json; print('matrix='+json.dumps('${{ inputs.packs }}'.split()))" >> $GITHUB_OUTPUT
+        run: |
+          python -c "import sys, json; print('matrix='+json.dumps('${{ inputs.packs }}'.split()))" >> $GITHUB_OUTPUT
 
   build-packs:
     name: Build pack
