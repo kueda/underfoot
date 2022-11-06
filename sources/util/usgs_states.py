@@ -7,16 +7,18 @@ import os
 import re
 import pandas as pd
 from . import (
-    ages_from_span,
     call_cmd,
+    log,
+    make_work_dir
+)
+from .proj import SRS as DEST_SRS
+from .rocks import (
+    ages_from_span,
     controlled_span_from_span,
     join_polygons_and_metadata,
-    log,
-    make_work_dir,
     METADATA_COLUMN_NAMES,
     rock_type_from_lithology,
-    span_from_lithology,
-    SRS as DEST_SRS
+    span_from_lithology
 )
 
 SRS = "+proj=longlat +datum=NAD27 +no_defs"
