@@ -1,9 +1,12 @@
 import os
+from util import extless_basename
 from util.water import process_nhdplus_hr_source
 
+NHD_BASENAME = extless_basename(__file__).upper()
+
 process_nhdplus_hr_source(
-  base_path=os.path.realpath(__file__),
+  os.path.realpath(__file__),
   url="https://prd-tnm.s3.amazonaws.com/StagedProducts/Hydrography/NHDPlusHR/Beta/GDB/"
-      "NHDPLUS_H_0107_HU4_GDB.zip",
-  gdb_name="NHDPLUS_H_0107_HU4_GDB.gdb"
+      f"{NHD_BASENAME}_GDB.zip",
+  gdb_name=f"{NHD_BASENAME}_GDB.gdb"
 )
