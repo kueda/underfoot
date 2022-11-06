@@ -74,6 +74,12 @@ def test_lithology_from_text_extracts_colluvium():
 def test_lithology_from_text_extracts_syenite():
     assert rocks.lithology_from_text("some syenite, oh boy") == "syenite"
 
+def test_lithology_from_text_extracts_sedimentary_breccia():
+    assert rocks.lithology_from_text("some sedimentary breccia, friend") == "sedimentary breccia"
+
+def test_lithology_from_text_extracts_tectonic_breccia():
+    assert rocks.lithology_from_text("some tectonic breccia, friend") == "tectonic breccia"
+
 def test_lithology_from_text_extracts_everything_before_water():
     assert rocks.lithology_from_text("watery sandstone") == "sandstone"
     assert rocks.lithology_from_text("did you know granite needs water to form?") == "granite"

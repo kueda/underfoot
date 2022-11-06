@@ -90,6 +90,7 @@ LITHOLOGY_PATTERN = re.compile(
     rhyolitic|
     sandstone|
     schist|
+    sedimentary\sbreccia|
     serpentine|
     serpentinite|
     shale|
@@ -98,6 +99,7 @@ LITHOLOGY_PATTERN = re.compile(
     surficial\sdeposit|
     syenite|
     talus|
+    tectonic\sbreccia|
     tephrite|
     till|
     tonalite|
@@ -114,6 +116,7 @@ LOW_PRIORITY_LITHOLOGY_PATTERN = re.compile(
   re.sub(r'\s+', '', r'''(
     arenaceous|
     artificial|
+    breccia|
     carbonate rock|
     colluvium|
     landslide|

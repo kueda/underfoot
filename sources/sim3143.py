@@ -51,12 +51,29 @@ def reproject(shp_dir_path):
     ])
     return units_path
 
+def get_unit_overrides():
+    """Get unit overrides from CSV file in repo"""
+    units_csv_path = os.path.join(
+        "..",
+        "sim3143",
+        "units.csv"
+    )
+    unit_overrides = {}
+    with open(units_csv_path, encoding="utf-8") as units_csv_file:
+        reader = csv.DictReader(units_csv_file)
+        for row in reader:
+            unit_overrides[row["code"]] = {
+                key: value for (key, value) in row.items()
+                if len(value) > 0 and key != 'code'
+            }
+    return unit_overrides
 
 def schemify_attributes(attributes_path):
     """Create an attributes CSV with standard attributes"""
     util.log(f"SCHEMIFYING ATTRIBUTES for {attributes_path}...")
     units_from_shp = {}
     shp_path = os.path.join(os.path.dirname(attributes_path), "GM_MapUnitPolys.shp")
+    unit_overrides = get_unit_overrides()
     with fiona.open(shp_path) as units:
         for unit in units:
             if "properties" not in unit:
@@ -113,13 +130,14 @@ def schemify_attributes(attributes_path):
             reader = csv.DictReader(attributes_file)
             for row in reader:
                 row["code"] = row["MapUnit"]
+                overrides = unit_overrides.get(row["code"], {})
                 codes_encoutered[row["code"]] = True
                 shp_unit = units_from_shp.get(row["code"], {})
-                row["title"] = row["FullName"]
-                row["description"] = row["Descr"]
+                row["title"] = overrides.get("title") or row["FullName"]
+                row["description"] = overrides.get("description") or row["Descr"]
                 if not row["description"] or len(row["description"]) == 0:
                     row["description"] = shp_unit.get("description")
-                row["lithology"] = shp_unit.get("lithology")
+                row["lithology"] = overrides.get("lithology") or shp_unit.get("lithology")
                 if not row["lithology"]:
                     row["lithology"] = rocks.lithology_from_text(
                         row["FullName"]
@@ -128,17 +146,30 @@ def schemify_attributes(attributes_path):
                     row["lithology"] = rocks.lithology_from_text(
                         row["Descr"]
                     )
-                row["rock_type"] = rocks.rock_type_from_lithology(
-                    row["lithology"]
+                row["rock_type"] = (
+                    overrides.get("rock_type")
+                    or rocks.rock_type_from_lithology(row["lithology"])
                 )
-                row["span"] = row["Age"]
+                row["span"] = overrides.get("span") or row["Age"]
                 row["controlled_span"] = rocks.controlled_span_from_span(
                     row["span"]
                 )
                 ages_from_span = rocks.ages_from_span(row["span"])
-                row["min_age"] = shp_unit.get("min_age") or ages_from_span[0]
-                row["max_age"] = shp_unit.get("max_age") or ages_from_span[1]
-                row["est_age"] = shp_unit.get("est_age") or ages_from_span[2]
+                row["min_age"] = (
+                    overrides.get("min_age")
+                    or shp_unit.get("min_age")
+                    or ages_from_span[0]
+                )
+                row["max_age"] = (
+                    overrides.get("max_age")
+                    or shp_unit.get("max_age")
+                    or ages_from_span[1]
+                )
+                row["est_age"] = (
+                    overrides.get("est_age")
+                    or shp_unit.get("est_age")
+                    or ages_from_span[2]
+                )
                 writer.writerow(row)
         for code, unit in units_from_shp.items():
             if code not in codes_encoutered:
