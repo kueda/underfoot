@@ -61,9 +61,9 @@ for pack_path in glob(pack_glob):
         validate_pack(pack_path, pack)
         if "geojson" in pack and "$ref" in pack["geojson"]:
             parsed_uri = urlparse(pack["geojson"]["$ref"])
-            geojson_path = os.path.join(pathlib.Path(pack_path).parent.absolute(),
+            pack["geojson_path"] = os.path.join(pathlib.Path(pack_path).parent.absolute(),
                 f"{parsed_uri.netloc}{parsed_uri.path}")
-            with open(geojson_path, encoding="utf-8") as geojson_f:
+            with open(pack["geojson_path"], encoding="utf-8") as geojson_f:
                 pack["geojson"] = json.load(geojson_f)
         PACKS[os.path.basename(os.path.splitext(pack_path)[0])] = pack
 
@@ -192,7 +192,7 @@ def make_pack(pack_id, clean=False, clean_rocks=False, clean_water=False,
     if clean or clean_ways or not os.path.isfile(ways_mbtiles_path):
         make_ways(
             pack["osm"],
-            bbox=pack["bbox"],
+            pack=pack,
             clean=(clean or clean_ways),
             path=ways_mbtiles_path)
     elif os.path.isfile(ways_mbtiles_path):
@@ -201,7 +201,7 @@ def make_pack(pack_id, clean=False, clean_rocks=False, clean_water=False,
     if clean or clean_context or not os.path.isfile(context_mbtiles_path):
         make_context(
             pack["osm"],
-            bbox=pack["bbox"],
+            pack=pack,
             clean=(clean or clean_context),
             path=context_mbtiles_path)
     elif os.path.isfile(context_mbtiles_path):

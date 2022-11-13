@@ -30,9 +30,28 @@ def setup_e00conv():
     os.chdir("../../")
 
 
+def setup_imposm():
+    """Download imposm3 binary for importing OpenStreetMap data"""
+    if os.path.isfile("bin/imposm/imposm"):
+        return
+    work_path = "bin"
+    if not os.path.isdir("bin"):
+        os.makedirs(work_path)
+    os.chdir(work_path)
+    basename = "imposm-0.11.1-linux-x86-64"
+    run([
+        "curl",
+        "-OL",
+        f"https://github.com/omniscale/imposm3/releases/download/v0.11.1/{basename}.tar.gz"
+    ], check=True)
+    run(["tar", "xzvf", f"{basename}.tar.gz"], check=True)
+    run(["ln", "-s", os.path.join(basename, "imposm"), "imposm"], check=True)
+    os.chdir("../")
+
 if __name__ == "__main__":
     shell_cmd(
         ["pip", "install", "-r", "requirements.txt"],
         msg="INSTALLING PYTHON PACKAGES..."
     )
     setup_e00conv()
+    setup_imposm()
