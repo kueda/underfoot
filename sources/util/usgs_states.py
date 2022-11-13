@@ -1,18 +1,24 @@
+"""
+Methods for processing state-wide USGS geology files
+"""
+
 import csv
 import os
 import re
 import pandas as pd
 from . import (
-    ages_from_span,
     call_cmd,
+    log,
+    make_work_dir
+)
+from .proj import SRS as DEST_SRS
+from .rocks import (
+    ages_from_span,
     controlled_span_from_span,
     join_polygons_and_metadata,
-    log,
-    make_work_dir,
     METADATA_COLUMN_NAMES,
     rock_type_from_lithology,
-    span_from_lithology,
-    SRS as DEST_SRS
+    span_from_lithology
 )
 
 SRS = "+proj=longlat +datum=NAD27 +no_defs"
@@ -55,9 +61,9 @@ def schemify_attributes(attributes_path):
     """Convert metadata attributes to the Underfoot schema"""
     log(f"SCHEMIFYING ATTRIBUTES for {attributes_path}...")
     outfile_path = "units.csv"
-    with open(attributes_path) as f:
-        reader = csv.DictReader(f)
-        with open(outfile_path, 'w') as outfile:
+    with open(attributes_path, encoding="utf-8") as attr_f:
+        reader = csv.DictReader(attr_f)
+        with open(outfile_path, "w", encoding="utf-8") as outfile:
             columns = METADATA_COLUMN_NAMES + ['UNIT_LINK']
             writer = csv.DictWriter(
                 outfile,

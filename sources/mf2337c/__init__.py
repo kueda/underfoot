@@ -1,9 +1,15 @@
-import util
+"""
+    Geologic Map and Map Database of Parts of Marin, San Francisco, Alameda,
+    Contra Costa, and Sonoma Counties, California
+"""
+
 import os
+
+from util.rocks import process_usgs_source
 
 
 def run():
-    util.process_usgs_source(
+    process_usgs_source(
         base_path=os.path.realpath(__file__),
         url="http://pubs.usgs.gov/mf/2000/2337/mf2337c.tgz",
         e00_path="mageo/ma-geol.e00",

@@ -61,7 +61,8 @@ for pack_path in glob(pack_glob):
         validate_pack(pack_path, pack)
         if "geojson" in pack and "$ref" in pack["geojson"]:
             parsed_uri = urlparse(pack["geojson"]["$ref"])
-            geojson_path = os.path.join(pathlib.Path(pack_path).parent.absolute(), f"{parsed_uri.netloc}{parsed_uri.path}")
+            geojson_path = os.path.join(pathlib.Path(pack_path).parent.absolute(),
+                f"{parsed_uri.netloc}{parsed_uri.path}")
             with open(geojson_path, encoding="utf-8") as geojson_f:
                 pack["geojson"] = json.load(geojson_f)
         PACKS[os.path.basename(os.path.splitext(pack_path)[0])] = pack

@@ -1,9 +1,11 @@
 import util
 import os
 
+from util.rocks import process_usgs_source
+
 
 def run():
-    util.process_usgs_source(
+    process_usgs_source(
         base_path=os.path.realpath(__file__),
         url="http://pubs.usgs.gov/of/1998/of98-354/sfs_data.tar.gz",
         uncompress_e00=True,

@@ -1,0 +1,38 @@
+name: Manually build packs
+
+on:
+  workflow_dispatch:
+    inputs:
+      packs:
+        description: |
+          Space-separated list of pack IDs you want to build,
+          e.g. "us-ca-oakland us-ca-la"
+        required: true
+        type: string
+
+jobs:
+  list-packs:
+    name: List packs
+    runs-on: ubuntu-latest
+    if:  ${{ inputs.packs }}
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v3
+      # Set the matrix output to a JSON array from a space-separated string
+      # from the workflow_dispatch input
+      - id: set-matrix
+        run: |
+          python -c "import sys, json; print('matrix='+json.dumps('${{ inputs.packs }}'.split()))" >> $GITHUB_OUTPUT
+
+  build-packs:
+    name: Build pack
+    needs: list-packs
+    strategy:
+      fail-fast: false
+      matrix:
+        pack: ${{ fromJson(needs.list-packs.outputs.matrix) }}
+    uses: kueda/underfoot/.github/workflows/build-pack.yml@main
+    with:
+      pack: ${{ matrix.pack }}
+    secrets: inherit
