@@ -32,7 +32,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - uses: ./.github/actions/underfoot-setup@gh-actions
+      # - uses: ./.github/actions/underfoot-setup@gh-actions
+      - name: Install dependencies
+        run: ./.github/dependencies.sh
 
       - id: cache-source-work
         name: Cache source work
@@ -68,7 +70,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - uses: ./.github/actions/underfoot-setup@gh-actions
+      # - uses: ./.github/actions/underfoot-setup@gh-actions
+      - name: Install dependencies
+        run: ./.github/dependencies.sh
 
       - name: Download all MBTiles artifacts
         uses: actions/download-artifact@v3
