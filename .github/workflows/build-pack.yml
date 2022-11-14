@@ -1,25 +1,5 @@
 name: Build Pack
 
-definitions:
-  services:
-    postgres: &underfoot-postgress
-      image: postgis/postgis:12-2.5
-      env:
-        POSTGRES_USER: underfoot
-        POSTGRES_PASSWORD: underfoot
-        POSTGRES_DB: underfoot
-      ports:
-        - 5432:5432
-      options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
-  steps:
-    - step: &cache-source-work
-      id: cache-source-work
-      name: Cache source work
-      uses: actions/cache@v3
-      with:
-        path: sources/work-*
-        key: cache-source-work-${{ inputs.pack }}-${{ hashFiles(format('packs/{0}.json', inputs.pack)) }}
-
 on:
   workflow_call:
     inputs:
@@ -40,11 +20,24 @@ jobs:
     name: Build rocks
     runs-on: ubuntu-20.04
     services:
-      postgres: *underfoot-postgress
+      postgres:
+        image: postgis/postgis:12-2.5
+        env:
+          POSTGRES_USER: underfoot
+          POSTGRES_PASSWORD: underfoot
+          POSTGRES_DB: underfoot
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
     steps:
       - uses: kueda/underfoot/.github/actions/underfoot-setup@gh-actions
 
-      - *cache-source-work
+      - id: cache-source-work
+        name: Cache source work
+        uses: actions/cache@v3
+        with:
+          path: sources/work-*
+          key: cache-source-work-${{ inputs.pack }}-${{ hashFiles(format('packs/{0}.json', inputs.pack)) }}
 
       - name: Build rocks
         run: python packs.py ${{ inputs.pack }} --only-rocks
