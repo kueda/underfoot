@@ -1,0 +1,79 @@
+tables:
+  ways:
+    type: linestring
+    columns:
+      - type: id
+        name: id
+      - type: geometry
+        name: linestring
+      - type: string
+        name: name
+        key: name
+      - type: hstore_tags
+        name: tags
+    filters:
+      require:
+        highway: [__any__]
+      reject:
+        highway:
+          - corridor
+          - footway
+          - pedestrian
+          - proposed
+          - service
+          - steps
+        service: [__any__]
+        footway: [sidewalk]
+        golf: [__any__]
+        golf-cart: [__any__]
+    mapping:
+      footway: [sidewalk]
+      golf-cart: [__any__]
+      golf: [__any__]
+      highway: [__any__]
+      name: [__any__]
+      natural: [__any__]
+      ref: [__any__]
+      service: [__any__]
+      tiger: [__any__]
+  natural_ways:
+    type: linestring
+    columns:
+      - type: id
+        name: id
+      - type: geometry
+        name: linestring
+      - type: string
+        name: name
+        key: name
+      - type: hstore_tags
+        name: tags
+    filters:
+      require:
+        natural: [mountain_range, ridge, valley]
+    mapping:
+      name: [__any__]
+      natural: [__any__]
+      ref: [__any__]
+      tiger: [__any__]
+  nodes:
+    type: point
+    columns:
+      - type: id
+        name: id
+      - type: geometry
+        name: geom
+      - type: string
+        name: name
+        key: name
+      - type: hstore_tags
+        name: tags
+    filters:
+      require:
+        natural: [peak, saddle, spring]
+    mapping:
+      ref: [__any__]
+      natural: [__any__]
+      ele: [__any__]
+      tiger: [__any__]
+      intermittent: [__any__]

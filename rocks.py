@@ -10,6 +10,8 @@ import shutil
 import re
 import time
 from multiprocessing import Pool
+import subprocess
+import traceback
 
 import psycopg2
 
@@ -94,6 +96,7 @@ def remove_polygon_overlaps(source_table_name):
 
 def process_source(source_identifier, clean=False):
     """Run the source scripts and load their data into the database"""
+    util.log(f"Starting to process source: {source_identifier}")
     source_table_name = re.sub(r"\W", "_", source_identifier)
     try:
         num_rows = util.run_sql(
@@ -107,60 +110,69 @@ def process_source(source_identifier, clean=False):
     except psycopg2.errors.UndefinedTable:
         # If the table doesn't exist we need to proceed
         pass
-    util.call_cmd([
-        "python",
-        os.path.join("sources", f"{source_identifier}.py")
-    ])
-    path = os.path.join("sources", f"{source_identifier}.py")
-    work_path = util.make_work_dir(path)
-    units_path = os.path.join(work_path, "units.geojson")
-    util.run_sql(
-        f"DROP TABLE IF EXISTS \"{source_table_name}\"",
-        dbname=DBNAME
-    )
-    # stupid hack to make sure the table is dropped before we start loading into
-    # it
-    time.sleep(5)
-    util.log(f"Loading {units_path} into {source_table_name} table...")
-    util.call_cmd([
-        "ogr2ogr",
-        "-f", "PostgreSQL",
-        f"PG:dbname={DBNAME}",
-        units_path,
-        "-nln", source_table_name,
-        "-nlt", "MULTIPOLYGON",
-        "-lco", "GEOMETRY_NAME=geom",
-        "-skipfailures",
-        "-a_srs", f"EPSG:{SRID}"
-    ])
-    work_source_table_name = f"work_{source_table_name}"
-    util.run_sql(
-        f"DROP TABLE IF EXISTS \"{work_source_table_name}\"",
-        dbname=DBNAME
-    )
-    util.run_sql(
-        f"CREATE TABLE {work_source_table_name} AS SELECT * FROM {source_table_name}",
-        dbname=DBNAME
-    )
-    util.log("Deleting empty units...")
-    util.run_sql(
-        f"DELETE FROM {work_source_table_name} WHERE code IS NULL OR code = ''",
-        dbname=DBNAME
-    )
-    util.log("Repairing invalid geometries...")
-    util.run_sql(
-        f"UPDATE {work_source_table_name} SET geom = ST_MakeValid(geom) WHERE NOT ST_IsValid(geom)"
-    )
-    util.log("Removing polygon overlaps...")
-    remove_polygon_overlaps(work_source_table_name)
-    util.run_sql(
-        f"DELETE FROM {work_source_table_name} "
-        "WHERE ST_GeometryType(geom) = 'ST_GeometryCollection'"
-    )
-    util.run_sql(
-        f"UPDATE {work_source_table_name} SET geom = ST_MakeValid(geom) WHERE NOT ST_IsValid(geom)"
-    )
-    load_citation_for_source(source_identifier)
+    try:
+        util.call_cmd([
+            "python",
+            os.path.join("sources", f"{source_identifier}.py")
+        ])
+        path = os.path.join("sources", f"{source_identifier}.py")
+        work_path = util.make_work_dir(path)
+        units_path = os.path.join(work_path, "units.geojson")
+        util.run_sql(
+            f"DROP TABLE IF EXISTS \"{source_table_name}\"",
+            dbname=DBNAME
+        )
+        # stupid hack to make sure the table is dropped before we start loading into
+        # it
+        time.sleep(5)
+        util.log(f"Loading {units_path} into {source_table_name} table...")
+        util.call_cmd([
+            "ogr2ogr",
+            "-f", "PostgreSQL",
+            f"PG:dbname={DBNAME}",
+            units_path,
+            "-nln", source_table_name,
+            "-nlt", "MULTIPOLYGON",
+            "-lco", "GEOMETRY_NAME=geom",
+            "-skipfailures",
+            "-a_srs", f"EPSG:{SRID}"
+        ])
+        work_source_table_name = f"work_{source_table_name}"
+        util.run_sql(
+            f"DROP TABLE IF EXISTS \"{work_source_table_name}\"",
+            dbname=DBNAME
+        )
+        util.run_sql(
+            f"CREATE TABLE {work_source_table_name} AS SELECT * FROM {source_table_name}",
+            dbname=DBNAME
+        )
+        util.log("Deleting empty units...")
+        util.run_sql(
+            f"DELETE FROM {work_source_table_name} WHERE code IS NULL OR code = ''",
+            dbname=DBNAME
+        )
+        util.log("Repairing invalid geometries...")
+        util.run_sql(
+            f"UPDATE {work_source_table_name} SET geom = ST_MakeValid(geom) WHERE NOT ST_IsValid(geom)"
+        )
+        util.log("Removing polygon overlaps...")
+        remove_polygon_overlaps(work_source_table_name)
+        util.run_sql(
+            f"DELETE FROM {work_source_table_name} "
+            "WHERE ST_GeometryType(geom) = 'ST_GeometryCollection'"
+        )
+        util.run_sql(
+            f"UPDATE {work_source_table_name} SET geom = ST_MakeValid(geom) WHERE NOT ST_IsValid(geom)"
+        )
+        load_citation_for_source(source_identifier)
+        util.log(f"Finished processing source: {source_identifier}")
+    except subprocess.CalledProcessError as e:
+        # If you don't do this, exceptions in subprocesses may not print stack
+        # traces
+        print(f"Failed to process {source_identifier}")
+        traceback.print_exc()
+        print()
+        raise e
 
 
 def clip_source_polygons_by_mask(source_table_name):
@@ -253,6 +265,8 @@ def load_units(sources, clean=False, procs=NUM_PROCESSES):
     # except the second arg is an iterable of iterables, if it's ['foo', true],
     # it will run process_source('foo', true)
     with Pool(processes=procs) as pool:
+        # TODO how can I make this terminate the parent process if a child
+        # process raises an exception
         pool.starmap(process_source, [[src, clean] for src in sources])
     col_names = ", ".join(rocks.METADATA_COLUMN_NAMES)
 

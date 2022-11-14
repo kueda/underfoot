@@ -18,25 +18,11 @@ NATURAL_NODES_TABLE_NAME = "underfoot_natural_nodes"
 
 def create_database():
     """Create the OSM database"""
-    osmosis_path = "/usr/share/doc/osmosis/examples"
-    if not os.path.isdir(osmosis_path):
-        osmosis_path = "/usr/local/Cellar/osmosis/0.45/libexec/script"
-        if not os.path.isdir(osmosis_path):
-            raise ValueError("Couldn't find osmosis path to osmosis files")
     util.call_cmd(["dropdb", "--if-exists", DBNAME], check=True)
     util.call_cmd(["createdb", DBNAME])
     util.call_cmd([
       "psql", "-d", DBNAME,
       "-c", "CREATE EXTENSION postgis; CREATE EXTENSION hstore;"])
-    util.call_cmd([
-      "psql", "-d", DBNAME,
-      "-f", f"{osmosis_path}/pgsnapshot_schema_0.6.sql"])
-    util.call_cmd([
-      "psql", "-d", DBNAME,
-      "-f", f"{osmosis_path}/pgsnapshot_schema_0.6_bbox.sql"])
-    util.call_cmd([
-      "psql", "-d", DBNAME,
-      "-f", f"{osmosis_path}/pgsnapshot_schema_0.6_linestring.sql"])
     return psycopg2.connect(f"dbname={DBNAME}")
 
 
@@ -61,42 +47,25 @@ def fetch_data(url, clean=False):
         util.call_cmd(["curl", "-o", filename, "--max-time", str(fifteen_mins), url], check=True)
     return filename
 
-def load_osm_from_pbf(data_path, bbox=None):
-    """Load OSM data from PBF export into a PostgreSQL database using osmosis"""
-    util.call_cmd([
-        "osmosis",
-        "--truncate-pgsql",
-        f"database={DBNAME}",
-        f"user={DB_USER}",
-        f"password={DB_PASSWORD}"
-    ])
+def load_osm_from_pbf(data_path, pack=None):
+    """Load OSM data from PBF export into a PostgreSQL database using"""
     read_args = [
-        "--read-pbf", data_path,
-        "--tf", "accept-ways", "highway=*", "natural=mountain_range,ridge,valley",
-        "--tf", "reject-ways", "service=*",
-        "--tf", "reject-ways", "footway=sidewalk",
-        "--tf", "reject-ways", "highway=proposed",
-        "--tf", "reject-ways", "golf=*",
-        "--tf", "reject-ways", "golf-cart=*",
-        "--tf", "reject-ways", "highway=pedestrian",
-        "--tf", "reject-ways", "highway=steps"
+        "import",
+        "-connection", f"postgis://{DB_USER}:{DB_PASSWORD}@localhost/{DBNAME}?prefix=NONE",
+        "-mapping", "imposm-mapping.yml",
+        "-read", data_path
     ]
     # Get bounding box coordinates from the database... or maybe the source
-    if bbox:
+    if pack:
         read_args += [
-            "--bounding-box",
-            f"top={bbox['top']}",
-            f"left={bbox['left']}",
-            f"bottom={bbox['bottom']}",
-            f"right={bbox['right']}"
+            "-limitto", pack["geojson_path"]
         ]
     write_args = [
-        "--write-pgsql",
-        f"database={DBNAME}",
-        f"user={DB_USER}",
-        f"password={DB_PASSWORD}"
+        "-write",
+        "-deployproduction",
+        "-overwritecache"
     ]
-    cmd = ["osmosis"] + read_args + write_args
+    cmd = [os.path.join("bin", "imposm")] + read_args + write_args
     # Load data from PBF into the database with osmosis
     util.call_cmd(cmd)
 
@@ -119,10 +88,10 @@ def is_osm_loaded():
     con.close()
     return osm_loaded
 
-def load_ways_data(data_path, bbox=None):
+def load_ways_data(data_path, pack=None):
     """Load ways from OSM data"""
     if not is_osm_loaded():
-        load_osm_from_pbf(data_path, bbox)
+        load_osm_from_pbf(data_path, pack)
     util.run_sql(f"DROP TABLE IF EXISTS {WAYS_TABLE_NAME}", dbname=DBNAME)
     util.run_sql(
         f"""
@@ -142,10 +111,10 @@ def load_ways_data(data_path, bbox=None):
     )
 
 
-def load_natural_ways_data(data_path, bbox=None):
+def load_natural_ways_data(data_path, pack=None):
     """Load natural ways from OSM data"""
     if not is_osm_loaded():
-        load_osm_from_pbf(data_path, bbox)
+        load_osm_from_pbf(data_path, pack)
     util.run_sql(f"DROP TABLE IF EXISTS {NATURAL_WAYS_TABLE_NAME}", dbname=DBNAME)
     # TODO think about how to add a column to control zoom level, maybe using
     # the length of the diagonal of the bounding box
@@ -160,8 +129,8 @@ def load_natural_ways_data(data_path, bbox=None):
                 ) AS name,
                 tags -> 'natural' AS "natural",
                 ROUND(st_length(st_boundingdiagonal(linestring))::numeric, 2) AS diag_deg,
-                ST_ChaikinSmoothing(ST_Simplify(linestring, 0.005), 3) AS linestring
-            FROM ways
+                ST_ChaikinSmoothing(ST_Simplify(linestring, 200), 3) AS linestring
+            FROM natural_ways
             WHERE
                 tags -> 'natural' IS NOT NULL
                 AND tags -> 'highway' IS NULL
@@ -183,10 +152,10 @@ def load_natural_ways_data(data_path, bbox=None):
     )
 
 
-def load_natural_nodes_data(data_path, bbox=None):
+def load_natural_nodes_data(data_path, pack=None):
     """Load natural nodes from OSM data"""
     if not is_osm_loaded():
-        load_osm_from_pbf(data_path, bbox)
+        load_osm_from_pbf(data_path, pack)
     util.run_sql(f"DROP TABLE IF EXISTS {NATURAL_NODES_TABLE_NAME}", dbname=DBNAME)
     util.run_sql(
         f"""
@@ -260,6 +229,7 @@ def make_ways_mbtiles(path):
     # Instead, I'm constructing a string version of the command and passing
     # that with shell=True so it doesn't try to do any fancy string escaping
     util.call_cmd(re.sub(r'\s+', " ", cmd).strip(), shell=True)
+    os.remove(gpkg_path)
 
 
 def make_context_mbtiles(path):
@@ -303,17 +273,17 @@ def make_context_mbtiles(path):
         -dsco CONF='{json.dumps(conf)}'
     """
     util.call_cmd(re.sub(r'\s+', " ", cmd).strip(), shell=True)
+    os.remove(gpkg_path)
 
-def make_ways(pbf_url, clean=False, bbox=None, path="./ways.mbtiles"):
+def make_ways(pbf_url, clean=False, pack=None, path="./ways.mbtiles"):
     r"""Make an MBTiles files for OSM ways data given an OSM PBF export URL
 
     Parameters
     ----------
     pbf_url : str
       The URL of a PBF export of OSM data
-    bbox : dict
-      Bounding box to import from the PBF export of the form
-      {"top": 1, "bottom": 0, "left": 0, "right": 1}
+    pack : dict
+      Pack object
     clean : bool
       Force
     """
@@ -324,12 +294,12 @@ def make_ways(pbf_url, clean=False, bbox=None, path="./ways.mbtiles"):
     if clean:
         con = database_connection(recreate=True)
         con.close()
-    load_ways_data(filename, bbox=bbox)
+    load_ways_data(filename, pack=pack)
     make_ways_mbtiles(path)
     return path
 
 
-def make_context(pbf_url, clean=False, bbox=None, path="./context.mbtiles"):
+def make_context(pbf_url, clean=False, pack=None, path="./context.mbtiles"):
     """Makes an mbtiles with contextual geographic info from OSM"""
     if not pbf_url or len(pbf_url) == 0:
         raise ValueError("You must specify a PBF URL")
@@ -337,8 +307,8 @@ def make_context(pbf_url, clean=False, bbox=None, path="./context.mbtiles"):
     if clean:
         con = database_connection(recreate=True)
         con.close()
-    load_natural_ways_data(filename, bbox=bbox)
-    load_natural_nodes_data(filename, bbox=bbox)
+    load_natural_ways_data(filename, pack=pack)
+    load_natural_nodes_data(filename, pack=pack)
     make_context_mbtiles(path)
 
 if __name__ == "__main__":
