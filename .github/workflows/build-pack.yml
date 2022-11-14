@@ -30,7 +30,9 @@ jobs:
           - 5432:5432
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
     steps:
-      - uses: kueda/underfoot/.github/actions/underfoot-setup@gh-actions
+      - uses: actions/checkout@v3
+
+      - uses: ./.github/actions/underfoot-setup@gh-actions
 
       - id: cache-source-work
         name: Cache source work
@@ -64,7 +66,9 @@ jobs:
       # - ways
       # - context
     steps:
-      - uses: kueda/underfoot/.github/actions/underfoot-setup@gh-actions
+      - uses: actions/checkout@v3
+
+      - uses: ./.github/actions/underfoot-setup@gh-actions
 
       - name: Download all MBTiles artifacts
         uses: actions/download-artifact@v3

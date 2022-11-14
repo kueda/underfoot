@@ -3,8 +3,6 @@ description: Checks out the Underfoot repo and sets up tools and dependencies
 runs:
   using: composite
   steps:
-    - uses: actions/checkout@v3
-
     - name: Install system dependencies
       run: |
         sudo add-apt-repository ppa:ubuntugis/ppa
