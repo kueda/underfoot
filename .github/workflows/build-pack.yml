@@ -44,7 +44,7 @@ jobs:
     steps:
       - uses: kueda/underfoot/.github/actions/underfoot-setup@main
 
-      - step: *cache-source-work
+      - *cache-source-work
 
       - name: Build rocks
         run: python packs.py ${{ inputs.pack }} --only-rocks
