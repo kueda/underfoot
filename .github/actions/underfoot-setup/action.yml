@@ -4,6 +4,7 @@ runs:
   using: composite
   steps:
     - name: Install system dependencies
+      shell: bash
       run: |
         sudo add-apt-repository ppa:ubuntugis/ppa
         sudo add-apt-repository ppa:deadsnakes/ppa
@@ -21,4 +22,5 @@ runs:
           zip
 
     - name: Install Python and other dependencies
+      shell: bash
       run: python setup.py
