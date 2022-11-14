@@ -79,7 +79,7 @@ jobs:
 
       - name: Zip up the pack
         run: |
-          mkdir -P build/${{ inputs.pack }}
+          mkdir -p build/${{ inputs.pack }}
           mv ${{ inputs.pack }}-rocks/rocks.mbtiles build/${{ inputs.pack }}/
           mv ${{ inputs.pack }}-rocks/water.mbtiles build/${{ inputs.pack }}/
           mv ${{ inputs.pack }}-rocks/contours.mbtiles build/${{ inputs.pack }}/
