@@ -78,13 +78,13 @@ jobs:
         uses: actions/download-artifact@v3
 
       - name: Zip up the pack
+        # mv ${{ inputs.pack }}-rocks/water.mbtiles build/${{ inputs.pack }}/
+        # mv ${{ inputs.pack }}-rocks/contours.mbtiles build/${{ inputs.pack }}/
+        # mv ${{ inputs.pack }}-rocks/ways.mbtiles build/${{ inputs.pack }}/
+        # mv ${{ inputs.pack }}-rocks/context.mbtiles build/${{ inputs.pack }}/
         run: |
           mkdir -p build/${{ inputs.pack }}
           mv ${{ inputs.pack }}-rocks/rocks.mbtiles build/${{ inputs.pack }}/
-          mv ${{ inputs.pack }}-rocks/water.mbtiles build/${{ inputs.pack }}/
-          mv ${{ inputs.pack }}-rocks/contours.mbtiles build/${{ inputs.pack }}/
-          mv ${{ inputs.pack }}-rocks/ways.mbtiles build/${{ inputs.pack }}/
-          mv ${{ inputs.pack }}-rocks/context.mbtiles build/${{ inputs.pack }}/
           cd build/${{ inputs.pack }}/
           zip ${{ inputs.pack }}.zip *.mbtiles
           mv ${{ inputs.pack }}.zip ../
