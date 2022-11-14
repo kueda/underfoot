@@ -56,6 +56,7 @@ jobs:
   # ways:
   # context:
   upload-pack:
+    runs-on: ubuntu-20.04
     needs:
       - rocks
       # - water
