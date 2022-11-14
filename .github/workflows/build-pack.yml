@@ -42,7 +42,7 @@ jobs:
     services:
       postgres: *underfoot-postgress
     steps:
-      - uses: kueda/underfoot/.github/actions/underfoot-setup@main
+      - uses: kueda/underfoot/.github/actions/underfoot-setup@gh-actions
 
       - *cache-source-work
 
@@ -70,7 +70,7 @@ jobs:
       # - ways
       # - context
     steps:
-      - uses: kueda/underfoot/.github/actions/underfoot-setup@main
+      - uses: kueda/underfoot/.github/actions/underfoot-setup@gh-actions
 
       - name: Download all MBTiles artifacts
         uses: actions/download-artifact@v3
