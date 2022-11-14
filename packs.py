@@ -153,29 +153,46 @@ def s3_built_packs(s3_bucket_url):
     return packs
 
 
-def make_pack(pack_id, clean=False, clean_rocks=False, clean_water=False,
-              clean_ways=False, clean_context=False, clean_contours=False,
-              procs=2):
-    """Generate a pack and write it to the build directory"""
-    make_database()
-    pack = PACKS[pack_id]
+def get_pack_dir(pack_id):
+    """Get build dir for a specific pack"""
     build_dir = get_build_dir()
     pack_dir = os.path.join(build_dir, pack_id)
     if not os.path.isdir(pack_dir):
         os.makedirs(pack_dir)
+    return pack_dir
+
+
+def make_rocks_for_pack(pack_id, clean=False, procs=2):
+    """Make rocks mbtiles given a pack"""
+    pack_dir = get_pack_dir(pack_id)
     rocks_mbtiles_path = os.path.join(pack_dir, "rocks.mbtiles")
     if (
-        clean
-        or clean_rocks or not os.path.isfile(rocks_mbtiles_path)
+        os.path.isfile(rocks_mbtiles_path)
+        and not clean
     ):
-        make_rocks(
-            pack["rock"],
-            bbox=pack["bbox"],
-            clean=(clean or clean_rocks),
-            path=rocks_mbtiles_path,
-            procs=procs)
-    elif os.path.isfile(rocks_mbtiles_path):
         util.log(f"{rocks_mbtiles_path} exists, skipping...")
+        return
+    pack = PACKS[pack_id]
+    make_rocks(
+        pack["rock"],
+        bbox=pack["bbox"],
+        clean=clean,
+        path=rocks_mbtiles_path,
+        procs=procs)
+
+
+def make_pack(pack_id, clean=False, clean_rocks=False, clean_water=False,
+              clean_ways=False, clean_context=False, clean_contours=False,
+              procs=2):
+    """Generate a pack and write it to the build directory"""
+    # make_database()
+    pack = PACKS[pack_id]
+    pack_dir = get_pack_dir(pack_id)
+    make_rocks_for_pack(
+        pack_id,
+        clean=(clean or clean_rocks),
+        procs=procs
+    )
     water_mbtiles_path = os.path.join(pack_dir, "water.mbtiles")
     if clean or clean_water or not os.path.isfile(water_mbtiles_path):
         make_water(
@@ -233,8 +250,53 @@ def make_pack(pack_id, clean=False, clean_rocks=False, clean_water=False,
     return shutil.make_archive(
         pack_dir,
         format="zip",
-        root_dir=build_dir,
+        root_dir=get_build_dir(),
         base_dir=os.path.basename(pack_dir))
+
+
+def make_all_packs_from_args(args):
+    """Make all packs given command-line args"""
+    util.log("MAKING ALL PACKS")
+    fails = []
+    for pack_id, _pack in PACKS.items():
+        util.log(f"Making pack: {args.pack}")
+        try:
+            pack_path = make_pack(
+                pack_id,
+                clean=args.clean,
+                clean_rocks=args.clean_rocks,
+                clean_water=args.clean_water,
+                clean_ways=args.clean_ways,
+                clean_context=args.clean_context,
+                clean_contours=args.clean_contours,
+                procs=args.procs)
+            util.log(f"Pack available at {pack_path}")
+        except: # pylint: disable=bare-except
+            fails.append(pack_id)
+            util.log(f"FAILED ON PACK {pack_id}, MOVING ON...")
+    make_manifest(manifest_url=args.manifest_url, s3_bucket_url=args.s3_bucket_url)
+    if len(fails) > 0:
+        util.log("FINISHED MAKING SOME PACKS, FAILED ON")
+        for pack_id in fails:
+            util.log(f"* {pack_id}")
+    else:
+        util.log("FINISHED MAKING ALL PACKS")
+
+
+def make_single_pack_from_args(args):
+    """Make a single pack from command-line args"""
+    util.log(f"Making pack: {args.pack}")
+    pack_path = make_pack(
+        args.pack,
+        clean=args.clean,
+        clean_rocks=args.clean_rocks,
+        clean_water=args.clean_water,
+        clean_ways=args.clean_ways,
+        clean_context=args.clean_context,
+        clean_contours=args.clean_contours,
+        procs=args.procs)
+    make_manifest(manifest_url=args.manifest_url, s3_bucket_url=args.s3_bucket_url)
+    util.log(f"Pack available at {pack_path}")
 
 
 if __name__ == "__main__":
@@ -285,6 +347,11 @@ if __name__ == "__main__":
         "--s3-bucket-url",
         type=str,
         help="URL of an existing s3 bucket to use when generating the manifest")
+    parser.add_argument(
+        "--only-rocks",
+        action="store_true",
+        help="Only build the rocks.mbtiles file; only works when specifying a single pack, i.e. "
+             "not when generating all packs")
     args = parser.parse_args()
 
     if args.pack == "list":
@@ -293,41 +360,8 @@ if __name__ == "__main__":
     elif args.pack == "manifest":
         make_manifest(manifest_url=args.manifest_url, s3_bucket_url=args.s3_bucket_url)
     elif args.pack == "all":
-        util.log("MAKING ALL PACKS")
-        fails = []
-        for pack_id, pack in PACKS.items():
-            util.log(f"Making pack: {args.pack}")
-            try:
-                pack_path = make_pack(
-                    pack_id,
-                    clean=args.clean,
-                    clean_rocks=args.clean_rocks,
-                    clean_water=args.clean_water,
-                    clean_ways=args.clean_ways,
-                    clean_context=args.clean_context,
-                    clean_contours=args.clean_contours,
-                    procs=args.procs)
-                util.log(f"Pack available at {pack_path}")
-            except: # pylint: disable=bare-except
-                fails.append(pack_id)
-                util.log(f"FAILED ON PACK {pack_id}, MOVING ON...")
-        make_manifest(manifest_url=args.manifest_url, s3_bucket_url=args.s3_bucket_url)
-        if len(fails) > 0:
-            util.log("FINISHED MAKING SOME PACKS, FAILED ON")
-            for pack_id in fails:
-                util.log(f"* {pack_id}")
-        else:
-            util.log("FINISHED MAKING ALL PACKS")
+        make_all_packs_from_args(args)
+    elif args.only_rocks:
+        make_rocks_for_pack(args.pack, clean=args.clean, procs=args.procs)
     else:
-        util.log(f"Making pack: {args.pack}")
-        pack_path = make_pack(
-            args.pack,
-            clean=args.clean,
-            clean_rocks=args.clean_rocks,
-            clean_water=args.clean_water,
-            clean_ways=args.clean_ways,
-            clean_context=args.clean_context,
-            clean_contours=args.clean_contours,
-            procs=args.procs)
-        make_manifest(manifest_url=args.manifest_url, s3_bucket_url=args.s3_bucket_url)
-        util.log(f"Pack available at {pack_path}")
+        make_single_pack_from_args(args)

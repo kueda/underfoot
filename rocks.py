@@ -352,11 +352,28 @@ def make_rocks(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Make an MBTiles of geologic units from given source(s)")
-    parser.add_argument("source", type=str, nargs="+", help="Source(s)")
+    parser.add_argument(
+        "source",
+        type=str,
+        nargs="+",
+        help="Source(s). If the first source is a pack ID, the sources from the pack will be used "
+             "and the other source arguments will be ignored"
+    )
     parser.add_argument(
         "--clean",
         action="store_true",
         help="Clean cached data before running"
     )
+    parser.add_argument(
+        "--path",
+        type=str,
+        help="Path to write the MBTiles file"
+    )
+    parser.add_argument(
+        "--procs",
+        type=int,
+        help="Number of processes to use in parallel"
+    )
     args = parser.parse_args()
-    make_rocks(args.source, clean=args.clean)
+    kwargs = { k: args[k] for k in args if args[k] and k in ("clean", "path", "procs")}
+    make_rocks(args.source, **kwargs)
