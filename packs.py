@@ -166,10 +166,7 @@ def make_rocks_for_pack(pack_id, clean=False, procs=2):
     """Make rocks mbtiles given a pack"""
     pack_dir = get_pack_dir(pack_id)
     rocks_mbtiles_path = os.path.join(pack_dir, "rocks.mbtiles")
-    if (
-        os.path.isfile(rocks_mbtiles_path)
-        and not clean
-    ):
+    if os.path.isfile(rocks_mbtiles_path) and not clean:
         util.log(f"{rocks_mbtiles_path} exists, skipping...")
         return
     pack = PACKS[pack_id]
@@ -214,7 +211,7 @@ def make_water_for_pack(pack_id, clean=False, procs=2):
     """Make water mbtiles given a pack"""
     pack_dir = get_pack_dir(pack_id)
     water_mbtiles_path = os.path.join(pack_dir, "water.mbtiles")
-    if os.path.isfile(water_mbtiles_path) or not clean:
+    if os.path.isfile(water_mbtiles_path) and not clean:
         util.log(f"{water_mbtiles_path} exists, skipping...")
         return
     pack = PACKS[pack_id]
@@ -233,7 +230,7 @@ def make_ways_for_pack(pack_id, clean=False):
     """Make ways mbtiles given a pack"""
     pack_dir = get_pack_dir(pack_id)
     ways_mbtiles_path = os.path.join(pack_dir, "ways.mbtiles")
-    if os.path.isfile(ways_mbtiles_path) or not clean:
+    if os.path.isfile(ways_mbtiles_path) and not clean:
         util.log(f"{ways_mbtiles_path} exists, skipping...")
         return
     pack = PACKS[pack_id]
@@ -247,7 +244,7 @@ def make_ways_for_pack(pack_id, clean=False):
 def make_context_for_pack(pack_id, clean=False):
     pack_dir = get_pack_dir(pack_id)
     context_mbtiles_path = os.path.join(pack_dir, "context.mbtiles")
-    if os.path.isfile(context_mbtiles_path) or not clean:
+    if os.path.isfile(context_mbtiles_path) and not clean:
         util.log(f"{context_mbtiles_path} exists, skipping...")
         return
     pack = PACKS[pack_id]
@@ -266,8 +263,8 @@ def make_pack(pack_id, clean=False, clean_rocks=False, clean_water=False,
     pack_dir = get_pack_dir(pack_id)
     make_rocks_for_pack(pack_id, clean=(clean or clean_rocks), procs=procs)
     make_water_for_pack(pack_id, clean=(clean or clean_water), procs=procs)
-    make_ways_for_pack(pack_id, clean=(clean or clean_ways), procs=procs)
-    make_context_for_pack(pack_id, clean=(clean or clean_context), procs=procs)
+    make_ways_for_pack(pack_id, clean=(clean or clean_ways))
+    make_context_for_pack(pack_id, clean=(clean or clean_context))
     make_contours_for_pack(pack_id, clean=(clean or clean_contours), procs=procs)
     return shutil.make_archive(
         pack_dir,
