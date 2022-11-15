@@ -55,6 +55,44 @@ jobs:
         with:
           name: ${{ inputs.pack }}-rocks
           path: build/${{ inputs.pack }}/rocks.mbtiles
+  contours:
+    name: Build contours
+    runs-on: ubuntu-20.04
+    services:
+      postgres:
+        image: postgis/postgis:12-2.5
+        env:
+          POSTGRES_USER: underfoot
+          POSTGRES_PASSWORD: underfoot
+          POSTGRES_DB: underfoot
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: ./.github/dependencies.sh
+
+      - name: Cache elevation tiles
+        id: cache-elevation
+        uses: actions/cache@v3
+        with:
+          path: elevation-tiles
+          key: cache-elevation-${{ inputs.pack }}-${{ hashFiles(format('packs/{0}.json', inputs.pack)) }}
+
+      - name: Build contours
+        run: python packs.py ${{ inputs.pack }} --only-contours
+        env:
+          PGHOST: 0.0.0.0
+          PGUSER: underfoot
+          PGPASSWORD: underfoot
+
+      - name: Upload contours.mbtiles
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ inputs.pack }}-contours
+          path: build/${{ inputs.pack }}/contours.mbtiles
   # water:
   # contours:
   # ways:

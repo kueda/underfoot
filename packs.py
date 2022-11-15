@@ -181,6 +181,34 @@ def make_rocks_for_pack(pack_id, clean=False, procs=2):
         procs=procs)
 
 
+def make_contours_for_pack(pack_id, clean=False, procs=2):
+    """Make contours mbtiles given a pack"""
+    pack_dir = get_pack_dir(pack_id)
+    contours_mbtiles_path = os.path.join(pack_dir, "contours.mbtiles")
+    if os.path.isfile(contours_mbtiles_path) and not clean:
+        util.log(f"{contours_mbtiles_path} exists, skipping...")
+        return
+    pack = PACKS[pack_id]
+    if "geojson" in pack:
+        make_contours(
+            12,
+            geojson=pack["geojson"],
+            mbtiles_zoom=14,
+            clean=clean,
+            procs=procs,
+            path=contours_mbtiles_path)
+        return
+    make_contours(
+        12,
+        swlon=pack["bbox"]["left"],
+        swlat=pack["bbox"]["bottom"],
+        nelon=pack["bbox"]["right"],
+        nelat=pack["bbox"]["top"],
+        mbtiles_zoom=14,
+        path=contours_mbtiles_path,
+        clean=clean,
+        procs=procs)
+
 def make_pack(pack_id, clean=False, clean_rocks=False, clean_water=False,
               clean_ways=False, clean_context=False, clean_contours=False,
               procs=2):
@@ -223,30 +251,10 @@ def make_pack(pack_id, clean=False, clean_rocks=False, clean_water=False,
             path=context_mbtiles_path)
     elif os.path.isfile(context_mbtiles_path):
         util.log(f"{context_mbtiles_path} exists, skipping...")
-    contours_mbtiles_path = os.path.join(pack_dir, "contours.mbtiles")
-    if clean or clean_contours or not os.path.isfile(contours_mbtiles_path):
-        if "geojson" in pack:
-            make_contours(
-                12,
-                geojson=pack["geojson"],
-                mbtiles_zoom=14,
-                clean=(clean or clean_contours),
-                procs=procs,
-                path=contours_mbtiles_path)
-        else:
-            make_contours(
-                12,
-                swlon=pack["bbox"]["left"],
-                swlat=pack["bbox"]["bottom"],
-                nelon=pack["bbox"]["right"],
-                nelat=pack["bbox"]["top"],
-                mbtiles_zoom=14,
-                path=contours_mbtiles_path,
-                clean=(clean or clean_contours),
-                procs=procs)
-    elif os.path.isfile(contours_mbtiles_path):
-        util.log(f"{contours_mbtiles_path} exists, skipping...")
-    # with tempfile.TemporaryDirectory() as tmpdirname:  # noqa: F841
+    make_contours_for_pack(
+        pack_id,
+        clean=(clean or clean_contours),
+        procs=procs)
     return shutil.make_archive(
         pack_dir,
         format="zip",
@@ -352,6 +360,11 @@ if __name__ == "__main__":
         action="store_true",
         help="Only build the rocks.mbtiles file; only works when specifying a single pack, i.e. "
              "not when generating all packs")
+    parser.add_argument(
+        "--only-contours",
+        action="store_true",
+        help="Only build the contours.mbtiles file; only works when specifying a single pack, i.e. "
+             "not when generating all packs")
     args = parser.parse_args()
 
     if args.pack == "list":
@@ -363,5 +376,7 @@ if __name__ == "__main__":
         make_all_packs_from_args(args)
     elif args.only_rocks:
         make_rocks_for_pack(args.pack, clean=args.clean, procs=args.procs)
+    elif args.only_contours:
+        make_contours_for_pack(args.pack, clean=args.clean, procs=args.procs)
     else:
         make_single_pack_from_args(args)
