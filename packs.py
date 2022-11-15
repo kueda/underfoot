@@ -209,52 +209,66 @@ def make_contours_for_pack(pack_id, clean=False, procs=2):
         clean=clean,
         procs=procs)
 
+
+def make_water_for_pack(pack_id, clean=False, procs=2):
+    """Make water mbtiles given a pack"""
+    pack_dir = get_pack_dir(pack_id)
+    water_mbtiles_path = os.path.join(pack_dir, "water.mbtiles")
+    if os.path.isfile(water_mbtiles_path) or not clean:
+        util.log(f"{water_mbtiles_path} exists, skipping...")
+        return
+    pack = PACKS[pack_id]
+    make_water(
+        pack["water"],
+        bbox=pack["bbox"],
+        # TODO make pack options to clip water / rocks / ways by the bbox
+        # or not. sometimes it makes more sense to include everythign in
+        # the sources
+        clean=clean,
+        path=water_mbtiles_path,
+        procs=procs)
+
+
+def make_ways_for_pack(pack_id, clean=False):
+    """Make ways mbtiles given a pack"""
+    pack_dir = get_pack_dir(pack_id)
+    ways_mbtiles_path = os.path.join(pack_dir, "ways.mbtiles")
+    if os.path.isfile(ways_mbtiles_path) or not clean:
+        util.log(f"{ways_mbtiles_path} exists, skipping...")
+        return
+    pack = PACKS[pack_id]
+    make_ways(
+        pack["osm"],
+        pack=pack,
+        clean=clean,
+        path=ways_mbtiles_path)
+
+
+def make_context_for_pack(pack_id, clean=False):
+    pack_dir = get_pack_dir(pack_id)
+    context_mbtiles_path = os.path.join(pack_dir, "context.mbtiles")
+    if os.path.isfile(context_mbtiles_path) or not clean:
+        util.log(f"{context_mbtiles_path} exists, skipping...")
+        return
+    pack = PACKS[pack_id]
+    make_context(
+        pack["osm"],
+        pack=pack,
+        clean=clean,
+        path=context_mbtiles_path)
+
+
 def make_pack(pack_id, clean=False, clean_rocks=False, clean_water=False,
               clean_ways=False, clean_context=False, clean_contours=False,
               procs=2):
     """Generate a pack and write it to the build directory"""
     # make_database()
-    pack = PACKS[pack_id]
     pack_dir = get_pack_dir(pack_id)
-    make_rocks_for_pack(
-        pack_id,
-        clean=(clean or clean_rocks),
-        procs=procs
-    )
-    water_mbtiles_path = os.path.join(pack_dir, "water.mbtiles")
-    if clean or clean_water or not os.path.isfile(water_mbtiles_path):
-        make_water(
-            pack["water"],
-            bbox=pack["bbox"],
-            # TODO make pack options to clip water / rocks / ways by the bbox
-            # or not. sometimes it makes more sense to include everythign in
-            # the sources
-            clean=(clean or clean_water),
-            path=water_mbtiles_path)
-    elif os.path.isfile(water_mbtiles_path):
-        util.log(f"{water_mbtiles_path} exists, skipping...")
-    ways_mbtiles_path = os.path.join(pack_dir, "ways.mbtiles")
-    if clean or clean_ways or not os.path.isfile(ways_mbtiles_path):
-        make_ways(
-            pack["osm"],
-            pack=pack,
-            clean=(clean or clean_ways),
-            path=ways_mbtiles_path)
-    elif os.path.isfile(ways_mbtiles_path):
-        util.log(f"{ways_mbtiles_path} exists, skipping...")
-    context_mbtiles_path = os.path.join(pack_dir, "context.mbtiles")
-    if clean or clean_context or not os.path.isfile(context_mbtiles_path):
-        make_context(
-            pack["osm"],
-            pack=pack,
-            clean=(clean or clean_context),
-            path=context_mbtiles_path)
-    elif os.path.isfile(context_mbtiles_path):
-        util.log(f"{context_mbtiles_path} exists, skipping...")
-    make_contours_for_pack(
-        pack_id,
-        clean=(clean or clean_contours),
-        procs=procs)
+    make_rocks_for_pack(pack_id, clean=(clean or clean_rocks), procs=procs)
+    make_water_for_pack(pack_id, clean=(clean or clean_water), procs=procs)
+    make_ways_for_pack(pack_id, clean=(clean or clean_ways), procs=procs)
+    make_context_for_pack(pack_id, clean=(clean or clean_context), procs=procs)
+    make_contours_for_pack(pack_id, clean=(clean or clean_contours), procs=procs)
     return shutil.make_archive(
         pack_dir,
         format="zip",
@@ -356,15 +370,11 @@ if __name__ == "__main__":
         type=str,
         help="URL of an existing s3 bucket to use when generating the manifest")
     parser.add_argument(
-        "--only-rocks",
-        action="store_true",
-        help="Only build the rocks.mbtiles file; only works when specifying a single pack, i.e. "
-             "not when generating all packs")
-    parser.add_argument(
-        "--only-contours",
-        action="store_true",
-        help="Only build the contours.mbtiles file; only works when specifying a single pack, i.e. "
-             "not when generating all packs")
+        "--only",
+        type=str,
+        nargs="*",
+        choices=["rocks", "water", "contours", "ways", "context"],
+        help="Only build selected MBTiles and don't generate the final pack archive")
     args = parser.parse_args()
 
     if args.pack == "list":
@@ -374,9 +384,16 @@ if __name__ == "__main__":
         make_manifest(manifest_url=args.manifest_url, s3_bucket_url=args.s3_bucket_url)
     elif args.pack == "all":
         make_all_packs_from_args(args)
-    elif args.only_rocks:
-        make_rocks_for_pack(args.pack, clean=args.clean, procs=args.procs)
-    elif args.only_contours:
-        make_contours_for_pack(args.pack, clean=args.clean, procs=args.procs)
+    elif args.only and len(args.only) > 0:
+        if "rocks" in args.only:
+            make_rocks_for_pack(args.pack, clean=args.clean, procs=args.procs)
+        if "water" in args.only:
+            make_water_for_pack(args.pack, clean=args.clean, procs=args.procs)
+        if "contours" in args.only:
+            make_contours_for_pack(args.pack, clean=args.clean, procs=args.procs)
+        if "ways" in args.only:
+            make_ways_for_pack(args.pack, clean=args.clean)
+        if "context" in args.only:
+            make_context_for_pack(args.pack, clean=args.clean)
     else:
         make_single_pack_from_args(args)

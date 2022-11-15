@@ -103,9 +103,9 @@ def process_source(source, clean=False, cleandb=False, cleanfiles=False):
         """, shell=True)
 
 
-def process_sources(sources, clean=False, cleandb=False, cleanfiles=False):
+def process_sources(sources, clean=False, cleandb=False, cleanfiles=False, procs=NUM_PROCESSES):
     """Process multiple sources in parallel processes"""
-    with Pool(processes=NUM_PROCESSES) as pool:
+    with Pool(processes=procs) as pool:
         pool.starmap(
             process_source,
             [[src, clean, cleandb, cleanfiles] for src in sources])
@@ -502,13 +502,13 @@ def make_mbtiles(sources, path="./water.mbtiles", bbox=None):
 
 def make_water(
         sources, clean=False, cleandb=False, cleanfiles=False, bbox=None,
-        path="./water.mbtiles"):
+        path="./water.mbtiles", procs=NUM_PROCESSES):
     """Process and load all water sources and write them to a MBTiles file"""
     util.log(f"make_water, sources: {sources}")
     make_database()
     if clean:
         clean_sources(sources)
-    process_sources(sources, cleandb=cleandb, cleanfiles=cleanfiles)
+    process_sources(sources, cleandb=cleandb, cleanfiles=cleanfiles, procs=procs)
     load_waterways(sources)
     load_waterbodies(sources)
     load_watersheds(sources)

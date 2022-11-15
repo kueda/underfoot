@@ -36,15 +36,15 @@ jobs:
       - name: Install dependencies
         run: ./.github/dependencies.sh
 
-      - id: cache-source-work
-        name: Cache source work
+      - id: cache-source-work-rocks
+        name: Cache source work for rocks
         uses: actions/cache@v3
         with:
           path: sources/work-*
-          key: cache-source-work-${{ inputs.pack }}-${{ hashFiles(format('packs/{0}.json', inputs.pack)) }}
+          key: cache-source-work-rocks-${{ inputs.pack }}-${{ hashFiles(format('packs/{0}.json', inputs.pack)) }}
 
       - name: Build rocks
-        run: python packs.py ${{ inputs.pack }} --only-rocks
+        run: python packs.py ${{ inputs.pack }} --only rocks
         env:
           PGHOST: 0.0.0.0
           PGUSER: underfoot
@@ -55,6 +55,44 @@ jobs:
         with:
           name: ${{ inputs.pack }}-rocks
           path: build/${{ inputs.pack }}/rocks.mbtiles
+  water:
+    name: Build water
+    runs-on: ubuntu-20.04
+    services:
+      postgres:
+        image: postgis/postgis:12-2.5
+        env:
+          POSTGRES_USER: underfoot
+          POSTGRES_PASSWORD: underfoot
+          POSTGRES_DB: underfoot
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: ./.github/dependencies.sh
+
+      - id: cache-source-work-water
+        name: Cache source work for water
+        uses: actions/cache@v3
+        with:
+          path: sources/work-*
+          key: cache-source-work-water-${{ inputs.pack }}-${{ hashFiles(format('packs/{0}.json', inputs.pack)) }}
+
+      - name: Build water
+        run: python packs.py ${{ inputs.pack }} --only water
+        env:
+          PGHOST: 0.0.0.0
+          PGUSER: underfoot
+          PGPASSWORD: underfoot
+
+      - name: Upload water.mbtiles
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ inputs.pack }}-water
+          path: build/${{ inputs.pack }}/water.mbtiles
   contours:
     name: Build contours
     runs-on: ubuntu-20.04
@@ -82,7 +120,7 @@ jobs:
           key: cache-elevation-${{ inputs.pack }}-${{ hashFiles(format('packs/{0}.json', inputs.pack)) }}
 
       - name: Build contours
-        run: python packs.py ${{ inputs.pack }} --only-contours
+        run: python packs.py ${{ inputs.pack }} --only contours
         env:
           PGHOST: 0.0.0.0
           PGUSER: underfoot
@@ -93,18 +131,58 @@ jobs:
         with:
           name: ${{ inputs.pack }}-contours
           path: build/${{ inputs.pack }}/contours.mbtiles
-  # water:
-  # contours:
-  # ways:
-  # context:
+  osm:
+    name: Build ways & context
+    runs-on: ubuntu-20.04
+    services:
+      postgres:
+        image: postgis/postgis:12-2.5
+        env:
+          POSTGRES_USER: underfoot
+          POSTGRES_PASSWORD: underfoot
+          POSTGRES_DB: underfoot
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: ./.github/dependencies.sh
+
+      - name: Cache OSM download
+        id: cache-osm
+        uses: actions/cache@v3
+        with:
+          path: "*.osm.pbf"
+          key: cache-osm-${{ steps.get-osm-url.outputs.osm-url }}-${{ steps.calc-year-week.outputs.year-week }}
+
+      - name: Build ways & context
+        run: python packs.py ${{ inputs.pack }} --only ways context
+        env:
+          PGHOST: 0.0.0.0
+          PGUSER: underfoot
+          PGPASSWORD: underfoot
+
+      - name: Upload ways.mbtiles
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ inputs.pack }}-ways
+          path: build/${{ inputs.pack }}/ways.mbtiles
+
+      - name: Upload context.mbtiles
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ inputs.pack }}-context
+          path: build/${{ inputs.pack }}/context.mbtiles
   upload-pack:
+    name: Archive and upload pack
     runs-on: ubuntu-20.04
     needs:
       - rocks
-      # - water
-      # - contours
-      # - ways
-      # - context
+      - water
+      - contours
+      - osm
     steps:
       - uses: actions/checkout@v3
 
@@ -116,13 +194,13 @@ jobs:
         uses: actions/download-artifact@v3
 
       - name: Zip up the pack
-        # mv ${{ inputs.pack }}-rocks/water.mbtiles build/${{ inputs.pack }}/
-        # mv ${{ inputs.pack }}-rocks/contours.mbtiles build/${{ inputs.pack }}/
-        # mv ${{ inputs.pack }}-rocks/ways.mbtiles build/${{ inputs.pack }}/
-        # mv ${{ inputs.pack }}-rocks/context.mbtiles build/${{ inputs.pack }}/
         run: |
           mkdir -p build/${{ inputs.pack }}
           mv ${{ inputs.pack }}-rocks/rocks.mbtiles build/${{ inputs.pack }}/
+          mv ${{ inputs.pack }}-rocks/contours.mbtiles build/${{ inputs.pack }}/
+          mv ${{ inputs.pack }}-rocks/water.mbtiles build/${{ inputs.pack }}/
+          mv ${{ inputs.pack }}-rocks/ways.mbtiles build/${{ inputs.pack }}/
+          mv ${{ inputs.pack }}-rocks/context.mbtiles build/${{ inputs.pack }}/
           cd build/${{ inputs.pack }}/
           zip ${{ inputs.pack }}.zip *.mbtiles
           mv ${{ inputs.pack }}.zip ../
