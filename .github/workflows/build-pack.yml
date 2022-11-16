@@ -150,6 +150,14 @@ jobs:
       - name: Install dependencies
         run: ./.github/dependencies.sh
 
+      - name: Get current year week
+        id: calc-year-week
+        run: echo "year-week=$(date +'%Y-%U')" >> $GITHUB_OUTPUT
+
+      - name: Get OSM URL
+        id: get-osm-url
+        run: UNDERFOOT_PACK=${{ inputs.pack }} && echo "osm-url=$(jq -c -r .osm packs/$UNDERFOOT_PACK.json)" >> $GITHUB_OUTPUT
+
       - name: Cache OSM download
         id: cache-osm
         uses: actions/cache@v3
@@ -201,10 +209,9 @@ jobs:
           mv ${{ inputs.pack }}-water/water.mbtiles build/${{ inputs.pack }}/
           mv ${{ inputs.pack }}-ways/ways.mbtiles build/${{ inputs.pack }}/
           mv ${{ inputs.pack }}-context/context.mbtiles build/${{ inputs.pack }}/
-          cd build/${{ inputs.pack }}/
-          zip ${{ inputs.pack }}.zip *.mbtiles
-          mv ${{ inputs.pack }}.zip ../
-          cd ../../
+          cd build/
+          zip ${{ inputs.pack }}.zip ${{ inputs.pack }}/*.mbtiles
+          cd ../
 
       - name: Make the manifest
         run: |
