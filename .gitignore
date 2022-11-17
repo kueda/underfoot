@@ -2,8 +2,11 @@
 *.pyc
 *__pycache__*
 *.pbf
+.sqliterc
 .vagrant/
 bin/
+build/
+elevation-tiles/
 sources/*/work*
 sources/work-*
 venv/

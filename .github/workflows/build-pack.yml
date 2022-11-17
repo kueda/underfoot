@@ -32,7 +32,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      # - uses: ./.github/actions/underfoot-setup@gh-actions
       - name: Install dependencies
         run: ./.github/dependencies.sh
 
@@ -55,6 +54,7 @@ jobs:
         with:
           name: ${{ inputs.pack }}-rocks
           path: build/${{ inputs.pack }}/rocks.mbtiles
+
   water:
     name: Build water
     runs-on: ubuntu-20.04
@@ -93,6 +93,7 @@ jobs:
         with:
           name: ${{ inputs.pack }}-water
           path: build/${{ inputs.pack }}/water.mbtiles
+
   contours:
     name: Build contours
     runs-on: ubuntu-20.04
@@ -131,6 +132,7 @@ jobs:
         with:
           name: ${{ inputs.pack }}-contours
           path: build/${{ inputs.pack }}/contours.mbtiles
+
   osm:
     name: Build ways & context
     runs-on: ubuntu-20.04
@@ -183,6 +185,7 @@ jobs:
         with:
           name: ${{ inputs.pack }}-context
           path: build/${{ inputs.pack }}/context.mbtiles
+
   upload-pack:
     name: Archive and upload pack
     runs-on: ubuntu-20.04
@@ -194,7 +197,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      # - uses: ./.github/actions/underfoot-setup@gh-actions
       - name: Install dependencies
         run: ./.github/dependencies.sh
 

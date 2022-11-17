@@ -7,7 +7,6 @@ sudo apt-get install -y \
   build-essential \
   gdal-bin \
   libgdal-dev \
-  osmosis \
   python3-gdal \
   python3.8 \
   python3.8-dev \
