@@ -3,6 +3,7 @@
 import json
 import os
 import re
+import shutil
 from glob import glob
 
 import xml.etree.ElementTree as ET
@@ -10,6 +11,19 @@ import xml.etree.ElementTree as ET
 from . import call_cmd, extless_basename, log, make_work_dir
 from .proj import GRS80_LONGLAT, SRS
 
+WATERWAYS_FNAME = "waterways.gpkg"
+WATERBODIES_FNAME = "waterbodies.gpkg"
+WATERSHEDS_FNAME = "watersheds.gpkg"
+WATERWAYS_NETWORK_FNAME = "waterways-network.sqlite"
+CITATION_FNAME = "citation.json"
+
+ARTIFACT_NAMES = [
+    WATERWAYS_FNAME,
+    WATERBODIES_FNAME,
+    WATERSHEDS_FNAME,
+    WATERWAYS_NETWORK_FNAME,
+    CITATION_FNAME
+]
 
 def process_omca_creeks_source(url, dir_name, waterways_shp_path,
                                watersheds_shp_path, waterways_name_col,
@@ -27,7 +41,7 @@ def process_omca_creeks_source(url, dir_name, waterways_shp_path,
         call_cmd(["unzip", download_path])
 
     # Project into EPSG 4326 along with name, type, and natural attributes
-    waterways_gpkg_path = "waterways.gpkg"
+    waterways_gpkg_path = WATERWAYS_FNAME
     if os.path.isfile(waterways_gpkg_path):
         log("{waterways_gpkg_path} exists, skipping...")
     else:
@@ -55,7 +69,7 @@ def process_omca_creeks_source(url, dir_name, waterways_shp_path,
               -sql "{sql}"
         """
         call_cmd(cmd, shell=True, check=True)
-    watersheds_gpkg_path = "watersheds.gpkg"
+    watersheds_gpkg_path = WATERSHEDS_FNAME
     if os.path.isfile(watersheds_gpkg_path):
         log("{watersheds_gpkg_path} exists, skipping...")
     else:
@@ -89,7 +103,7 @@ def process_omca_creeks_source(url, dir_name, waterways_shp_path,
 
 def process_nhdplus_hr_source_waterways(gdb_path, srs):
     """Project into EPSG 4326 along with name, type, and natural attributes"""
-    waterways_gpkg_path = "waterways.gpkg"
+    waterways_gpkg_path = WATERWAYS_FNAME
     if os.path.isfile(waterways_gpkg_path):
         log(f"{waterways_gpkg_path} exists, skipping...")
         return
@@ -188,7 +202,7 @@ def process_nhdplus_hr_source_waterways(gdb_path, srs):
 
 def process_nhdplus_hr_source_waterbodies(gdb_path, srs):
     """Creates waterbodies.gpkg in the work dir"""
-    waterbodies_gpkg_path = "waterbodies.gpkg"
+    waterbodies_gpkg_path = WATERBODIES_FNAME
     if os.path.isfile(waterbodies_gpkg_path):
         log(f"{waterbodies_gpkg_path} exists, skipping...")
         return
@@ -275,7 +289,7 @@ def process_nhdplus_hr_source_watersheds(gdb_path, srs):
 
 def process_nhdplus_hr_source_waterways_network(gdb_path):
     """Adds waterways-network.csv to the work dir given Underfoot water GDB"""
-    sqlite_path = "waterways-network.sqlite"
+    sqlite_path = WATERWAYS_NETWORK_FNAME
     if not os.path.isfile(sqlite_path):
         # Extract network data from the GDB to a sqlite database that we can
         # index for efficient queries
@@ -321,7 +335,7 @@ def process_nhdplus_hr_source_waterways_network(gdb_path):
 
 def process_nhdplus_hr_source_citation(url):
     """Adds citation.json to work dir"""
-    citation_json_path = "citation.json"
+    citation_json_path = CITATION_FNAME
     if os.path.isfile(citation_json_path):
         return
     globs = glob("*_GDB.xml")
@@ -357,6 +371,29 @@ def process_nhdplus_hr_source_citation(url):
         json.dump(citation_json, outfile)
 
 
+def cleanup(work_path):
+    """Remove build artifacts that aren't needed anymore or can't be rebuilt"""
+    doomed = (
+        glob(os.path.join(work_path, "*.gdb")) +
+        glob(os.path.join(work_path, "*.zip")) +
+        glob(os.path.join(work_path, "*.jpg")) +
+        glob(os.path.join(work_path, "*.xml"))
+    )
+    for path in doomed:
+        if os.path.isdir(path):
+            shutil.rmtree(path)
+        else:
+            os.remove(path)
+
+
+def artifacts_generated(work_path):
+    """Check if all artifacts exist"""
+    for fname in ARTIFACT_NAMES:
+        if not os.path.isfile(os.path.join(work_path, fname)):
+            return False
+    return True
+
+
 def process_nhdplus_hr_source(
         base_path,
         url,
@@ -364,6 +401,10 @@ def process_nhdplus_hr_source(
         srs=GRS80_LONGLAT):
     """Process hydrologic data from an NHDPlus source"""
     work_path = make_work_dir(os.path.realpath(base_path))
+    if artifacts_generated(work_path):
+        log(f"Artifacts generated for {gdb_name}, skipping...")
+        cleanup(work_path)
+        return
     os.chdir(work_path)
     # Download the data
     download_path = os.path.basename(url)
@@ -384,3 +425,6 @@ def process_nhdplus_hr_source(
     process_nhdplus_hr_source_watersheds(gdb_path, srs)
     process_nhdplus_hr_source_waterways_network(gdb_path)
     process_nhdplus_hr_source_citation(url)
+    if not artifacts_generated(work_path):
+        raise FileNotFoundError(f"Failed tobuild artifacts for {gdb_name}")
+    cleanup(work_path)
