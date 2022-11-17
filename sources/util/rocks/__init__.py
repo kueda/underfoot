@@ -298,11 +298,9 @@ def join_polygons_and_metadata(
     output_format="GeoJSON"
 ):
     """Add metadata as attributes of polygons"""
-    # print("polygons_path: {}".format(polygons_path))
     polygons_table_name = polygons_table_name or extless_basename(
         polygons_path)
     column_names = METADATA_COLUMN_NAMES.copy()
-    # column_names[column_names.index('code')] = "{} AS code".format(join_col)
     metadata_layer_name = extless_basename(metadata_path)
     sql = f"""
       SELECT
@@ -311,7 +309,6 @@ def join_polygons_and_metadata(
         LEFT JOIN '{metadata_path}'.{metadata_layer_name}
           ON {polygons_table_name}.{polygons_join_col} = {metadata_layer_name}.{metadata_join_col}
     """
-    # print("sql: {}".format(sql))
     call_cmd(["rm", "-f", output_path])
     call_cmd([
       "ogr2ogr",

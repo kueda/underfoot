@@ -26,7 +26,7 @@ virtualenv venv -p python3.8
 source venv/bin/activate
 
 # Install deps and some stuff for working with ESRI Arc/Info coverages
-# ./setup
+pip install -r requirements.txt
 python setup.py
 
 # Make a pack

@@ -49,9 +49,5 @@ def setup_imposm():
     os.chdir("../")
 
 if __name__ == "__main__":
-    shell_cmd(
-        ["pip", "install", "-r", "requirements.txt"],
-        msg="INSTALLING PYTHON PACKAGES..."
-    )
     setup_e00conv()
     setup_imposm()

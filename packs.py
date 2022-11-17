@@ -153,88 +153,169 @@ def s3_built_packs(s3_bucket_url):
     return packs
 
 
-def make_pack(pack_id, clean=False, clean_rocks=False, clean_water=False,
-              clean_ways=False, clean_context=False, clean_contours=False,
-              procs=2):
-    """Generate a pack and write it to the build directory"""
-    make_database()
-    pack = PACKS[pack_id]
+def get_pack_dir(pack_id):
+    """Get build dir for a specific pack"""
     build_dir = get_build_dir()
     pack_dir = os.path.join(build_dir, pack_id)
     if not os.path.isdir(pack_dir):
         os.makedirs(pack_dir)
+    return pack_dir
+
+
+def make_rocks_for_pack(pack_id, clean=False, procs=2):
+    """Make rocks mbtiles given a pack"""
+    pack_dir = get_pack_dir(pack_id)
     rocks_mbtiles_path = os.path.join(pack_dir, "rocks.mbtiles")
-    if (
-        clean
-        or clean_rocks or not os.path.isfile(rocks_mbtiles_path)
-    ):
-        make_rocks(
-            pack["rock"],
-            bbox=pack["bbox"],
-            clean=(clean or clean_rocks),
-            path=rocks_mbtiles_path,
-            procs=procs)
-    elif os.path.isfile(rocks_mbtiles_path):
+    if os.path.isfile(rocks_mbtiles_path) and not clean:
         util.log(f"{rocks_mbtiles_path} exists, skipping...")
-    water_mbtiles_path = os.path.join(pack_dir, "water.mbtiles")
-    if clean or clean_water or not os.path.isfile(water_mbtiles_path):
-        make_water(
-            pack["water"],
-            bbox=pack["bbox"],
-            # TODO make pack options to clip water / rocks / ways by the bbox
-            # or not. sometimes it makes more sense to include everythign in
-            # the sources
-            clean=(clean or clean_water),
-            path=water_mbtiles_path)
-    elif os.path.isfile(water_mbtiles_path):
-        util.log(f"{water_mbtiles_path} exists, skipping...")
-    ways_mbtiles_path = os.path.join(pack_dir, "ways.mbtiles")
-    if clean or clean_ways or not os.path.isfile(ways_mbtiles_path):
-        make_ways(
-            pack["osm"],
-            pack=pack,
-            clean=(clean or clean_ways),
-            path=ways_mbtiles_path)
-    elif os.path.isfile(ways_mbtiles_path):
-        util.log(f"{ways_mbtiles_path} exists, skipping...")
-    context_mbtiles_path = os.path.join(pack_dir, "context.mbtiles")
-    if clean or clean_context or not os.path.isfile(context_mbtiles_path):
-        make_context(
-            pack["osm"],
-            pack=pack,
-            clean=(clean or clean_context),
-            path=context_mbtiles_path)
-    elif os.path.isfile(context_mbtiles_path):
-        util.log(f"{context_mbtiles_path} exists, skipping...")
+        return
+    pack = PACKS[pack_id]
+    make_rocks(
+        pack["rock"],
+        bbox=pack["bbox"],
+        clean=clean,
+        path=rocks_mbtiles_path,
+        procs=procs)
+
+
+def make_contours_for_pack(pack_id, clean=False, procs=2):
+    """Make contours mbtiles given a pack"""
+    pack_dir = get_pack_dir(pack_id)
     contours_mbtiles_path = os.path.join(pack_dir, "contours.mbtiles")
-    if clean or clean_contours or not os.path.isfile(contours_mbtiles_path):
-        if "geojson" in pack:
-            make_contours(
-                12,
-                geojson=pack["geojson"],
-                mbtiles_zoom=14,
-                clean=(clean or clean_contours),
-                procs=procs,
-                path=contours_mbtiles_path)
-        else:
-            make_contours(
-                12,
-                swlon=pack["bbox"]["left"],
-                swlat=pack["bbox"]["bottom"],
-                nelon=pack["bbox"]["right"],
-                nelat=pack["bbox"]["top"],
-                mbtiles_zoom=14,
-                path=contours_mbtiles_path,
-                clean=(clean or clean_contours),
-                procs=procs)
-    elif os.path.isfile(contours_mbtiles_path):
+    if os.path.isfile(contours_mbtiles_path) and not clean:
         util.log(f"{contours_mbtiles_path} exists, skipping...")
-    # with tempfile.TemporaryDirectory() as tmpdirname:  # noqa: F841
+        return
+    pack = PACKS[pack_id]
+    if "geojson" in pack:
+        make_contours(
+            12,
+            geojson=pack["geojson"],
+            mbtiles_zoom=14,
+            clean=clean,
+            procs=procs,
+            path=contours_mbtiles_path)
+        return
+    make_contours(
+        12,
+        swlon=pack["bbox"]["left"],
+        swlat=pack["bbox"]["bottom"],
+        nelon=pack["bbox"]["right"],
+        nelat=pack["bbox"]["top"],
+        mbtiles_zoom=14,
+        path=contours_mbtiles_path,
+        clean=clean,
+        procs=procs)
+
+
+def make_water_for_pack(pack_id, clean=False, procs=2):
+    """Make water mbtiles given a pack"""
+    pack_dir = get_pack_dir(pack_id)
+    water_mbtiles_path = os.path.join(pack_dir, "water.mbtiles")
+    if os.path.isfile(water_mbtiles_path) and not clean:
+        util.log(f"{water_mbtiles_path} exists, skipping...")
+        return
+    pack = PACKS[pack_id]
+    make_water(
+        pack["water"],
+        bbox=pack["bbox"],
+        # TODO make pack options to clip water / rocks / ways by the bbox
+        # or not. sometimes it makes more sense to include everythign in
+        # the sources
+        clean=clean,
+        path=water_mbtiles_path,
+        procs=procs)
+
+
+def make_ways_for_pack(pack_id, clean=False):
+    """Make ways mbtiles given a pack"""
+    pack_dir = get_pack_dir(pack_id)
+    ways_mbtiles_path = os.path.join(pack_dir, "ways.mbtiles")
+    if os.path.isfile(ways_mbtiles_path) and not clean:
+        util.log(f"{ways_mbtiles_path} exists, skipping...")
+        return
+    pack = PACKS[pack_id]
+    make_ways(
+        pack["osm"],
+        pack=pack,
+        clean=clean,
+        path=ways_mbtiles_path)
+
+
+def make_context_for_pack(pack_id, clean=False):
+    pack_dir = get_pack_dir(pack_id)
+    context_mbtiles_path = os.path.join(pack_dir, "context.mbtiles")
+    if os.path.isfile(context_mbtiles_path) and not clean:
+        util.log(f"{context_mbtiles_path} exists, skipping...")
+        return
+    pack = PACKS[pack_id]
+    make_context(
+        pack["osm"],
+        pack=pack,
+        clean=clean,
+        path=context_mbtiles_path)
+
+
+def make_pack(pack_id, clean=False, clean_rocks=False, clean_water=False,
+              clean_ways=False, clean_context=False, clean_contours=False,
+              procs=2):
+    """Generate a pack and write it to the build directory"""
+    # make_database()
+    pack_dir = get_pack_dir(pack_id)
+    make_rocks_for_pack(pack_id, clean=(clean or clean_rocks), procs=procs)
+    make_water_for_pack(pack_id, clean=(clean or clean_water), procs=procs)
+    make_ways_for_pack(pack_id, clean=(clean or clean_ways))
+    make_context_for_pack(pack_id, clean=(clean or clean_context))
+    make_contours_for_pack(pack_id, clean=(clean or clean_contours), procs=procs)
     return shutil.make_archive(
         pack_dir,
         format="zip",
-        root_dir=build_dir,
+        root_dir=get_build_dir(),
         base_dir=os.path.basename(pack_dir))
+
+
+def make_all_packs_from_args(args):
+    """Make all packs given command-line args"""
+    util.log("MAKING ALL PACKS")
+    fails = []
+    for pack_id, _pack in PACKS.items():
+        util.log(f"Making pack: {args.pack}")
+        try:
+            pack_path = make_pack(
+                pack_id,
+                clean=args.clean,
+                clean_rocks=args.clean_rocks,
+                clean_water=args.clean_water,
+                clean_ways=args.clean_ways,
+                clean_context=args.clean_context,
+                clean_contours=args.clean_contours,
+                procs=args.procs)
+            util.log(f"Pack available at {pack_path}")
+        except: # pylint: disable=bare-except
+            fails.append(pack_id)
+            util.log(f"FAILED ON PACK {pack_id}, MOVING ON...")
+    make_manifest(manifest_url=args.manifest_url, s3_bucket_url=args.s3_bucket_url)
+    if len(fails) > 0:
+        util.log("FINISHED MAKING SOME PACKS, FAILED ON")
+        for pack_id in fails:
+            util.log(f"* {pack_id}")
+    else:
+        util.log("FINISHED MAKING ALL PACKS")
+
+
+def make_single_pack_from_args(args):
+    """Make a single pack from command-line args"""
+    util.log(f"Making pack: {args.pack}")
+    pack_path = make_pack(
+        args.pack,
+        clean=args.clean,
+        clean_rocks=args.clean_rocks,
+        clean_water=args.clean_water,
+        clean_ways=args.clean_ways,
+        clean_context=args.clean_context,
+        clean_contours=args.clean_contours,
+        procs=args.procs)
+    make_manifest(manifest_url=args.manifest_url, s3_bucket_url=args.s3_bucket_url)
+    util.log(f"Pack available at {pack_path}")
 
 
 if __name__ == "__main__":
@@ -285,6 +366,12 @@ if __name__ == "__main__":
         "--s3-bucket-url",
         type=str,
         help="URL of an existing s3 bucket to use when generating the manifest")
+    parser.add_argument(
+        "--only",
+        type=str,
+        nargs="*",
+        choices=["rocks", "water", "contours", "ways", "context"],
+        help="Only build selected MBTiles and don't generate the final pack archive")
     args = parser.parse_args()
 
     if args.pack == "list":
@@ -293,41 +380,17 @@ if __name__ == "__main__":
     elif args.pack == "manifest":
         make_manifest(manifest_url=args.manifest_url, s3_bucket_url=args.s3_bucket_url)
     elif args.pack == "all":
-        util.log("MAKING ALL PACKS")
-        fails = []
-        for pack_id, pack in PACKS.items():
-            util.log(f"Making pack: {args.pack}")
-            try:
-                pack_path = make_pack(
-                    pack_id,
-                    clean=args.clean,
-                    clean_rocks=args.clean_rocks,
-                    clean_water=args.clean_water,
-                    clean_ways=args.clean_ways,
-                    clean_context=args.clean_context,
-                    clean_contours=args.clean_contours,
-                    procs=args.procs)
-                util.log(f"Pack available at {pack_path}")
-            except: # pylint: disable=bare-except
-                fails.append(pack_id)
-                util.log(f"FAILED ON PACK {pack_id}, MOVING ON...")
-        make_manifest(manifest_url=args.manifest_url, s3_bucket_url=args.s3_bucket_url)
-        if len(fails) > 0:
-            util.log("FINISHED MAKING SOME PACKS, FAILED ON")
-            for pack_id in fails:
-                util.log(f"* {pack_id}")
-        else:
-            util.log("FINISHED MAKING ALL PACKS")
+        make_all_packs_from_args(args)
+    elif args.only and len(args.only) > 0:
+        if "rocks" in args.only:
+            make_rocks_for_pack(args.pack, clean=args.clean, procs=args.procs)
+        if "water" in args.only:
+            make_water_for_pack(args.pack, clean=args.clean, procs=args.procs)
+        if "contours" in args.only:
+            make_contours_for_pack(args.pack, clean=args.clean, procs=args.procs)
+        if "ways" in args.only:
+            make_ways_for_pack(args.pack, clean=args.clean)
+        if "context" in args.only:
+            make_context_for_pack(args.pack, clean=args.clean)
     else:
-        util.log(f"Making pack: {args.pack}")
-        pack_path = make_pack(
-            args.pack,
-            clean=args.clean,
-            clean_rocks=args.clean_rocks,
-            clean_water=args.clean_water,
-            clean_ways=args.clean_ways,
-            clean_context=args.clean_context,
-            clean_contours=args.clean_contours,
-            procs=args.procs)
-        make_manifest(manifest_url=args.manifest_url, s3_bucket_url=args.s3_bucket_url)
-        util.log(f"Pack available at {pack_path}")
+        make_single_pack_from_args(args)
