@@ -18,7 +18,7 @@ import psycopg2
 from sources import util
 from sources.util import rocks
 from sources.util.citations import load_citation_for_source, CITATIONS_TABLE_NAME
-from database import DBNAME, SRID
+from database import DBNAME, SRID, make_database
 
 NUM_PROCESSES = 4
 
@@ -166,13 +166,13 @@ def process_source(source_identifier, clean=False):
         )
         load_citation_for_source(source_identifier)
         util.log(f"Finished processing source: {source_identifier}")
-    except subprocess.CalledProcessError as e:
+    except subprocess.CalledProcessError as process_error:
         # If you don't do this, exceptions in subprocesses may not print stack
         # traces
         print(f"Failed to process {source_identifier}")
         traceback.print_exc()
         print()
-        raise e
+        raise process_error
 
 
 def clip_source_polygons_by_mask(source_table_name):
@@ -356,6 +356,7 @@ def make_rocks(
     bbox=None
 ):
     """Make rocks MBTiles from a collection of sources"""
+    make_database()
     if clean:
         clean_sources(sources)
     load_units(sources, clean=clean, procs=procs)

@@ -22,7 +22,6 @@ import pathlib
 import shutil
 import re
 
-from database import make_database
 from elevation import make_contours
 from osm import make_ways, make_context
 from rocks import make_rocks
@@ -38,6 +37,7 @@ REQUIRED_ATTRIBUTES = [
 ATTRIBUTES_FOR_METADATA = [
     "admin1",
     "admin2",
+    "bbox",
     "description",
     "id",
     "name"
@@ -219,7 +219,7 @@ def make_water_for_pack(pack_id, clean=False, procs=2):
         pack["water"],
         bbox=pack["bbox"],
         # TODO make pack options to clip water / rocks / ways by the bbox
-        # or not. sometimes it makes more sense to include everythign in
+        # or not. Sometimes it makes more sense to include everything in
         # the sources
         clean=clean,
         path=water_mbtiles_path,
@@ -259,7 +259,6 @@ def make_pack(pack_id, clean=False, clean_rocks=False, clean_water=False,
               clean_ways=False, clean_context=False, clean_contours=False,
               procs=2):
     """Generate a pack and write it to the build directory"""
-    # make_database()
     pack_dir = get_pack_dir(pack_id)
     make_rocks_for_pack(pack_id, clean=(clean or clean_rocks), procs=procs)
     make_water_for_pack(pack_id, clean=(clean or clean_water), procs=procs)
