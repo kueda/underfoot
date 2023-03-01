@@ -1,4 +1,4 @@
-from . import make_work_dir, run_sql, log
+from . import make_work_dir, run_sql, run_sql_with_retries, log
 from psycopg2.errors import UndefinedTable
 import json
 import os
@@ -11,7 +11,7 @@ CITATIONS_TABLE_NAME = "citations"
 
 def create_table():
     """Create the citations table in the database"""
-    run_sql(f"""
+    run_sql_with_retries(f"""
       CREATE TABLE IF NOT EXISTS {CITATIONS_TABLE_NAME} (
         source VARCHAR(255),
         citation TEXT)
