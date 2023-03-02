@@ -26,7 +26,7 @@ def download(fips):
         log(f"Archive already extracted at {shp_path}, skipping...")
     else:
         log("EXTRACTING ARCHIVE...")
-        call_cmd(["unzip", "-o", download_path, "-d", work_path])
+        call_cmd(["unzip", "-u", "-o", download_path, "-d", work_path])
 
 
 def make_gpkg(fips, dst_path, append=False):

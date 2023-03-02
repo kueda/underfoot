@@ -26,7 +26,7 @@ def get_archive(url):
     gdb_path = "JOTR_OFR_v10-2.gdb"
     if not os.path.isdir(gdb_path):
         print("EXTRACTING ARCHIVE...")
-        util.call_cmd(["unzip", download_path])
+        util.unzip(download_path)
     return os.path.realpath(gdb_path)
 
 

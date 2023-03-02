@@ -7,7 +7,15 @@ from glob import glob
 
 import xml.etree.ElementTree as ET
 
-from .. import call_cmd, extless_basename, extract_e00, make_work_dir, met2xml, polygonize_arcs
+from .. import (
+    call_cmd,
+    extless_basename,
+    extract_e00,
+    make_work_dir,
+    met2xml,
+    polygonize_arcs,
+    unzip
+)
 from ..proj import NAD27_UTM10_PROJ4, SRS
 from .constants import *
 
@@ -428,7 +436,7 @@ def process_usgs_source(
         ):
             call_cmd(["tar", "xzvf", download_path])
         elif use_unzip:
-            call_cmd(["unzip", download_path])
+            unzip(download_path)
         else:
             copy_path = download_path + "-copy"
             call_cmd(["cp", download_path, copy_path])

@@ -26,7 +26,7 @@ def run():
     dir_path = "of97-744-shapefiles"
     if not os.path.isdir(dir_path):
         print("EXTRACTING ARCHIVE...")
-        util.call_cmd(["unzip", download_path])
+        util.unzip( download_path )
 
     # In this case we're converting the existing shapefile to JSON and
     # translating some coded data into a usable form in one step

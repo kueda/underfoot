@@ -271,3 +271,7 @@ def add_table_from_query_to_mbtiles(
             mbtiles_path,
             sql
         ], check=True)
+
+def unzip(path):
+    """Unzip a zip file at a path, updating if necessary"""
+    return call_cmd(["unzip", "-u", path])

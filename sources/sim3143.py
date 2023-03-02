@@ -28,7 +28,7 @@ def fetch(url):
     shp_dir_path = "HawaiiStateGeologicMap_GeMS-open"
     if not os.path.isdir(shp_dir_path):
         util.log("EXTRACTING ARCHIVE...")
-        util.call_cmd(["unzip", download_path])
+        util.unzip(download_path)
     return os.path.realpath(shp_dir_path)
 
 
