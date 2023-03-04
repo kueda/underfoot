@@ -27,7 +27,7 @@ def get_archive(url, data_path):
         is_extracted = os.path.isfile(data_path)
     if not is_extracted:
         print("EXTRACTING ARCHIVE...")
-        util.call_cmd(["unzip", download_path])
+        util.unzip(download_path)
     return os.path.realpath(data_path)
 
 

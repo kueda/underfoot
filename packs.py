@@ -22,7 +22,6 @@ import pathlib
 import shutil
 import re
 
-from database import make_database
 from elevation import make_contours
 from osm import make_ways, make_context
 from rocks import make_rocks
@@ -38,6 +37,7 @@ REQUIRED_ATTRIBUTES = [
 ATTRIBUTES_FOR_METADATA = [
     "admin1",
     "admin2",
+    "bbox",
     "description",
     "id",
     "name"
@@ -74,6 +74,13 @@ def list_packs():
         print(f"\t{pack_id}: {pack['description']}")
 
 
+def get_pack(pack_id):
+    """Get a pack by pack ID or raise a human-readble exception"""
+    try:
+        return PACKS[pack_id]
+    except KeyError as exc:
+        raise Exception(f"Pack {pack_id} does not exist") from exc
+
 def get_build_dir():
     """Return absolute path to the directory where pack files will be written"""
     return os.path.join(pathlib.Path(__file__).parent.absolute(), "build")
@@ -83,7 +90,7 @@ def add_metadata_to_pack(pack):
     """Augments a pack dict that has info about a specific file with descriptive static metadata"""
     if pack["id"] not in PACKS:
         return pack
-    full_pack = PACKS[pack["id"]]
+    full_pack = get_pack(pack["id"])
     filtered = dict((k, full_pack[k]) for k in ATTRIBUTES_FOR_METADATA if k in full_pack)
     return {
         **pack,
@@ -259,7 +266,6 @@ def make_pack(pack_id, clean=False, clean_rocks=False, clean_water=False,
               clean_ways=False, clean_context=False, clean_contours=False,
               procs=2):
     """Generate a pack and write it to the build directory"""
-    # make_database()
     pack_dir = get_pack_dir(pack_id)
     make_rocks_for_pack(pack_id, clean=(clean or clean_rocks), procs=procs)
     make_water_for_pack(pack_id, clean=(clean or clean_water), procs=procs)

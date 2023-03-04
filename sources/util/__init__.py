@@ -76,7 +76,7 @@ def run_sql_with_retries(
     """Run a SQL statement with backoff retries"""
     try:
         return run_sql(sql, dbname=dbname, quiet=quiet)
-    except psycopg2.OperationalError as pg_err:
+    except (psycopg2.OperationalError, psycopg2.IntegrityError) as pg_err:
         if retry > max_retries:
             raise pg_err
         sleep = retry ** 3
@@ -271,3 +271,7 @@ def add_table_from_query_to_mbtiles(
             mbtiles_path,
             sql
         ], check=True)
+
+def unzip(path):
+    """Unzip a zip file at a path, updating if necessary"""
+    return call_cmd(["unzip", "-u", path])

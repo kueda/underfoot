@@ -9,7 +9,8 @@ import pandas as pd
 from . import (
     call_cmd,
     log,
-    make_work_dir
+    make_work_dir,
+    unzip
 )
 from .proj import SRS as DEST_SRS
 from .rocks import (
@@ -34,7 +35,7 @@ def download_shapes(state, base_url):
     shp_path = f"{state.lower()}geol_poly_dd.shp"
     if not os.path.isfile(shp_path):
         log("EXTRACTING ARCHIVE...")
-        call_cmd(["unzip", download_path])
+        unzip(download_path)
     return os.path.realpath(shp_path)
 
 
@@ -49,7 +50,7 @@ def download_attributes(state, base_url):
     csv_path = f"{state}units.csv"
     if not os.path.isfile(csv_path):
         log("EXTRACTING ARCHIVE...")
-        call_cmd(["unzip", download_path])
+        unzip(download_path)
     if not os.path.isfile(csv_path):
         csv_path = re.sub(f'^{state}', state.lower(), csv_path)
     if not os.path.isfile(csv_path):

@@ -8,7 +8,7 @@ from glob import glob
 
 import xml.etree.ElementTree as ET
 
-from . import call_cmd, extless_basename, log, make_work_dir
+from . import call_cmd, extless_basename, log, make_work_dir, unzip
 from .proj import GRS80_LONGLAT, SRS
 
 WATERWAYS_FNAME = "waterways.gpkg"
@@ -38,7 +38,7 @@ def process_omca_creeks_source(url, dir_name, waterways_shp_path,
     dir_path = dir_name
     if not os.path.isdir(dir_path):
         print("EXTRACTING ARCHIVE...")
-        call_cmd(["unzip", download_path])
+        unzip(download_path)
 
     # Project into EPSG 4326 along with name, type, and natural attributes
     waterways_gpkg_path = WATERWAYS_FNAME
@@ -419,7 +419,7 @@ def process_nhdplus_hr_source(
         log(f"Archive already extracted at {gdb_path}, skipping...")
     else:
         log("EXTRACTING ARCHIVE...")
-        call_cmd(["unzip", "-o", download_path])
+        call_cmd(["unzip", "-u", "-o", download_path])
     process_nhdplus_hr_source_waterways(gdb_path, srs)
     process_nhdplus_hr_source_waterbodies(gdb_path, srs)
     process_nhdplus_hr_source_watersheds(gdb_path, srs)
