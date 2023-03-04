@@ -74,6 +74,13 @@ def list_packs():
         print(f"\t{pack_id}: {pack['description']}")
 
 
+def get_pack(pack_id):
+    """Get a pack by pack ID or raise a human-readble exception"""
+    try:
+        return PACKS[pack_id]
+    except KeyError as exc:
+        raise Exception(f"Pack {pack_id} does not exist") from exc
+
 def get_build_dir():
     """Return absolute path to the directory where pack files will be written"""
     return os.path.join(pathlib.Path(__file__).parent.absolute(), "build")
@@ -83,7 +90,7 @@ def add_metadata_to_pack(pack):
     """Augments a pack dict that has info about a specific file with descriptive static metadata"""
     if pack["id"] not in PACKS:
         return pack
-    full_pack = PACKS[pack["id"]]
+    full_pack = get_pack(pack["id"])
     filtered = dict((k, full_pack[k]) for k in ATTRIBUTES_FOR_METADATA if k in full_pack)
     return {
         **pack,
@@ -169,7 +176,7 @@ def make_rocks_for_pack(pack_id, clean=False, procs=2):
     if os.path.isfile(rocks_mbtiles_path) and not clean:
         util.log(f"{rocks_mbtiles_path} exists, skipping...")
         return
-    pack = PACKS[pack_id]
+    pack = get_pack(pack_id)
     make_rocks(
         pack["rock"],
         bbox=pack["bbox"],
@@ -185,7 +192,7 @@ def make_contours_for_pack(pack_id, clean=False, procs=2):
     if os.path.isfile(contours_mbtiles_path) and not clean:
         util.log(f"{contours_mbtiles_path} exists, skipping...")
         return
-    pack = PACKS[pack_id]
+    pack = get_pack(pack_id)
     if "geojson" in pack:
         make_contours(
             12,
@@ -214,7 +221,7 @@ def make_water_for_pack(pack_id, clean=False, procs=2):
     if os.path.isfile(water_mbtiles_path) and not clean:
         util.log(f"{water_mbtiles_path} exists, skipping...")
         return
-    pack = PACKS[pack_id]
+    pack = get_pack(pack_id)
     make_water(
         pack["water"],
         bbox=pack["bbox"],
@@ -233,7 +240,7 @@ def make_ways_for_pack(pack_id, clean=False):
     if os.path.isfile(ways_mbtiles_path) and not clean:
         util.log(f"{ways_mbtiles_path} exists, skipping...")
         return
-    pack = PACKS[pack_id]
+    pack = get_pack(pack_id)
     make_ways(
         pack["osm"],
         pack=pack,
@@ -247,7 +254,7 @@ def make_context_for_pack(pack_id, clean=False):
     if os.path.isfile(context_mbtiles_path) and not clean:
         util.log(f"{context_mbtiles_path} exists, skipping...")
         return
-    pack = PACKS[pack_id]
+    pack = get_pack(pack_id)
     make_context(
         pack["osm"],
         pack=pack,
