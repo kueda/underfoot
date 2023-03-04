@@ -176,7 +176,7 @@ def make_rocks_for_pack(pack_id, clean=False, procs=2):
     if os.path.isfile(rocks_mbtiles_path) and not clean:
         util.log(f"{rocks_mbtiles_path} exists, skipping...")
         return
-    pack = get_pack(pack_id)
+    pack = PACKS[pack_id]
     make_rocks(
         pack["rock"],
         bbox=pack["bbox"],
@@ -192,7 +192,7 @@ def make_contours_for_pack(pack_id, clean=False, procs=2):
     if os.path.isfile(contours_mbtiles_path) and not clean:
         util.log(f"{contours_mbtiles_path} exists, skipping...")
         return
-    pack = get_pack(pack_id)
+    pack = PACKS[pack_id]
     if "geojson" in pack:
         make_contours(
             12,
@@ -221,12 +221,12 @@ def make_water_for_pack(pack_id, clean=False, procs=2):
     if os.path.isfile(water_mbtiles_path) and not clean:
         util.log(f"{water_mbtiles_path} exists, skipping...")
         return
-    pack = get_pack(pack_id)
+    pack = PACKS[pack_id]
     make_water(
         pack["water"],
         bbox=pack["bbox"],
         # TODO make pack options to clip water / rocks / ways by the bbox
-        # or not. Sometimes it makes more sense to include everything in
+        # or not. sometimes it makes more sense to include everythign in
         # the sources
         clean=clean,
         path=water_mbtiles_path,
@@ -240,7 +240,7 @@ def make_ways_for_pack(pack_id, clean=False):
     if os.path.isfile(ways_mbtiles_path) and not clean:
         util.log(f"{ways_mbtiles_path} exists, skipping...")
         return
-    pack = get_pack(pack_id)
+    pack = PACKS[pack_id]
     make_ways(
         pack["osm"],
         pack=pack,
@@ -254,7 +254,7 @@ def make_context_for_pack(pack_id, clean=False):
     if os.path.isfile(context_mbtiles_path) and not clean:
         util.log(f"{context_mbtiles_path} exists, skipping...")
         return
-    pack = get_pack(pack_id)
+    pack = PACKS[pack_id]
     make_context(
         pack["osm"],
         pack=pack,

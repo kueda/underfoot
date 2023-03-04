@@ -14,5 +14,4 @@ sudo apt-get install -y \
   unzip \
   zip
 pip install -r requirements.txt
-pip install --upgrade numpy
 python setup.py
