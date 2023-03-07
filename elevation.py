@@ -210,6 +210,7 @@ async def make_contours_mbtiles(
     clean=False, procs=2, path="./contours.mbtiles"
 ):
     """Make the mbtiles for contours"""
+    make_database()
     zooms = [zoom]
     if not mbtiles_zoom:
         mbtiles_zoom = zoom

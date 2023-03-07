@@ -504,7 +504,6 @@ def make_water(
         sources, clean=False, cleandb=False, cleanfiles=False, bbox=None,
         path="./water.mbtiles", procs=NUM_PROCESSES):
     """Process and load all water sources and write them to a MBTiles file"""
-    util.log(f"make_water, sources: {sources}")
     make_database()
     if clean:
         clean_sources(sources)

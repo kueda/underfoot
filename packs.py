@@ -176,7 +176,7 @@ def make_rocks_for_pack(pack_id, clean=False, procs=2):
     if os.path.isfile(rocks_mbtiles_path) and not clean:
         util.log(f"{rocks_mbtiles_path} exists, skipping...")
         return
-    pack = PACKS[pack_id]
+    pack = get_pack(pack_id)
     make_rocks(
         pack["rock"],
         bbox=pack["bbox"],
@@ -192,23 +192,25 @@ def make_contours_for_pack(pack_id, clean=False, procs=2):
     if os.path.isfile(contours_mbtiles_path) and not clean:
         util.log(f"{contours_mbtiles_path} exists, skipping...")
         return
-    pack = PACKS[pack_id]
+    pack = get_pack(pack_id)
+    zoom = pack.get("zoom", 12)
+    mbtiles_zoom = zoom + 2
     if "geojson" in pack:
         make_contours(
-            12,
+            zoom,
             geojson=pack["geojson"],
-            mbtiles_zoom=14,
+            mbtiles_zoom=mbtiles_zoom,
             clean=clean,
             procs=procs,
             path=contours_mbtiles_path)
         return
     make_contours(
-        12,
+        zoom,
         swlon=pack["bbox"]["left"],
         swlat=pack["bbox"]["bottom"],
         nelon=pack["bbox"]["right"],
         nelat=pack["bbox"]["top"],
-        mbtiles_zoom=14,
+        mbtiles_zoom=mbtiles_zoom,
         path=contours_mbtiles_path,
         clean=clean,
         procs=procs)
@@ -221,7 +223,7 @@ def make_water_for_pack(pack_id, clean=False, procs=2):
     if os.path.isfile(water_mbtiles_path) and not clean:
         util.log(f"{water_mbtiles_path} exists, skipping...")
         return
-    pack = PACKS[pack_id]
+    pack = get_pack(pack_id)
     make_water(
         pack["water"],
         bbox=pack["bbox"],
@@ -240,7 +242,7 @@ def make_ways_for_pack(pack_id, clean=False):
     if os.path.isfile(ways_mbtiles_path) and not clean:
         util.log(f"{ways_mbtiles_path} exists, skipping...")
         return
-    pack = PACKS[pack_id]
+    pack = get_pack(pack_id)
     make_ways(
         pack["osm"],
         pack=pack,
@@ -254,7 +256,7 @@ def make_context_for_pack(pack_id, clean=False):
     if os.path.isfile(context_mbtiles_path) and not clean:
         util.log(f"{context_mbtiles_path} exists, skipping...")
         return
-    pack = PACKS[pack_id]
+    pack = get_pack(pack_id)
     make_context(
         pack["osm"],
         pack=pack,
