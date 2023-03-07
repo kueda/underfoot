@@ -7,6 +7,9 @@
         "right": -114.947442,
         "top": 35.497348
     },
+    "geojson": {
+        "$ref": "file://./us-ca-mojave.geojson"
+    },
     "description": "Mojave National Preserve and surround area",
     "id": "us-ca-mojave",
     "name": "Mojave National Preserve and surround area, CA, USA",

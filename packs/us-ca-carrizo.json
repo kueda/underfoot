@@ -7,6 +7,9 @@
         "right": -119.402112,
         "top": 35.436633
     },
+    "geojson": {
+        "$ref": "file://./us-ca-carrizo.geojson"
+    },
     "description": "Carrizo Plain National Monument and surrounding area",
     "id": "us-ca-carrizo",
     "name": "Carrizo Plain National Monument and surrounding area, CA, USA",

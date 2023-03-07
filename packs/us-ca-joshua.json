@@ -7,6 +7,9 @@
         "right": -115.165456,
         "top": 34.195329
     },
+    "geojson": {
+        "$ref": "file://./us-ca-joshua.geojson"
+    },
     "description": "Joshua Tree National Park and surrounding area",
     "id": "us-ca-joshua",
     "name": "Joshua Tree National Park and surrounding area, CA, USA",
