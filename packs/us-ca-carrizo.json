@@ -1,0 +1,23 @@
+{
+    "admin1": "United States",
+    "admin2": "California",
+    "bbox": {
+        "bottom": 34.934077,
+        "left": -120.283111,
+        "right": -119.402112,
+        "top": 35.436633
+    },
+    "description": "Carrizo Plain National Monument and surrounding area",
+    "id": "us-ca-carrizo",
+    "name": "Carrizo Plain National Monument and surrounding area, CA, USA",
+    "osm": "http://download.geofabrik.de/north-america/us/california-latest.osm.pbf",
+    "rock": [
+        "of99_014",
+        "of2005_1305_ca"
+    ],
+    "water": [
+        "nhdplus_h_1803_hu4",
+        "nhdplus_h_1806_hu4",
+        "tiger_ca_water"
+    ]
+}

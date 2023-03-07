@@ -1,0 +1,22 @@
+{
+    "admin1": "United States",
+    "admin2": "California",
+    "bbox": {
+        "bottom": 33.679416,
+        "left": -116.591216,
+        "right": -115.165456,
+        "top": 34.195329
+    },
+    "description": "Joshua Tree National Park and surrounding area",
+    "id": "us-ca-joshua",
+    "name": "Joshua Tree National Park and surrounding area, CA, USA",
+    "osm": "http://download.geofabrik.de/north-america/us/california-latest.osm.pbf",
+    "rock": [
+        "ofr20151175",
+        "of2005_1305_ca"
+    ],
+    "water": [
+        "nhdplus_h_1810_hu4",
+        "tiger_ca_water"
+    ]
+}

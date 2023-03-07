@@ -1,0 +1,24 @@
+{
+    "admin1": "United States",
+    "admin2": "California",
+    "bbox": {
+        "bottom": 34.706980,
+        "left": -116.165853,
+        "right": -114.947442,
+        "top": 35.497348
+    },
+    "description": "Mojave National Preserve and surround area",
+    "id": "us-ca-mojave",
+    "name": "Mojave National Preserve and surround area, CA, USA",
+    "osm": "http://download.geofabrik.de/north-america/us/california-latest.osm.pbf",
+    "rock": [
+        "of2005_1305_ca"
+    ],
+    "water": [
+        "nhdplus_h_1503_hu4",
+        "nhdplus_h_1606_hu4",
+        "nhdplus_h_1809_hu4",
+        "nhdplus_h_1810_hu4",
+        "tiger_ca_water"
+    ]
+}
