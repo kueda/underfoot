@@ -24,9 +24,11 @@ TABLE_NAME = "contours"
 CACHE_DIR = "./elevation-tiles"
 
 
+# pylint: disable=invalid-name
 def tile_file_path(x, y, z, ext="tif"):
     """Return tile file path for coordinates"""
     return f"{CACHE_DIR}/{z}/{x}/{y}.{ext}"
+# pylint: enable=invalid-name
 
 
 def tiles_from_bbox(swlon, swlat, nelon, nelat, zooms):
@@ -185,9 +187,7 @@ def make_contours_table(tiles, procs=2):
         presumably CPU-bound process
     """
     make_database()
-    zooms = {tile.z for tile in tiles}
-    for _zoom in zooms:
-        util.run_sql(f"DROP TABLE IF EXISTS {TABLE_NAME}")
+    util.run_sql(f"DROP TABLE IF EXISTS {TABLE_NAME}")
     with Pool(processes=procs) as pool:
         pbar = tqdm(
             pool.imap_unordered(make_contours_for_tile, tiles),
@@ -217,7 +217,6 @@ async def make_contours_mbtiles(
     print("Clearing out existing data...")
     if os.path.exists(path):
         os.remove(path)
-    util.call_cmd(["psql", DBNAME, "-c", f"DROP TABLE IF EXISTS {TABLE_NAME}"])
     if os.path.isdir(CACHE_DIR):
         util.call_cmd(
             ["find", CACHE_DIR, "-type", "f", "-name", "*.merge*", "-delete"]
