@@ -18,7 +18,7 @@ on:
 jobs:
   rocks:
     name: Build rocks
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     services:
       postgres:
         image: postgis/postgis:12-2.5
@@ -32,8 +32,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install dependencies
+      - name: Install Ubuntu dependencies
         run: ./.github/dependencies.sh
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt && python setup.py
 
       - id: cache-source-work-rocks
         name: Cache source work for rocks
@@ -57,7 +60,7 @@ jobs:
 
   water:
     name: Build water
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     services:
       postgres:
         image: postgis/postgis:12-2.5
@@ -71,8 +74,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install dependencies
+      - name: Install Ubuntu dependencies
         run: ./.github/dependencies.sh
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt && python setup.py
 
       - id: cache-source-work-water
         name: Cache source work for water
@@ -96,7 +102,7 @@ jobs:
 
   contours:
     name: Build contours
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     services:
       postgres:
         image: postgis/postgis:12-2.5
@@ -110,8 +116,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install dependencies
+      - name: Install Ubuntu dependencies
         run: ./.github/dependencies.sh
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt && python setup.py
 
       - name: Cache elevation tiles
         id: cache-elevation
@@ -135,7 +144,7 @@ jobs:
 
   osm:
     name: Build ways & context
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     services:
       postgres:
         image: postgis/postgis:12-2.5
@@ -149,8 +158,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install dependencies
+      - name: Install Ubuntu dependencies
         run: ./.github/dependencies.sh
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt && python setup.py
 
       - name: Get current year week
         id: calc-year-week
@@ -188,7 +200,7 @@ jobs:
 
   upload-pack:
     name: Archive and upload pack
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs:
       - rocks
       - water
@@ -197,8 +209,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install dependencies
+      - name: Install Ubuntu dependencies
         run: ./.github/dependencies.sh
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt && python setup.py
 
       - name: Download all MBTiles artifacts
         uses: actions/download-artifact@v3

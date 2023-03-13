@@ -6,12 +6,17 @@ sudo apt-get update
 sudo apt-get install -y \
   build-essential \
   gdal-bin \
+  git \
   libgdal-dev \
+  mdbtools-dev \
+  odbc-mdbtools \
+  postgis \
+  python-is-python3 \
+  python3 \
+  python3-dev \
   python3-gdal \
-  python3.8 \
-  python3.8-dev \
+  python3-pip \
   sqlite3 \
   unzip \
+  virtualenv \
   zip
-pip install -r requirements.txt
-python setup.py

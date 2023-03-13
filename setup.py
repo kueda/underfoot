@@ -1,7 +1,7 @@
 """Install some OS-agnostic dependencies"""
 from subprocess import run
 import os
-
+import shutil
 
 def shell_cmd(cmd, msg=None):
     """Execute a shell command"""
@@ -37,6 +37,10 @@ def setup_imposm():
     work_path = "bin"
     if not os.path.isdir("bin"):
         os.makedirs(work_path)
+    if os.path.isdir(os.path.join(work_path, "imposm")):
+        shutil.rmtree(os.path.join(work_path, "imposm"))
+    else:
+        os.remove(os.path.join(work_path, "imposm"))
     os.chdir(work_path)
     basename = "imposm-0.11.1-linux-x86-64"
     run([

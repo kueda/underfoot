@@ -66,7 +66,7 @@ def load_osm_from_pbf(data_path, pack=None):
         "-overwritecache"
     ]
     cmd = [os.path.join("bin", "imposm")] + read_args + write_args
-    # Load data from PBF into the database with osmosis
+    # Load data from PBF into the database
     util.call_cmd(cmd)
 
 

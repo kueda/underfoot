@@ -22,7 +22,7 @@ git clone https://github.com/kueda/underfoot.git
 cd underfoot
 
 # Set up a python virtual environment
-virtualenv venv -p python3.8
+virtualenv venv -p python3
 source venv/bin/activate
 
 # Install deps and some stuff for working with ESRI Arc/Info coverages
