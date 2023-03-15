@@ -43,6 +43,7 @@ LITHOLOGY_PATTERN = re.compile(
     diabase|
     dolerite|
     dolomite|
+    dune sand|
     fanglomerate|
     gabbro|
     gneiss|
@@ -127,6 +128,7 @@ LOW_PRIORITY_LITHOLOGY_PATTERN = re.compile(
     unconsolidated\smaterial|
     water|
     metasedimentary|
+    metamorphic\srock
     sedimentary|
     volcanic|
     (?# Very short so putting it at the end so others don't match)
@@ -219,7 +221,8 @@ METAMORPHIC_ROCKS = [
   'schist',
   'serpentinite',
   'silica-carbonate',
-  'metasedimentary rock'
+  'metasedimentary rock',
+  'metamorphic rock'
 ]
 
 SEDIMENTARY_ROCKS = [

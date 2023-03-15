@@ -12,7 +12,7 @@ def run():
     process_usgs_source(
         base_path=os.path.realpath(__file__),
         url="http://pubs.usgs.gov/mf/2002/2403/mf2403c.tgz",
-        e00_path="nesfgeo/*-geol.e00",
+        extracted_file_path="nesfgeo/*-geol.e00",
         srs=STATE_PLANE_CA_ZONE_3,
         polygon_pattern="GEOL",
         metadata_csv_path=os.path.join(

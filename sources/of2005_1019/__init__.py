@@ -11,7 +11,7 @@ def run():
     process_usgs_source(
         base_path=os.path.realpath(__file__),
         url="https://pubs.usgs.gov/of/2005/1019/los_angeles.tar.gz",
-        e00_path="los_angeles/la1_geo.e00",
+        extracted_file_path="los_angeles/la1_geo.e00",
         polygons_join_col="LABL",
         skip_polygonize_arcs=True,
         srs=NAD27_UTM11_PROJ4,

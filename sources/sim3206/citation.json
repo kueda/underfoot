@@ -1,0 +1,32 @@
+[
+	{
+		"id": "http://zotero.org/users/local/b90sdi4a/items/ACXCRDQL",
+		"type": "map",
+		"collection-title": "U.S. Geological Survey Scientific Investigations",
+		"scale": "1:100,000",
+		"title": "Surficial Geologic Map of the Ivanpah 30' x 60' Quadrangle, San Bernardino County, California, and Clark County, Nevada",
+		"URL": "https://pubs.usgs.gov/sim/3206/",
+		"author": [
+			{
+				"family": "Miller",
+				"given": "David M."
+			}
+		],
+		"accessed": {
+			"date-parts": [
+				[
+					"2023",
+					3,
+					13
+				]
+			]
+		},
+		"issued": {
+			"date-parts": [
+				[
+					"2012"
+				]
+			]
+		}
+	}
+]
