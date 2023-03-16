@@ -4,9 +4,9 @@ import csv
 import os
 import re
 from glob import glob
+import xml.etree.ElementTree as ET
 
 import fiona
-import xml.etree.ElementTree as ET
 
 from .. import (
     call_cmd,
@@ -267,7 +267,8 @@ def metadata_from_usgs_met(path):
     data = [METADATA_COLUMN_NAMES.copy()]
     xml_path = met2xml(path)
     tree = ET.parse(xml_path)
-    for enumerated_domain in tree.iterfind('.//Attribute[Attribute_Label="PTYPE"]//Enumerated_Domain'):
+    enumerated_domain_xpath = './/Attribute[Attribute_Label="PTYPE"]//Enumerated_Domain'
+    for enumerated_domain in tree.iterfind(enumerated_domain_xpath):
         row = {col: None for col in METADATA_COLUMN_NAMES}
         edv = enumerated_domain.find('Enumerated_Domain_Value')
         edvd = enumerated_domain.find('Enumerated_Domain_Value_Definition')
@@ -332,17 +333,25 @@ def join_polygons_and_metadata(
 
 def infer_metadata_from_csv_row(row):
     """Infer metadata from a row in a metadata file"""
+    csv_lithology = row.get("lithology")
+    csv_title = row.get("title")
+    csv_description = row.get("description")
+    if csv_lithology and csv_lithology not in LITHOLOGIES:
+        if csv_lithology in LITHOLOGY_SYNONYMS:
+            row["lithology"] = LITHOLOGY_SYNONYMS[csv_lithology]
+        else:
+            raise ValueError(f"Metadata CSV specified an unrecognized lithology: '{csv_lithology}'")
     if not row.get('lithology') or len(row['lithology']) == 0:
-        row['lithology'] = lithology_from_text(row['title'])
+        row['lithology'] = lithology_from_text(csv_title)
     if not row.get('lithology') or len(row['lithology']) == 0:
-        row['lithology'] = lithology_from_text(row['description'])
-    row['span'] = span_from_text(row['title'])
+        row['lithology'] = lithology_from_text(csv_description)
+    row['span'] = span_from_text(csv_title)
     if not row['span'] and row['lithology']:
         row['span'] = span_from_lithology(row['lithology'])
     if not row.get('span') and row.get('code'):
         row['span'] = span_from_code(row['code'])
     row['controlled_span'] = controlled_span_from_span(row['span'])
-    row['formation'] = formation_from_text(row['title'])
+    row['formation'] = formation_from_text(csv_title)
     if row['lithology']:
         row['rock_type'] = rock_type_from_lithology(
             row['lithology']
