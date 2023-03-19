@@ -46,6 +46,7 @@ LITHOLOGY_PATTERN = re.compile(
     dolomite|
     dune sand|
     fanglomerate|
+    felsic\smetavolcanic\srock|
     gabbro|
     gneiss|
     gneissic|
@@ -131,6 +132,7 @@ LOW_PRIORITY_LITHOLOGY_PATTERN = re.compile(
     water|
     metasedimentary|
     metamorphic\srock|
+    metavolcanic\srock|
     sedimentary|
     valley\sdeposits|
     volcanic|
