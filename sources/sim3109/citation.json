@@ -1,0 +1,31 @@
+[
+	{
+		"id": "http://zotero.org/users/local/b90sdi4a/items/XMFKR4ED",
+		"type": "webpage",
+		"title": "Surficial Geologic Map of the Amboy 30' x 60' Quadrangle, San Bernardino County, California",
+		"URL": "https://pubs.usgs.gov/sim/3109/",
+		"contributor": [
+			{
+				"family": "Bedford",
+				"given": "David R."
+			},
+			{
+				"family": "Miller",
+				"given": "David M."
+			},
+			{
+				"family": "Phelps",
+				"given": "Geoffrey A."
+			}
+		],
+		"accessed": {
+			"date-parts": [
+				[
+					"2023",
+					3,
+					18
+				]
+			]
+		}
+	}
+]

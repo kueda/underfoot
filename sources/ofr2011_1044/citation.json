@@ -4,6 +4,28 @@
 		"type": "webpage",
 		"title": "Preliminary Surficial Geologic Map of the Newberry Springs 30' x 60' Quadrangle, California",
 		"URL": "https://pubs.usgs.gov/of/2011/1044/",
+		"contributor": [
+			{
+				"family": "Phelps",
+				"given": "G.A."
+			},
+			{
+				"family": "Bedford",
+				"given": "D.R."
+			},
+			{
+				"family": "Lidke",
+				"given": "D.J."
+			},
+			{
+				"family": "Miller",
+				"given": "D.M."
+			},
+			{
+				"family": "Schmidt",
+				"given": "K.M."
+			}
+		],
 		"accessed": {
 			"date-parts": [
 				[
