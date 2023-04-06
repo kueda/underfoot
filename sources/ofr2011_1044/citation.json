@@ -1,0 +1,48 @@
+[
+	{
+		"id": "http://zotero.org/users/local/b90sdi4a/items/UU38RG2Y",
+		"type": "map",
+		"publisher": "U.S. Geological Survey",
+		"scale": "1:100,000",
+		"title": "Preliminary Surficial Geologic Map of the Newberry Springs 30' x 60' Quadrangle, California",
+		"URL": "https://pubs.usgs.gov/of/2011/1044/",
+		"contributor": [
+			{
+				"family": "Phelps",
+				"given": "G.A."
+			},
+			{
+				"family": "Bedford",
+				"given": "D.R."
+			},
+			{
+				"family": "Lidke",
+				"given": "D.J."
+			},
+			{
+				"family": "Miller",
+				"given": "D.M."
+			},
+			{
+				"family": "Schmidt",
+				"given": "K.M."
+			}
+		],
+		"accessed": {
+			"date-parts": [
+				[
+					"2023",
+					3,
+					18
+				]
+			]
+		},
+		"issued": {
+			"date-parts": [
+				[
+					"2012"
+				]
+			]
+		}
+	}
+]

@@ -1,6 +1,8 @@
 # pylint: disable=missing-function-docstring
 """Tests for sources.util.rocks"""
 from numbers import Number
+import pytest
+
 from sources.util import rocks
 
 
@@ -77,6 +79,9 @@ def test_lithology_from_text_extracts_syenite():
 def test_lithology_from_text_extracts_sedimentary_breccia():
     assert rocks.lithology_from_text("some sedimentary breccia, friend") == "sedimentary breccia"
 
+def test_lithology_from_text_extracts_sedimentary_rock():
+    assert rocks.lithology_from_text("interflow sedimentary rocks") == "sedimentary rock"
+
 def test_lithology_from_text_extracts_tectonic_breccia():
     assert rocks.lithology_from_text("some tectonic breccia, friend") == "tectonic breccia"
 
@@ -88,3 +93,12 @@ def test_infer_metadata_from_csv_row_uses_lithology_column_over_inferred_litholo
     row = {"lithology": "plutonic rock", "title": "granite"}
     inferred_row = rocks.infer_metadata_from_csv_row(row)
     assert inferred_row["lithology"] == row["lithology"]
+
+def test_infer_metadata_from_csv_row_allows_known_lithology():
+    row = {"lithology": "sandstone", "title": "foo"}
+    assert rocks.infer_metadata_from_csv_row(row)["lithology"] == "sandstone"
+
+def test_infer_metadata_from_csv_row_disallows_unknown_lithology():
+    row = {"lithology": "totally not a valid lithology", "title": "foo"}
+    with pytest.raises(ValueError):
+        rocks.infer_metadata_from_csv_row(row)

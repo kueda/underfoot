@@ -37,10 +37,11 @@ def setup_imposm():
     work_path = "bin"
     if not os.path.isdir("bin"):
         os.makedirs(work_path)
-    if os.path.isdir(os.path.join(work_path, "imposm")):
-        shutil.rmtree(os.path.join(work_path, "imposm"))
-    else:
-        os.remove(os.path.join(work_path, "imposm"))
+    imposm_path = os.path.join(work_path, "imposm")
+    if os.path.isdir(imposm_path):
+        shutil.rmtree(imposm_path)
+    elif os.path.isfile(imposm_path):
+        os.remove(imposm_path)
     os.chdir(work_path)
     basename = "imposm-0.11.1-linux-x86-64"
     run([

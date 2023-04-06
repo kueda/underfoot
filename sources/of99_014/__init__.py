@@ -13,7 +13,7 @@ def run():
     process_usgs_source(
         base_path=os.path.realpath(__file__),
         url="https://pubs.usgs.gov/of/1999/of99-014/of99-14_3a.e00.gz",
-        e00_path="of99-14_3a.e00",
+        extracted_file_path="of99-14_3a.e00",
         polygon_pattern="CARR-GEOL#",
         # Supposed to be California State Plane Zone 5
         # (https://spatialreference.org/ref/epsg/2229/), but this works

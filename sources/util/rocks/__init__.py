@@ -4,13 +4,15 @@ import csv
 import os
 import re
 from glob import glob
-
 import xml.etree.ElementTree as ET
+
+import fiona
 
 from .. import (
     call_cmd,
     extless_basename,
     extract_e00,
+    log,
     make_work_dir,
     met2xml,
     polygonize_arcs,
@@ -265,7 +267,8 @@ def metadata_from_usgs_met(path):
     data = [METADATA_COLUMN_NAMES.copy()]
     xml_path = met2xml(path)
     tree = ET.parse(xml_path)
-    for enumerated_domain in tree.iterfind('.//Attribute[Attribute_Label="PTYPE"]//Enumerated_Domain'):
+    enumerated_domain_xpath = './/Attribute[Attribute_Label="PTYPE"]//Enumerated_Domain'
+    for enumerated_domain in tree.iterfind(enumerated_domain_xpath):
         row = {col: None for col in METADATA_COLUMN_NAMES}
         edv = enumerated_domain.find('Enumerated_Domain_Value')
         edvd = enumerated_domain.find('Enumerated_Domain_Value_Definition')
@@ -330,17 +333,25 @@ def join_polygons_and_metadata(
 
 def infer_metadata_from_csv_row(row):
     """Infer metadata from a row in a metadata file"""
+    csv_lithology = row.get("lithology")
+    csv_title = row.get("title")
+    csv_description = row.get("description")
+    if csv_lithology and csv_lithology not in LITHOLOGIES:
+        if csv_lithology in LITHOLOGY_SYNONYMS:
+            row["lithology"] = LITHOLOGY_SYNONYMS[csv_lithology]
+        else:
+            raise ValueError(f"Metadata CSV specified an unrecognized lithology: '{csv_lithology}'")
     if not row.get('lithology') or len(row['lithology']) == 0:
-        row['lithology'] = lithology_from_text(row['title'])
+        row['lithology'] = lithology_from_text(csv_title)
     if not row.get('lithology') or len(row['lithology']) == 0:
-        row['lithology'] = lithology_from_text(row['description'])
-    row['span'] = span_from_text(row['title'])
+        row['lithology'] = lithology_from_text(csv_description)
+    row['span'] = span_from_text(csv_title)
     if not row['span'] and row['lithology']:
         row['span'] = span_from_lithology(row['lithology'])
     if not row.get('span') and row.get('code'):
         row['span'] = span_from_code(row['code'])
     row['controlled_span'] = controlled_span_from_span(row['span'])
-    row['formation'] = formation_from_text(row['title'])
+    row['formation'] = formation_from_text(csv_title)
     if row['lithology']:
         row['rock_type'] = rock_type_from_lithology(
             row['lithology']
@@ -381,10 +392,75 @@ def infer_metadata_from_csv(infile_path):
     return outfile_path
 
 
+def convert_e00_to_shapefiles(
+    e00_path,
+    uncompress_e00=False,
+    skip_polygonize_arcs=False,
+    polygon_pattern=None
+):
+    """Convert an ESRI E00 file to an array of shapefile paths"""
+    log("CONVERTING E00 TO SHAPEFILES...")
+    polygon_paths = []
+    for path in glob(e00_path):
+        if uncompress_e00:
+            uncompressed_e00_path = "uncompressed.e00"
+            if not os.path.isfile(uncompressed_e00_path):
+                log("\tUncompressing e00")
+                call_cmd([
+                    "../../bin/e00compr/e00conv",
+                    path,
+                    uncompressed_e00_path
+                ])
+                path = uncompressed_e00_path
+        log("\tExtracting e00...")
+        shapefiles_path = extract_e00(path)
+        log(f"\tshapefiles_path: {shapefiles_path}")
+        log("\tPolygonizing arcs...")
+        if skip_polygonize_arcs:
+            polygon_paths.append(os.path.join(shapefiles_path, "PAL.shp"))
+        elif polygon_pattern:
+            polygon_paths.append(polygonize_arcs(
+                shapefiles_path,
+                polygon_pattern=polygon_pattern
+            ))
+        else:
+            polygon_paths.append(polygonize_arcs(shapefiles_path))
+    return polygon_paths
+
+
+def convert_mdb_to_shapefiles(mdb_path, layer_name):
+    """Convert an ESRI Personal Geodatabase (MDB) file to an array of shapefile paths"""
+    log("CONVERTING MDB TO SHAPEFILES...")
+    shp_path = f"{layer_name}.shp"
+    call_cmd(["ogr2ogr", shp_path, mdb_path, layer_name])
+    return [shp_path]
+
+
+def apply_join_col_modifier(shapefile_path, join_col, join_col_modifier):
+    """Apply a lambda to modify the join column in a shapefile"""
+    output_path = f"{extless_basename(shapefile_path)}_mod.shp"
+    schema = {
+      'geometry': 'Polygon',
+      'properties': {
+        join_col: 'str'
+      }
+    }
+    with fiona.collection(output_path, "w", "ESRI Shapefile", schema) as output_shapefile:
+        with fiona.open(shapefile_path) as input_shapefile:
+            for shape in input_shapefile:
+                output_shapefile.write({
+                    "properties": {
+                      join_col: join_col_modifier(shape["properties"][join_col])
+                    },
+                    "geometry": shape["geometry"]
+                })
+    return output_path
+
+
 def process_usgs_source(
     base_path,
     url,
-    e00_path,
+    extracted_file_path,
     polygon_pattern=None,
     srs=NAD27_UTM10_PROJ4,
     metadata_csv_path=None,
@@ -392,18 +468,18 @@ def process_usgs_source(
     skip_polygonize_arcs=False,
     uncompress_e00=False,
     # As opposed to gunzip
-    use_unzip=False
+    use_unzip=False,
+    layer_name=None,
+    join_col_modifier=None
 ):
-    """Process units from a USGS Arc Info archive given a couple configurations.
-
-    Most USGS map databases seem to be in the form of a gzipped tarbal
-    containing Arc Info coverages, so this method just wraps up some of the
-    code I keep repeating.
+    """Process units from a USGS Arc Info or MDB archive given a couple
+    configurations.
 
     Args:
       base_path: path to the source module's __init__.py
       url: URL of the gzipped tarball
-      e00_path: Relative path to the e00 to extract
+      extracted_file_path: Relative path to the extracted file containing the
+        geodata, e.g. an e00 file
       polygon_pattern (optional): Pattern to use when finding the polygon ID
         column in the e00 arcs
       srs (optional): Proj4 coordinate reference string for the geodata.
@@ -417,18 +493,20 @@ def process_usgs_source(
         usually isn't the case. Default value is false.
       uncompress_e00: If the e00 is itself compressed, uncompress it with
         e00conv. Default is false.
+      layer_name: Layer to pull out of extracted file if it contains multiple;
+        required for MDB
     """
     work_path = make_work_dir(base_path)
     os.chdir(work_path)
     download_path = os.path.basename(url)
     # download the file if necessary
     if not os.path.isfile(download_path):
-        print(f"DOWNLOADING {url}")
+        log(f"DOWNLOADING {url}")
         call_cmd(["curl", "-OL", url])
 
     # extract the archive if necessary
-    if len(glob(e00_path)) == 0:
-        print("EXTRACTING ARCHIVE...")
+    if len(glob(extracted_file_path)) == 0:
+        log("EXTRACTING ARCHIVE...")
         if (
             ".tar.gz" in download_path
             or ".tgz" in download_path
@@ -445,58 +523,53 @@ def process_usgs_source(
             call_cmd(["rm", copy_path])
 
     # convert the Arc Info coverages to shapefiles
-    polygons_path = "e00_polygons.shp"
-    if not os.path.isfile(polygons_path):
-        print("CONVERTING E00 TO SHAPEFILES...")
-        polygon_paths = []
-        for path in glob(e00_path):
-            if uncompress_e00:
-                uncompressed_e00_path = "uncompressed.e00"
-                if not os.path.isfile(uncompressed_e00_path):
-                    print("\tUncompressing e00")
-                    call_cmd([
-                        "../../bin/e00compr/e00conv",
-                        path,
-                        uncompressed_e00_path
-                    ])
-                    path = uncompressed_e00_path
-            print("\tExtracting e00...")
-            shapefiles_path = extract_e00(path)
-            print(f"\tshapefiles_path: {shapefiles_path}")
-            print("\tPolygonizing arcs...")
-            if skip_polygonize_arcs:
-                polygon_paths.append(os.path.join(shapefiles_path, "PAL.shp"))
-            elif polygon_pattern:
-                polygon_paths.append(polygonize_arcs(
-                    shapefiles_path,
-                    polygon_pattern=polygon_pattern
-                ))
-            else:
-                polygon_paths.append(polygonize_arcs(shapefiles_path))
-        print("MERGING SHAPEFILES...")
-        call_cmd(["ogr2ogr", "-overwrite", polygons_path, polygon_paths.pop()])
+    extracted_polygons_path = "extracted_polygons.shp"
+    if not os.path.isfile(extracted_polygons_path):
+        if extracted_file_path.endswith(".e00"):
+            polygon_paths = convert_e00_to_shapefiles(
+                extracted_file_path,
+                uncompress_e00=uncompress_e00,
+                skip_polygonize_arcs=skip_polygonize_arcs,
+                polygon_pattern=polygon_pattern
+            )
+        elif extracted_file_path.endswith(".mdb"):
+            polygon_paths = convert_mdb_to_shapefiles(
+                extracted_file_path,
+                layer_name
+            )
+        elif extracted_file_path.endswith(".shp"):
+            polygon_paths = [extracted_file_path]
+        else:
+            raise ValueError(f"Can't convert {extracted_file_path}")
+        log("MERGING SHAPEFILES...")
+        call_cmd(["ogr2ogr", "-overwrite", extracted_polygons_path, polygon_paths.pop()])
         for path in polygon_paths:
-            call_cmd(["ogr2ogr", "-update", "-append", polygons_path, path])
+            call_cmd(["ogr2ogr", "-update", "-append", extracted_polygons_path, path])
 
     # dissolve all the shapes by polygons_join_col and project them into Google Mercator
-    print("DISSOLVING SHAPES AND REPROJECTING...")
+    log("DISSOLVING SHAPES AND REPROJECTING...")
     final_polygons_path = "polygons.shp"
     call_cmd([
         "ogr2ogr",
         "-s_srs", srs,
         "-t_srs", SRS,
-        final_polygons_path, polygons_path,
+        final_polygons_path, extracted_polygons_path,
         "-overwrite",
         "-dialect", "sqlite",
         "-sql",
-        # pylint: disable=line-too-long
-        f"SELECT {polygons_join_col},ST_Union(geometry) as geometry FROM 'e00_polygons' GROUP BY {polygons_join_col}"
-        # pylint: enable=line-too-long
+        f"SELECT {polygons_join_col},ST_Union(geometry) as geometry "
+        f"FROM '{extless_basename(extracted_polygons_path)}' "
+        f"GROUP BY {polygons_join_col}"
     ])
 
-    print("EXTRACTING METADATA...")
+    if join_col_modifier:
+        final_polygons_path = apply_join_col_modifier(
+            final_polygons_path, polygons_join_col, join_col_modifier
+        )
+
+    log("EXTRACTING METADATA...")
     metadata_path = "data.csv"
-    globs = glob(os.path.join(os.path.dirname(e00_path), "*.met"))
+    globs = glob(os.path.join(os.path.dirname(extracted_file_path), "*.met"))
     met_path = globs[0] if globs else None
     if metadata_csv_path:
         metadata_path = infer_metadata_from_csv(metadata_csv_path)
@@ -512,11 +585,11 @@ def process_usgs_source(
         with open(metadata_path, "w", encoding="utf-8") as metadata_file:
             csv.writer(metadata_file).writerows(data)
 
-    print("JOINING METADATA...")
+    log("JOINING METADATA...")
     join_polygons_and_metadata(final_polygons_path, metadata_path,
       polygons_join_col=polygons_join_col)
 
-    print("COPYING CITATION")
+    log("COPYING CITATION")
     call_cmd([
       "cp",
       os.path.join(os.path.dirname(base_path), "citation.json"),

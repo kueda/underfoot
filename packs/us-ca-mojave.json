@@ -10,11 +10,15 @@
     "geojson": {
         "$ref": "file://./us-ca-mojave.geojson"
     },
-    "description": "Mojave National Preserve and surround area",
+    "description": "Mojave National Preserve and surrounding area",
     "id": "us-ca-mojave",
-    "name": "Mojave National Preserve and surround area, CA, USA",
+    "name": "Mojave National Preserve and surrounding area, CA, USA",
     "osm": "http://download.geofabrik.de/north-america/us/california-latest.osm.pbf",
     "rock": [
+        "sim3376",
+        "ofr2011_1044",
+        "sim3206",
+        "sim3109",
         "of2005_1305_ca"
     ],
     "water": [

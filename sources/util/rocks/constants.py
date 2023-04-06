@@ -3,18 +3,18 @@
 import re
 
 METADATA_COLUMN_NAMES = [
-  'code',
-  'title',
-  'description',
-  'lithology',
-  'rock_type',
-  'formation',
-  'grouping',
-  'span',
-  'min_age',
-  'max_age',
-  'est_age',
-  'controlled_span'
+  "code",
+  "title",
+  "description",
+  "lithology",
+  "rock_type",
+  "formation",
+  "grouping",
+  "span",
+  "min_age",
+  "max_age",
+  "est_age",
+  "controlled_span",
 ]
 
 # Note that you should try to list substrings *after* longer strings, e.g. mud
@@ -41,9 +41,12 @@ LITHOLOGY_PATTERN = re.compile(
     conglomerate|
     dacite|
     diabase|
+    diatomite|
     dolerite|
     dolomite|
+    dune sand|
     fanglomerate|
+    felsic\smetavolcanic\srock|
     gabbro|
     gneiss|
     gneissic|
@@ -117,8 +120,9 @@ LOW_PRIORITY_LITHOLOGY_PATTERN = re.compile(
     arenaceous|
     artificial|
     breccia|
-    carbonate rock|
+    carbonate\srock|
     colluvium|
+    glacier|
     landslide|
     levee|
     mud|
@@ -127,7 +131,10 @@ LOW_PRIORITY_LITHOLOGY_PATTERN = re.compile(
     unconsolidated\smaterial|
     water|
     metasedimentary|
+    metamorphic\srock|
+    metavolcanic\srock|
     sedimentary|
+    valley\sdeposits|
     volcanic|
     (?# Very short so putting it at the end so others don't match)
     fill
@@ -136,131 +143,141 @@ LOW_PRIORITY_LITHOLOGY_PATTERN = re.compile(
 )
 
 LITHOLOGY_SYNONYMS = {
-  'alluvial-fan': 'alluvial fan',
-  'andesitic': 'andesite',
-  'arenaceous': 'sand',
-  'basaltic': 'basalt',
-  'dolostone': 'dolomite',
-  'dolerite': 'diabase',
-  'dolostone (dolomite)': 'dolomite',
-  'fanglomerate': 'alluvial fan',
-  'fill': 'artificial',
-  'gneissic': 'gneiss',
-  'granitic': 'granite',
-  'listwanite': 'silica-carbonate',
-  'listvenite': 'silica-carbonate',
-  'listvanite': 'silica-carbonate',
-  'listwaenite': 'silica-carbonate',
-  'metasedimentary': 'metasedimentary rock',
-  'mélange': 'melange',
-  'mélange': 'melange',
-  'orthogneiss': 'gneiss',
-  'paragneiss': 'gneiss',
-  'pelitic': 'pelite',
-  'picrobasalt': 'picrite',
-  'quartz-lithic arenite': 'quartz arenite',
-  'rhyolitic': 'rhyolite',
-  'sedimentary': 'sedimentary rock',
-  'serpentine': 'serpentinite',
-  'silica carbonate': 'silica-carbonate',
-  'surficial deposit': 'surficial deposits',
-  'volcanic': 'volcanic rock',
+  "alluvial-fan": "alluvial fan",
+  "andesitic": "andesite",
+  "arenaceous": "sand",
+  "basaltic": "basalt",
+  "dolostone": "dolomite",
+  "dolerite": "diabase",
+  "dolostone (dolomite)": "dolomite",
+  "fanglomerate": "alluvial fan",
+  "fill": "artificial",
+  "glacier": "ice",
+  "gneissic": "gneiss",
+  "granitic": "granite",
+  "listwanite": "silica-carbonate",
+  "listvenite": "silica-carbonate",
+  "listvanite": "silica-carbonate",
+  "listwaenite": "silica-carbonate",
+  "metasedimentary": "metasedimentary rock",
+  "mélange": "melange",
+  "mélange": "melange",
+  "orthogneiss": "gneiss",
+  "paragneiss": "gneiss",
+  "pelitic": "pelite",
+  "picrobasalt": "picrite",
+  "quartz-lithic arenite": "quartz arenite",
+  "rhyolitic": "rhyolite",
+  "sedimentary": "sedimentary rock",
+  "serpentine": "serpentinite",
+  "silica carbonate": "silica-carbonate",
+  "surficial deposit": "surficial deposits",
+  "valley deposits": "sedimentary rock",
+  "volcanic": "volcanic rock",
 }
 
 IGNEOUS_ROCKS = [
-  'agglomerate',
-  'andesite',
-  'aplite',
-  'basalt',
-  'basaltic andesite',
-  'basanite',
-  'benmoreite'
-  'breccia',
-  'dacite',
-  'diabase',
-  'dolerite',
-  'gabbro',
-  'granite',
-  'granitoid',
-  'granodiorite',
-  'hawaiite',
-  'icelandite',
-  'keratophyre',
-  'microdiorite',
-  'monzodiorite',
-  'monzogranite',
-  'mugearite',
-  'pegmatite',
-  'peridotite',
-  'picrite',
-  'plutonic rock',
-  'pyroxenite',
-  'quartz diorite',
-  'quartz keratophyre',
-  'quartz latite',
-  'quartz monzonite',
-  'rhyodacite',
-  'rhyolite',
-  'syenite',
-  'tephrite',
-  'tonalite',
-  'trachyte',
-  'tuff',
-  'volcanic rock',
-  'volcanoclastic breccia'
+  "agglomerate",
+  "andesite",
+  "aplite",
+  "basalt",
+  "basaltic andesite",
+  "basanite",
+  "benmoreite",
+  "breccia",
+  "dacite",
+  "diabase",
+  "dolerite",
+  "gabbro",
+  "granite",
+  "granitoid",
+  "granodiorite",
+  "hawaiite",
+  "icelandite",
+  "keratophyre",
+  "microdiorite",
+  "monzodiorite",
+  "monzogranite",
+  "mugearite",
+  "pegmatite",
+  "peridotite",
+  "picrite",
+  "plutonic rock",
+  "pyroxenite",
+  "quartz diorite",
+  "quartz keratophyre",
+  "quartz latite",
+  "quartz monzonite",
+  "rhyodacite",
+  "rhyolite",
+  "syenite",
+  "tephrite",
+  "tonalite",
+  "trachyte",
+  "tuff",
+  "volcanic rock",
+  "volcanoclastic breccia",
 ]
 
 METAMORPHIC_ROCKS = [
-  'gneiss',
-  'greenstone',
-  'marble',
-  'mylonite',
-  'quartzite',
-  'schist',
-  'serpentinite',
-  'silica-carbonate',
-  'metasedimentary rock'
+  "gneiss",
+  "greenstone",
+  "marble",
+  "mylonite",
+  "quartzite",
+  "schist",
+  "serpentinite",
+  "silica-carbonate",
+  "metasedimentary rock",
+  "metamorphic rock",
 ]
 
 SEDIMENTARY_ROCKS = [
-  'arkose',
-  'carbonate rock',
-  'calcerenite',
-  'chert',
-  'clay',
-  'claystone',
-  'conglomerate',
-  'dolomite',
-  'graywacke',
-  'limestone',
-  'mudstone',
-  'pelite',
-  'quartz arenite',
-  'sandstone',
-  'schist',
-  'shale',
-  'siltstone',
-  'sedimentary rock'
+  "arkose",
+  "carbonate rock",
+  "calcerenite",
+  "chert",
+  "clay",
+  "claystone",
+  "conglomerate",
+  "dolomite",
+  "graywacke",
+  "limestone",
+  "mudstone",
+  "pelite",
+  "quartz arenite",
+  "sandstone",
+  "schist",
+  "shale",
+  "siltstone",
+  "sedimentary breccia",
+  "sedimentary rock",
 ]
 
 NON_ROCKS = [
-  'alluvium',
-  'alluvial fan',
-  'colluvium',
-  'landslide',
-  'melange',
-  'moraine',
-  'sand',
-  'talus',
-  'till'
+  "artificial",
+  "alluvium",
+  "alluvial fan",
+  "colluvium",
+  "dune sand",
+  "gravel",
+  "landslide",
+  "melange",
+  "moraine",
+  "sand",
+  "silt",
+  "talus",
+  "till",
 ]
+
+LITHOLOGIES = IGNEOUS_ROCKS + SEDIMENTARY_ROCKS + METAMORPHIC_ROCKS + NON_ROCKS
 
 GROUPING_PATTERN = re.compile(
   r'([Ff]ranciscan [Cc]omplex|[Gg]reat [Vv]alley [Ss]equence)'
 )
 FORMATION_PATTERN = re.compile(r'([A-Z]\w+ )+\s?([Ff]ormation|[Tt]errane)')
 
-# Adapted from https://en.wikipedia.org/w/index.php?title=Template:Period_start&action=edit  # noqa: E501
+# Adapted from https://en.wikipedia.org/w/index.php?title=Template:Period_start&action=edit
 WIKI_SPANS = {
   "precambrian": [4600, 541.0],
     "hadean": [4600, 4000],  # noqa: E131
@@ -549,25 +566,25 @@ for span, dates in WIKI_SPANS.items():
        SPANS[span][1]
     ]
     upper_key = f"upper {span}".lower()
-    if upper_key not in WIKI_SPANS.keys():
+    if upper_key not in WIKI_SPANS:
         SPANS[upper_key] = [
            SPANS[span][1] + third,
            SPANS[span][1]
         ]
     early_key = f"early {span}".lower()
-    if early_key not in WIKI_SPANS.keys():
+    if early_key not in WIKI_SPANS:
         SPANS[early_key] = [
            SPANS[span][0],
            SPANS[span][0] - third,
         ]
     lower_key = f"lower {span}".lower()
-    if lower_key not in WIKI_SPANS.keys():
+    if lower_key not in WIKI_SPANS:
         SPANS[lower_key] = [
            SPANS[span][0],
            SPANS[span][0] - third,
         ]
     middle_key = f"middle {span}".lower()
-    if middle_key not in WIKI_SPANS.keys():
+    if middle_key not in WIKI_SPANS:
         SPANS[middle_key] = [
            SPANS[span][0] - third,
            SPANS[span][1] + third

@@ -1,0 +1,64 @@
+[
+	{
+		"id": "http://zotero.org/users/local/b90sdi4a/items/M4L2WKWX",
+		"type": "report",
+		"abstract": "The Providence Mountains are in the eastern Mojave Desert about 60 km southeast of Baker, San Bernardino County, California. This range, which is noted for its prominent cliffs of Paleozoic limestone, is part of a northeast-trending belt of mountainous terrain more than 100 km long that also includes the Granite Mountains, Mid Hills, and New York Mountains. Providence Mountains State Recreation Area encompasses part of the range, the remainder of which is within Mojave National Preserve, a large parcel of land administered by the National Park Service. Access to the Providence Mountains is by secondary roads leading south and north from Interstate Highways 15 and 40, respectively, which bound the main part of Mojave National Preserve.The geologic map presented here includes most of Providence Mountains State Recreation Area and land that surrounds it on the north, west, and south. This area covers most of the Fountain Peak 7.5′ quadrangle and...",
+		"language": "en",
+		"note": "ISSN: 2329-132X\ncontainer-title: Scientific Investigations Map\nDOI: 10.3133/sim3376",
+		"number": "3376",
+		"publisher": "U.S. Geological Survey",
+		"source": "pubs.er.usgs.gov",
+		"title": "Geologic map of the Providence Mountains in parts of the Fountain Peak and adjacent 7.5' quadrangles, San Bernardino County, California",
+		"URL": "https://pubs.er.usgs.gov/publication/sim3376",
+		"author": [
+			{
+				"family": "Stone",
+				"given": "Paul"
+			},
+			{
+				"family": "Miller",
+				"given": "David M."
+			},
+			{
+				"family": "Stevens",
+				"given": "Calvin H."
+			},
+			{
+				"family": "Rosario",
+				"given": "Jose J."
+			},
+			{
+				"family": "Vazquez",
+				"given": "Jorge A."
+			},
+			{
+				"family": "Wan",
+				"given": "Elmira"
+			},
+			{
+				"family": "Priest",
+				"given": "Susan S."
+			},
+			{
+				"family": "Valin",
+				"given": "Zenon C."
+			}
+		],
+		"accessed": {
+			"date-parts": [
+				[
+					"2023",
+					3,
+					14
+				]
+			]
+		},
+		"issued": {
+			"date-parts": [
+				[
+					"2017"
+				]
+			]
+		}
+	}
+]

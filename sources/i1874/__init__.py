@@ -13,7 +13,7 @@ def run():
         base_path=os.path.realpath(__file__),
         url="https://pubs.usgs.gov/imap/i1874/yosenp.e00.zip",
         use_unzip=True,
-        e00_path="yosenp.e00",
+        extracted_file_path="yosenp.e00",
         skip_polygonize_arcs=True,
         srs=NAD27_UTM11_PROJ4,
         metadata_csv_path=os.path.join(
