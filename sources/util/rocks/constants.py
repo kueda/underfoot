@@ -24,6 +24,7 @@ LITHOLOGY_PATTERN = re.compile(
     agglomerate|
     alluvium|
     alluvial.fan|
+    alluvial.terrace|
     andesite|
     andesitic|
     ankaramite|
@@ -134,8 +135,10 @@ LOW_PRIORITY_LITHOLOGY_PATTERN = re.compile(
     metamorphic\srock|
     metavolcanic\srock|
     sedimentary|
+    terrace|
     valley\sdeposits|
     volcanic|
+    wacke|
     (?# Very short so putting it at the end so others don't match)
     fill
   )''', flags=re.MULTILINE),
@@ -252,12 +255,14 @@ SEDIMENTARY_ROCKS = [
   "siltstone",
   "sedimentary breccia",
   "sedimentary rock",
+  "wacke"
 ]
 
 NON_ROCKS = [
   "artificial",
   "alluvium",
   "alluvial fan",
+  "alluvial terrace",
   "colluvium",
   "dune sand",
   "gravel",
@@ -267,6 +272,7 @@ NON_ROCKS = [
   "sand",
   "silt",
   "talus",
+  "terrace",
   "till",
 ]
 

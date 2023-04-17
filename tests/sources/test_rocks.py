@@ -55,6 +55,9 @@ def test_lithology_from_text_extracts_alluvial_fan():
 def test_lithology_from_text_extracts_alluvial_hyphen_fan():
     assert rocks.lithology_from_text("an alluvial-fan is nice") == "alluvial fan"
 
+def test_lithology_from_text_extracts_alluvial_terrace():
+    assert rocks.lithology_from_text("an alluvial terrace is nice too") == "alluvial terrace"
+
 def test_lithology_from_text_extracts_plutonic_rock():
     assert rocks.lithology_from_text("some plutonic rock sandwich") == "plutonic rock"
 
@@ -84,6 +87,15 @@ def test_lithology_from_text_extracts_sedimentary_rock():
 
 def test_lithology_from_text_extracts_tectonic_breccia():
     assert rocks.lithology_from_text("some tectonic breccia, friend") == "tectonic breccia"
+
+def test_lithology_from_text_extracts_tectonic_graywacke():
+    assert rocks.lithology_from_text("some graywacke, friend") == "graywacke"
+
+def test_lithology_from_text_extracts_tectonic_wacke():
+    assert rocks.lithology_from_text("some very fine wacke you got there") == "wacke"
+
+def test_lithology_from_text_extracts_terrace():
+    assert rocks.lithology_from_text("marine terrace") == "terrace"
 
 def test_lithology_from_text_extracts_everything_before_water():
     assert rocks.lithology_from_text("watery sandstone") == "sandstone"
