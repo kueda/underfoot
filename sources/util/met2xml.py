@@ -54,7 +54,7 @@ for line in lines:
                 line.replace('\n', "")
             )
         )
-    matches = re.match(r'^\s*(([A-z_\-]+):)?\s*?(.+)?', line)
+    matches = re.match(r'^\s*(([a-zA-Z_\-]+):)?\s*?(.+)?', line)
     # skip lines that don't match the key/value pattern
     if not matches:
         continue

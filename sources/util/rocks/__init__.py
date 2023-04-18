@@ -525,7 +525,10 @@ def process_usgs_source(
     # convert the Arc Info coverages to shapefiles
     extracted_polygons_path = "extracted_polygons.shp"
     if not os.path.isfile(extracted_polygons_path):
-        if extracted_file_path.endswith(".e00"):
+        if (
+            extracted_file_path.endswith(".e00")
+            or os.path.isfile(os.path.join(extracted_file_path, "pal"))
+        ):
             polygon_paths = convert_e00_to_shapefiles(
                 extracted_file_path,
                 uncompress_e00=uncompress_e00,

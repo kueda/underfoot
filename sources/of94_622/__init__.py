@@ -13,6 +13,7 @@ def run():
         base_path=os.path.realpath(__file__),
         url="http://pubs.usgs.gov/of/1994/of94-622/cc_g1.tar.Z",
         extracted_file_path="ccgeo/cc_utm",
+        skip_polygonize_arcs=True,
         polygon_pattern="CC_UTM#",
         srs=NAD27_UTM10_PROJ4,
         metadata_csv_path=os.path.join(
