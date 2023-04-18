@@ -3,7 +3,7 @@
 
 
 from multiprocessing import Pool
-from subprocess import run
+from subprocess import CalledProcessError, run
 import argparse
 import asyncio
 import json
@@ -167,18 +167,27 @@ def make_contours_for_tile(tile, clean=False):
     # Do a bunch of stuff, including clipping the lines back to the original
     # tile boundaries, projecting them into 4326, and loading them into a
     # PostGIS table
-    run([
-        "ogr2ogr",
-        "-append",
-        "-skipfailures",
-        "-nln", TABLE_NAME,
-        "-nlt", "MULTILINESTRING",
-        "-clipsrc", *[str(c) for c in [bounds_x[0], bounds_y[0], bounds_x[1], bounds_y[1]]],
-        "-f", "PostgreSQL", f"PG:dbname={DBNAME}",
-        "-t_srs", f"EPSG:{SRID}",
-        "--config", "PG_USE_COPY", "YES",
-        merge_contours_path
-    ], check=True)
+    try:
+        run([
+            "ogr2ogr",
+            "-append",
+            "-skipfailures",
+            "-nln", TABLE_NAME,
+            "-nlt", "MULTILINESTRING",
+            "-clipsrc", *[str(c) for c in [bounds_x[0], bounds_y[0], bounds_x[1], bounds_y[1]]],
+            "-f", "PostgreSQL", f"PG:dbname={DBNAME}",
+            "-t_srs", f"EPSG:{SRID}",
+            "--config", "PG_USE_COPY", "YES",
+            merge_contours_path
+        ], check=True)
+    except CalledProcessError as ogrerror:
+        # Sometimes the ogr2ogr command results in a GeometryColleciton
+        # instead of a MultilineString, which returns an error when it tries
+        # to insert into the MULTILINESTRING contours table. Might have
+        # something to do with clipsrs leaving some points. Unfortunately the
+        # error doesn't seem to have any output I can use to make sure it's
+        # that error.
+        util.log(f"Could not extract contours for {merge_contours_path}: {ogrerror}")
 
 
 def make_contours_table(tiles, procs=2):
