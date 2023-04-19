@@ -195,16 +195,18 @@ def initialize_masks_table(mask_table_name, source_table_name, buff=0.01):
       SELECT
         ST_MakeValid(
           ST_Multi(
-            ST_Buffer(
+            ST_MakeValid(
               ST_Buffer(
-                ST_MakeValid(
-                  ST_Union(geom)
+                ST_Buffer(
+                  ST_MakeValid(
+                    ST_Union(geom)
+                  ),
+                  {buff},
+                  'join=mitre'
                 ),
-                {buff},
+                -{buff},
                 'join=mitre'
-              ),
-              -{buff},
-              'join=mitre'
+              )
             )
           )
         )
