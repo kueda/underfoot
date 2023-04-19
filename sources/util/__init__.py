@@ -193,17 +193,19 @@ def initialize_masks_table(mask_table_name, source_table_name, buff=0.01):
     run_sql(f"""
       INSERT INTO {mask_table_name} (geom)
       SELECT
-        ST_Multi(
-          ST_Buffer(
+        ST_MakeValid(
+          ST_Multi(
             ST_Buffer(
-              ST_MakeValid(
-                ST_Union(geom)
+              ST_Buffer(
+                ST_MakeValid(
+                  ST_Union(geom)
+                ),
+                {buff},
+                'join=mitre'
               ),
-              {buff},
+              -{buff},
               'join=mitre'
-            ),
-            -{buff},
-            'join=mitre'
+            )
           )
         )
       FROM {source_table_name}
