@@ -130,6 +130,8 @@ def schemify_attributes(attributes_path):
             reader = csv.DictReader(attributes_file)
             for row in reader:
                 row["code"] = row["MapUnit"]
+                if not row["code"] or len(row["code"]) == 0:
+                    continue
                 overrides = unit_overrides.get(row["code"], {})
                 codes_encoutered[row["code"]] = True
                 shp_unit = units_from_shp.get(row["code"], {})

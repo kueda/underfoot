@@ -62,7 +62,7 @@ def process_source(source, clean=False, cleandb=False, cleanfiles=False, debug=F
         fips_code = source.replace("tiger_water_", "")
         process_tiger_water_for_fips(
             [fips_code],
-            source=os.path.join(os.path.realpath(__file__), "sources", source.upper())
+            source=os.path.join(os.path.realpath(__file__), "sources", source)
         )
     else:
         raise ValueError(f"{source} has no file and no way to process it")
