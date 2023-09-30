@@ -43,11 +43,14 @@ def tiles_from_bbox(swlon, swlat, nelon, nelat, zooms):
 def tiles_from_geojson(geojson, zooms):
     """Tiles from a GeoJSON feature passed in as a dict"""
     tiles = []
-    features = [geojson]
+    if geojson["type"] == "FeatureCollection":
+        features = geojson["features"]
     # supermercado expects features, so if this is a just a geometry, wrap it in a
     # Feature
-    if geojson["type"] != "Feature":
+    elif geojson["type"] != "Feature":
         features = [{"type": "Feature", "geometry": geojson}]
+    else:
+        features = [geojson]
     for zoom in zooms:
         # So much more complicated than it needs to be. burntiles.burn only
         # accepts a list of polygons, not features, not multipolygons, just

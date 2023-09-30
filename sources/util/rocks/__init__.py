@@ -57,6 +57,7 @@ def grouping_from_text(text):
 def rock_type_from_lithology(lithology):
     """Extract rock type from normalized lithology"""
     rock_type = ''
+    lithology = lithology.lower()
     if lithology in IGNEOUS_ROCKS:
         rock_type = 'igneous'
     elif lithology in METAMORPHIC_ROCKS:
@@ -299,6 +300,32 @@ def metadata_from_usgs_met(path):
     return data
 
 
+def metadata_from_shapes(geo_path, mapping):
+    """Return a CSV with shape metadata extracted from geodata"""
+    return None
+
+
+def metadata_from_csv(infile_path, mapping):
+    """
+    Return a CSV with metadata extracted from an existing CSV. Mapping uses
+    controlled metadata col names for keys.
+    """
+    outfile_path = "metadata_from_csv.csv"
+    with open(infile_path, encoding="utf-8") as infile:
+        reader = csv.DictReader(infile)
+        with open(outfile_path, 'w', encoding="utf-8") as outfile:
+            writer = csv.DictWriter(
+                outfile,
+                fieldnames=mapping.keys(),
+                extrasaction='ignore'
+            )
+            writer.writeheader()
+            for row in reader:
+                row = {key: row[value] for key, value in mapping.items()}
+                writer.writerow(row)
+    return outfile_path
+
+
 def join_polygons_and_metadata(
     polygons_path,
     metadata_path,
@@ -470,7 +497,9 @@ def process_usgs_source(
     # As opposed to gunzip
     use_unzip=False,
     layer_name=None,
-    join_col_modifier=None
+    join_col_modifier=None,
+    mappable_metadata_csv_path=None,
+    mappable_metadata_mapping=None,
 ):
     """Process units from a USGS Arc Info or MDB archive given a couple
     configurations.
@@ -578,6 +607,12 @@ def process_usgs_source(
         metadata_path = infer_metadata_from_csv(metadata_csv_path)
         if met_path:
             fill_in_custom_metadata_from_met(met_path, metadata_path)
+    elif mappable_metadata_csv_path and mappable_metadata_mapping:
+        mappable_metadata_path = metadata_from_csv(
+            mappable_metadata_csv_path,
+            mappable_metadata_mapping
+        )
+        metadata_path = infer_metadata_from_csv(mappable_metadata_path)
     elif met_path:
         data = metadata_from_usgs_met(met_path)
         with open(metadata_path, "w", encoding="utf-8") as metadata_file:

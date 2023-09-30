@@ -1,0 +1,38 @@
+[
+	{
+		"id": "http://zotero.org/users/local/b90sdi4a/items/4RMUNNS5",
+		"type": "webpage",
+		"title": "USGS Scientific Investigations Map 3002: Geologic Map of the Eastern Three-Quarters of the Cuyama 30’ x 60’ Quadrangle, California",
+		"URL": "https://pubs.usgs.gov/sim/3002/",
+		"author": [
+			{
+				"family": "Kellogg",
+				"given": "Karl S."
+			},
+			{
+				"family": "Minor",
+				"given": "Scott A."
+			},
+			{
+				"family": "Cossette",
+				"given": "Pamela"
+			}
+		],
+		"accessed": {
+			"date-parts": [
+				[
+					"2023",
+					9,
+					13
+				]
+			]
+		},
+		"issued": {
+			"date-parts": [
+				[
+					"2008"
+				]
+			]
+		}
+	}
+]

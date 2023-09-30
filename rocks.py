@@ -1,4 +1,4 @@
-"""Methods for generating geologica data for Underfoot
+"""Methods for generating geologic data for Underfoot
 
 Main export is make_rocks, which should load everything into the database,
 export an MBTiles file, and return a list with the files you need.

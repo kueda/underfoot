@@ -1,12 +1,15 @@
 *.DS_Store
+*.pbf
 *.pyc
 *__pycache__*
-*.pbf
 .sqliterc
 .vagrant/
 bin/
 build/
 elevation-tiles/
+geofabrik_index.geojson
+simplified_wbd_hu4.geojson
 sources/*/work*
 sources/work-*
+tiger_counties.geojson
 venv/

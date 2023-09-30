@@ -1,0 +1,23 @@
+[
+	{
+		"type": "map",
+		"edition": "2nd",
+		"publisher": "California Department of Conservation",
+		"scale": "1:250000",
+		"title": "Geologic map of California : San Luis Obispo Sheet",
+		"URL": "https://www.conservation.ca.gov/cgs/rgm",
+		"author": [
+			{
+				"family": "Jennings",
+				"given": "Charles W."
+			}
+		],
+		"issued": {
+			"date-parts": [
+				[
+					"1967"
+				]
+			]
+		}
+	}
+]

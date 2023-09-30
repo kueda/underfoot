@@ -1,0 +1,36 @@
+[
+	{
+		"id": "http://zotero.org/users/local/b90sdi4a/items/54SBG4KN",
+		"type": "map",
+		"collection-title": "USGS Scientific Investigations Maps",
+		"scale": "1:24000",
+		"title": "Geologic map of the southern White Ledge Peak and Matilija quadrangles, Santa Barbara and Ventura Counties, California: U.S. Geological Survey Scientific Investigations Map 3321",
+		"URL": "https://pubs.usgs.gov/sim/3321/",
+		"author": [
+			{
+				"family": "Minor",
+				"given": "S.A."
+			},
+			{
+				"family": "Brandt",
+				"given": "T.R."
+			}
+		],
+		"accessed": {
+			"date-parts": [
+				[
+					"2023",
+					9,
+					7
+				]
+			]
+		},
+		"issued": {
+			"date-parts": [
+				[
+					"2015"
+				]
+			]
+		}
+	}
+]

@@ -13,6 +13,8 @@ import psycopg2
 from database import DBNAME, SRID, make_database
 from sources import util
 from sources.util.citations import load_citation_for_source, CITATIONS_TABLE_NAME
+from sources.util.water import process_nhdplus_hr_source
+from sources.util.tiger_water import process_tiger_water_for_fips
 
 
 NUM_PROCESSES = 4
@@ -25,16 +27,20 @@ WATERSHEDS_MASK_TABLE_NAME = "watersheds_mask"
 WATERWAYS_NETWORK_TABLE_NAME = "waterways_network"
 
 
-def clean_sources(sources):
+def clean_sources(sources, debug=False):
     """Clean any cached data for specified sources"""
     for source_identifier in sources:
         path = os.path.join("sources", f"{source_identifier}.py")
         work_path = util.make_work_dir(path)
+        if debug:
+            util.log(f"water: removing work dir: {work_path}")
         shutil.rmtree(work_path)
 
 
-def process_source(source, clean=False, cleandb=False, cleanfiles=False):
+def process_source(source, clean=False, cleandb=False, cleanfiles=False, debug=False):
     """Process water source"""
+    if debug:
+        util.log(f"water: processing source: {source}")
     path = os.path.join("sources", f"{source}.py")
     source_script_path = os.path.join("sources", f"{source}.py")
     work_path = util.make_work_dir(source_script_path)
@@ -43,7 +49,23 @@ def process_source(source, clean=False, cleandb=False, cleanfiles=False):
         for file_to_delete in glob(gpkgs_path):
             util.log(f"Deleting {file_to_delete}...")
             os.remove(file_to_delete)
-    util.call_cmd(["python", path], check=True)
+    if os.path.isfile(path):
+        util.call_cmd(["python", path], check=True)
+    elif source.startswith("nhdplus_"):
+        process_nhdplus_hr_source(
+          os.path.join(os.path.realpath(__file__), "sources", source.upper()),
+          url="https://prd-tnm.s3.amazonaws.com/StagedProducts/Hydrography/NHDPlusHR/Beta/GDB/"
+              f"{source.upper()}_GDB.zip",
+          gdb_name=f"{source.upper()}_GDB.gdb"
+        )
+    elif source.startswith("tiger_water_"):
+        fips_code = source.replace("tiger_water_", "")
+        process_tiger_water_for_fips(
+            [fips_code],
+            source=os.path.join(os.path.realpath(__file__), "sources", source.upper())
+        )
+    else:
+        raise ValueError(f"{source} has no file and no way to process it")
     load_citation_for_source(source)
     for layer in ["waterways", "waterbodies", "watersheds"]:
         gpkg_path = os.path.join(work_path, f"{layer}.gpkg")
@@ -103,7 +125,8 @@ def process_source(source, clean=False, cleandb=False, cleanfiles=False):
         """, shell=True)
 
 
-def process_sources(sources, clean=False, cleandb=False, cleanfiles=False, procs=NUM_PROCESSES):
+def process_sources(sources, clean=False, cleandb=False, cleanfiles=False, procs=NUM_PROCESSES,
+                    debug=False):
     """Process multiple sources in parallel processes"""
     with Pool(processes=procs) as pool:
         pool.starmap(
@@ -111,8 +134,10 @@ def process_sources(sources, clean=False, cleandb=False, cleanfiles=False, procs
             [[src, clean, cleandb, cleanfiles] for src in sources])
 
 
-def load_waterways(sources):
+def load_waterways(sources, debug=False):
     """Load waterways into the database"""
+    if debug:
+        util.log(f"water: loading waterways for sources: {sources}")
     util.run_sql(f"DROP TABLE IF EXISTS {WATERWAYS_TABLE_NAME}", dbname=DBNAME)
     util.run_sql(
         f"""
@@ -164,8 +189,10 @@ def load_waterways(sources):
             util.log(f"{source_table_name} doesn't exist, skipping...")
 
 
-def load_waterbodies(sources):
+def load_waterbodies(sources, debug=False):
     """Load waterbodies into the database"""
+    if debug:
+        util.log(f"water: loading waterbodies for sources: {sources}")
     util.run_sql(
         f"DROP TABLE IF EXISTS {WATERBODIES_TABLE_NAME}", dbname=DBNAME)
     util.run_sql(
@@ -210,8 +237,10 @@ def load_waterbodies(sources):
         """)
 
 
-def load_watersheds(sources):
+def load_watersheds(sources, debug=False):
     """Load watersheds into the database"""
+    if debug:
+        util.log(f"water: loading watersheds for sources: {sources}")
     util.run_sql(
         f"DROP TABLE IF EXISTS \"{WATERSHEDS_TABLE_NAME}\"",
         dbname=DBNAME
@@ -330,9 +359,11 @@ def load_watersheds(sources):
                 continue
 
 
-def load_networks(sources):
+def load_networks(sources, debug=False):
     """Combine waterways networks from multiple sources into a single network
     """
+    if debug:
+        util.log(f"water: loading waterway networks for sources: {sources}")
     util.run_sql(f"DROP TABLE IF EXISTS {WATERWAYS_NETWORK_TABLE_NAME}", dbname=DBNAME)
     util.run_sql(
         f"""
@@ -362,8 +393,10 @@ def load_networks(sources):
             util.log(f"{source_table_name} doesn't exist, skipping...")
 
 
-def make_mbtiles(sources, path="./water.mbtiles", bbox=None):
+def make_mbtiles(sources, path="./water.mbtiles", bbox=None, debug=False):
     """Export water into am MBTiles file"""
+    if debug:
+        util.log(f"water: making mbtiles for sources: {sources}")
     if os.path.exists(path):
         os.remove(path)
     # 1. Write ways, bodies, and sheds to separate layers of a single GeoPackage file
@@ -502,17 +535,19 @@ def make_mbtiles(sources, path="./water.mbtiles", bbox=None):
 
 def make_water(
         sources, clean=False, cleandb=False, cleanfiles=False, bbox=None,
-        path="./water.mbtiles", procs=NUM_PROCESSES):
+        path="./water.mbtiles", procs=NUM_PROCESSES, debug=False):
     """Process and load all water sources and write them to a MBTiles file"""
+    if debug:
+        util.log("water: making database")
     make_database()
     if clean:
-        clean_sources(sources)
-    process_sources(sources, cleandb=cleandb, cleanfiles=cleanfiles, procs=procs)
-    load_waterways(sources)
-    load_waterbodies(sources)
-    load_watersheds(sources)
-    load_networks(sources)
-    return make_mbtiles(sources, path=path, bbox=bbox)
+        clean_sources(sources, debug=debug)
+    process_sources(sources, cleandb=cleandb, cleanfiles=cleanfiles, procs=procs, debug=debug)
+    load_waterways(sources, debug=debug)
+    load_waterbodies(sources, debug=debug)
+    load_watersheds(sources, debug=debug)
+    load_networks(sources, debug=debug)
+    return make_mbtiles(sources, path=path, bbox=bbox, debug=debug)
 
 
 if __name__ == "__main__":
@@ -538,10 +573,15 @@ if __name__ == "__main__":
         action="store_true",
         help="Just clean the files extracted from the download"
     )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Print debug statements")
     args = parser.parse_args()
     util.log(f"cleandb: {args.cleandb}")
     make_water(
         args.source,
         clean=args.clean,
         cleandb=args.cleandb,
-        cleanfiles=args.cleanfiles)
+        cleanfiles=args.cleanfiles,
+        debug=args.debug)

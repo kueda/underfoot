@@ -1,0 +1,24 @@
+[
+	{
+		"id": "http://zotero.org/users/local/b90sdi4a/items/43SDFSNK",
+		"type": "map",
+		"edition": "3rd",
+		"publisher": "California Department of Conservation",
+		"scale": "1:250000",
+		"title": "Geologic map of California : Bakersfield sheet",
+		"URL": "https://www.conservation.ca.gov/cgs/rgm",
+		"author": [
+			{
+				"family": "Smith",
+				"given": "Arthur R."
+			}
+		],
+		"issued": {
+			"date-parts": [
+				[
+					"1964"
+				]
+			]
+		}
+	}
+]

@@ -1,0 +1,48 @@
+[
+	{
+		"id": "http://zotero.org/users/local/b90sdi4a/items/H5JV6BIV",
+		"type": "report",
+		"collection-title": "Scientific Investigations Map",
+		"number": "3472",
+		"publisher": "United States Geologic Survey",
+		"title": "Geologic and geophysical maps of the Santa Maria and part of the Point Conception 30'×60' quadrangles, California",
+		"URL": "https://doi.org/10.3133/sim3472",
+		"author": [
+			{
+				"family": "Sweetkind",
+				"given": "Donald"
+			},
+			{
+				"family": "Langenheim",
+				"given": "Victoria E."
+			},
+			{
+				"family": "McDougall-Reid",
+				"given": "Kristin"
+			},
+			{
+				"family": "Sorlien",
+				"given": "Christopher C."
+			},
+			{
+				"family": "Demas",
+				"given": "Shiera C."
+			},
+			{
+				"family": "Tennyson",
+				"given": "Marilyn E."
+			},
+			{
+				"family": "Johnson",
+				"given": "Samuel Y."
+			}
+		],
+		"issued": {
+			"date-parts": [
+				[
+					"2021"
+				]
+			]
+		}
+	}
+]

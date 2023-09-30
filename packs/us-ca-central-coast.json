@@ -1,0 +1,39 @@
+{
+ "id": "us-ca-central-coast",
+ "name": "Central Coast, CA, USA",
+ "description": "Coastal area of California from Monterey Bay south to the Transverse Ranges ",
+ "admin1": "United States",
+ "admin2": "California",
+ "rock": [
+  "sim3002",
+  "gam_18_sanluisobispo_1958_gis",
+  "gam_02_bakersfield_1964_gis",
+  "gam_21_santamaria_1959_gis",
+  "of2005_1305_ca"
+ ],
+ "geojson": {
+  "$ref": "file://./us-ca-central-coast.geojson"
+ },
+ "bbox": {
+  "bottom": 34.13146152028154,
+  "left": -122.13528987745767,
+  "right": -118.59691743032408,
+  "top": 36.58010325519885
+ },
+ "osm": "https://download.geofabrik.de/north-america/us/california-latest.osm.pbf",
+ "water": [
+  "nhdplus_h_1806_hu4",
+  "nhdplus_h_1807_hu4",
+  "nhdplus_h_1804_hu4",
+  "nhdplus_h_1803_hu4",
+  "tiger_water_06029",
+  "tiger_water_06053",
+  "tiger_water_06019",
+  "tiger_water_06111",
+  "tiger_water_06037",
+  "tiger_water_06069",
+  "tiger_water_06031",
+  "tiger_water_06079",
+  "tiger_water_06083"
+ ]
+}
