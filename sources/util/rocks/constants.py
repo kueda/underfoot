@@ -28,13 +28,16 @@ LITHOLOGY_PATTERN = re.compile(
     andesite|
     andesitic|
     ankaramite|
+    anorthosite|
     aplite|
+    argillite|
     arkose|
     basaltic andesite|
     basaltic|
     basalt|
     basanite|
     benmoreite|
+    blueschist|
     calcerenite|
     chert|
     claystone|
@@ -42,13 +45,16 @@ LITHOLOGY_PATTERN = re.compile(
     conglomerate|
     dacite|
     diabase|
+    diamicton|
     diatomite|
     dolerite|
     dolomite|
     dune sand|
     fanglomerate|
     felsic\smetavolcanic\srock|
+    felsic\svolcanic\srock|
     gabbro|
+    glacial\sdrift|
     gneiss|
     gneissic|
     granite|
@@ -57,17 +63,24 @@ LITHOLOGY_PATTERN = re.compile(
     granodiorite|
     gravel|
     graywacke|
+    greenschist|
     greenstone|
     hawaiite|
+    hornfels|
     icelandite|
+    intermediate\svolcanic\srock|
     keratophyre|
     limestone|
     listwanite|
     listvenite|
     listvanite|
     listwaenite|
+    mafic\svolcanic\srock|
     marble|
     m(e|é|é)lange|
+    metabasalt|
+    metavolcanic\srock|
+    mica\sschist|
     microdiorite|
     monzodiorite|
     monzogranite|
@@ -76,11 +89,16 @@ LITHOLOGY_PATTERN = re.compile(
     mugearite|
     mylonite|
     orthogneiss|
+    orthoquartzite|
     paragneiss|
     pegmatite|
     pelit(e|ic)|
+    peraluminous granite|
     peridotite|
+    phanerite|
+    phyllite|
     picrite|
+    plutonic rock (phaneritic)|
     plutonic\srock|
     pyroxenite|
     quartz(\-lithic)?\sarenite|
@@ -100,6 +118,7 @@ LITHOLOGY_PATTERN = re.compile(
     shale|
     silica(\-|\s)carbonate|
     siltstone|
+    slate|
     surficial\sdeposit|
     syenite|
     talus|
@@ -107,6 +126,7 @@ LITHOLOGY_PATTERN = re.compile(
     tephrite|
     till|
     tonalite|
+    trachybasalt|
     trachyte|
     tuff|
     volcanoclastic\sbreccia
@@ -123,6 +143,7 @@ LOW_PRIORITY_LITHOLOGY_PATTERN = re.compile(
     breccia|
     carbonate\srock|
     colluvium|
+    diorite|
     glacier|
     landslide|
     levee|
@@ -153,6 +174,7 @@ LITHOLOGY_SYNONYMS = {
   "dolostone": "dolomite",
   "dolerite": "diabase",
   "dolostone (dolomite)": "dolomite",
+  "diamicton": "gravel",
   "fanglomerate": "alluvial fan",
   "fill": "artificial",
   "glacier": "ice",
@@ -168,6 +190,8 @@ LITHOLOGY_SYNONYMS = {
   "orthogneiss": "gneiss",
   "paragneiss": "gneiss",
   "pelitic": "pelite",
+  "pelitic schist": "pelite",
+  "plutonic rock (phaneritic)": "phanerite",
   "picrobasalt": "picrite",
   "quartz-lithic arenite": "quartz arenite",
   "rhyolitic": "rhyolite",
@@ -175,6 +199,7 @@ LITHOLOGY_SYNONYMS = {
   "serpentine": "serpentinite",
   "silica carbonate": "silica-carbonate",
   "surficial deposit": "surficial deposits",
+  "tephrite (basanite)": "basanite",
   "valley deposits": "sedimentary rock",
   "volcanic": "volcanic rock",
 }
@@ -182,6 +207,7 @@ LITHOLOGY_SYNONYMS = {
 IGNEOUS_ROCKS = [
   "agglomerate",
   "andesite",
+  "anorthosite",
   "aplite",
   "basalt",
   "basaltic andesite",
@@ -190,7 +216,9 @@ IGNEOUS_ROCKS = [
   "breccia",
   "dacite",
   "diabase",
+  "diorite",
   "dolerite",
+  "felsic volcanic rock",
   "gabbro",
   "granite",
   "granitoid",
@@ -198,11 +226,13 @@ IGNEOUS_ROCKS = [
   "hawaiite",
   "icelandite",
   "keratophyre",
+  "mafic volcanic rock",
   "microdiorite",
   "monzodiorite",
   "monzogranite",
   "mugearite",
   "pegmatite",
+  "peraluminous granite",
   "peridotite",
   "picrite",
   "plutonic rock",
@@ -217,16 +247,26 @@ IGNEOUS_ROCKS = [
   "tephrite",
   "tonalite",
   "trachyte",
+  "trachybasalt",
   "tuff",
   "volcanic rock",
   "volcanoclastic breccia",
 ]
 
 METAMORPHIC_ROCKS = [
+  "blueschist",
   "gneiss",
   "greenstone",
+  "felsic metavolcanic rock",
+  "greenschist",
+  "hornfels",
+  "intermediate volcanic rock",
   "marble",
+  "metabasalt",
+  "metavolcanic rock",
+  "mica schist",
   "mylonite",
+  "phyllite",
   "quartzite",
   "schist",
   "serpentinite",
@@ -236,6 +276,7 @@ METAMORPHIC_ROCKS = [
 ]
 
 SEDIMENTARY_ROCKS = [
+  "argillite",
   "arkose",
   "carbonate rock",
   "calcerenite",
@@ -247,12 +288,14 @@ SEDIMENTARY_ROCKS = [
   "graywacke",
   "limestone",
   "mudstone",
+  "orthoquartzite",
   "pelite",
   "quartz arenite",
   "sandstone",
   "schist",
   "shale",
   "siltstone",
+  "slate",
   "sedimentary breccia",
   "sedimentary rock",
   "wacke"
@@ -265,6 +308,7 @@ NON_ROCKS = [
   "alluvial terrace",
   "colluvium",
   "dune sand",
+  "glacial drift",
   "gravel",
   "landslide",
   "melange",
@@ -274,6 +318,7 @@ NON_ROCKS = [
   "talus",
   "terrace",
   "till",
+  "water"
 ]
 
 LITHOLOGIES = IGNEOUS_ROCKS + SEDIMENTARY_ROCKS + METAMORPHIC_ROCKS + NON_ROCKS
