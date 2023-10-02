@@ -300,15 +300,12 @@ def metadata_from_usgs_met(path):
     return data
 
 
-def metadata_from_shapes(geo_path, mapping):
-    """Return a CSV with shape metadata extracted from geodata"""
-    return None
-
-
 def metadata_from_csv(infile_path, mapping):
     """
     Return a CSV with metadata extracted from an existing CSV. Mapping uses
-    controlled metadata col names for keys.
+    controlled metadata col names for keys. Values can either be the
+    attribute names in the source data to use, or callables that take the
+    entire source row as an argument.
     """
     outfile_path = "metadata_from_csv.csv"
     with open(infile_path, encoding="utf-8") as infile:
@@ -321,8 +318,15 @@ def metadata_from_csv(infile_path, mapping):
             )
             writer.writeheader()
             for row in reader:
-                row = {key: row[value] for key, value in mapping.items()}
-                writer.writerow(row)
+                new_row = {}
+                for key, value in mapping.items():
+                    # If the mapping value is callable, use it to extract the
+                    # mapped value out of the row
+                    if callable(value):
+                        new_row[key] = value(row)
+                    else:
+                        new_row[key] = row[value]
+                writer.writerow(new_row)
     return outfile_path
 
 
@@ -591,6 +595,7 @@ def process_usgs_source(
         "-sql",
         f"SELECT {polygons_join_col},ST_Union(geometry) as geometry "
         f"FROM '{extless_basename(extracted_polygons_path)}' "
+        f"WHERE {polygons_join_col} IS NOT NULL AND {polygons_join_col} != ''"
         f"GROUP BY {polygons_join_col}"
     ])
 

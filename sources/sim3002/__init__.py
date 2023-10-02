@@ -16,7 +16,7 @@ def run():
         extracted_file_path="cuya_shapefiles/geo1.shp",
         srs=NAD27_UTM11_PROJ4,
         use_unzip=True,
-        polygons_join_col="PLABL",
+        polygons_join_col="RU_LABL",
         metadata_csv_path=os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
             "units.csv"
