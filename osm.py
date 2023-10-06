@@ -14,6 +14,7 @@ DB_PASSWORD = "underfoot"
 WAYS_TABLE_NAME = "underfoot_ways"
 NATURAL_WAYS_TABLE_NAME = "underfoot_natural_ways"
 NATURAL_NODES_TABLE_NAME = "underfoot_natural_nodes"
+PLACE_NODES_TABLE_NAME = "underfoot_place_nodes"
 
 
 def create_database():
@@ -169,9 +170,30 @@ def load_natural_nodes_data(data_path, pack=None):
               tags -> 'ele' AS elevation_m,
               tags -> 'intermittent' AS intermittent,
               geom
-            FROM nodes
+            FROM natural_nodes
             WHERE
               tags -> 'natural' IN ('peak', 'saddle', 'spring')
+        """,
+        dbname=DBNAME
+    )
+
+def load_place_nodes_data(data_path, pack=None):
+    """Load natural nodes from OSM data"""
+    if not is_osm_loaded():
+        load_osm_from_pbf(data_path, pack)
+    util.run_sql(f"DROP TABLE IF EXISTS {PLACE_NODES_TABLE_NAME}", dbname=DBNAME)
+    util.run_sql(
+        f"""
+            CREATE TABLE {PLACE_NODES_TABLE_NAME} AS
+            SELECT
+              id,
+              COALESCE(
+                  name, tags -> 'name'
+              ) AS name,
+              tags -> 'place' AS place,
+              tags -> 'population' AS population,
+              geom
+            FROM place_nodes
         """,
         dbname=DBNAME
     )
@@ -237,33 +259,22 @@ def make_context_mbtiles(path):
     if os.path.exists(path):
         os.remove(path)
     gpkg_path = f"{util.basename_for_path(path)}.gpkg"
+    tables = [
+        NATURAL_NODES_TABLE_NAME,
+        NATURAL_WAYS_TABLE_NAME,
+        PLACE_NODES_TABLE_NAME
+    ]
     cmds = [
-        [
-            "ogr2ogr",
-            gpkg_path,
-            f"PG:dbname={DBNAME}",
-            NATURAL_WAYS_TABLE_NAME,
-            "-nln", NATURAL_WAYS_TABLE_NAME
-        ],
-        [
-            "ogr2ogr",
-            gpkg_path,
-            f"PG:dbname={DBNAME}",
-            NATURAL_NODES_TABLE_NAME,
-            "-nln", NATURAL_NODES_TABLE_NAME
-        ]
+        ["ogr2ogr", gpkg_path, f"PG:dbname={DBNAME}", table, "-nln", table]
+        for table in tables
     ]
     for idx, cmd in enumerate(cmds):
         if idx > 0:
             cmd += ["-update"]
         util.call_cmd(cmd)
     conf = {
-        NATURAL_WAYS_TABLE_NAME: {
-            "target_name": NATURAL_WAYS_TABLE_NAME
-        },
-        NATURAL_NODES_TABLE_NAME: {
-            "target_name": NATURAL_NODES_TABLE_NAME
-        }
+        table: {"target_name": table}
+        for table in tables
     }
     cmd = f"""
       ogr2ogr {path} {gpkg_path}
@@ -309,6 +320,7 @@ def make_context(pbf_url, clean=False, pack=None, path="./context.mbtiles"):
         con.close()
     load_natural_ways_data(filename, pack=pack)
     load_natural_nodes_data(filename, pack=pack)
+    load_place_nodes_data(filename, pack=pack)
     make_context_mbtiles(path)
 
 if __name__ == "__main__":

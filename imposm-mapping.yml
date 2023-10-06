@@ -56,7 +56,7 @@ tables:
       natural: [__any__]
       ref: [__any__]
       tiger: [__any__]
-  nodes:
+  natural_nodes:
     type: point
     columns:
       - type: id
@@ -77,3 +77,23 @@ tables:
       ele: [__any__]
       tiger: [__any__]
       intermittent: [__any__]
+  place_nodes:
+    type: point
+    columns:
+      - type: id
+        name: id
+      - type: geometry
+        name: geom
+      - type: string
+        name: name
+        key: name
+      - type: hstore_tags
+        name: tags
+    filters:
+      require:
+        place: [city, town, village, hamlet]
+    mapping:
+      name: [__any__]
+      place: [__any__]
+      population: [__any__]
+      ref: [__any__]
