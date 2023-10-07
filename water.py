@@ -149,6 +149,7 @@ def load_waterways(sources, debug=False):
                 source_id_attr VARCHAR(32),
                 type VARCHAR(128),
                 is_natural INTEGER DEFAULT 1,
+                is_imaginary INTEGER DEFAULT 0,
                 permanence VARCHAR(64) DEFAULT 'permanent',
                 surface VARCHAR(64) DEFAULT 'surface',
                 geom geometry(MultiLineString, {SRID})
@@ -156,6 +157,9 @@ def load_waterways(sources, debug=False):
         """,
         dbname=DBNAME
     )
+    util.run_sql(f"""
+        CREATE INDEX {WATERWAYS_TABLE_NAME}_geom_idx ON {WATERWAYS_TABLE_NAME} USING GIST(geom)
+    """)
     for source in sources:
         source_table_name = f"{source}_waterways"
         sql = f"""
@@ -211,6 +215,9 @@ def load_waterbodies(sources, debug=False):
         """,
         dbname=DBNAME
     )
+    util.run_sql(f"""
+        CREATE INDEX {WATERBODIES_TABLE_NAME}_geom_idx ON {WATERBODIES_TABLE_NAME} USING GIST(geom)
+    """)
     for source in sources:
         source_table_name = f"{source}_waterbodies"
         util.run_sql(f"""
@@ -532,6 +539,21 @@ def make_mbtiles(sources, path="./water.mbtiles", bbox=None, debug=False):
         index_columns=["source"])
     return path
 
+def update_imaginary_waterways():
+    """
+    Set the imaginary column in the waterways table for all ways that are
+    effectively imaginary, i.e. they depict the path water might take through
+    a waterbody. NHD lumps these in the "artificial" type, even though the
+    artificer in these cases are mapmapkers, not people making physical
+    changes on the ground.
+    """
+    util.run_sql(f"""
+        UPDATE {WATERWAYS_TABLE_NAME} SET is_imaginary = 1
+        FROM {WATERBODIES_TABLE_NAME}
+        WHERE
+            ST_CONTAINS({WATERBODIES_TABLE_NAME}.geom, {WATERWAYS_TABLE_NAME}.geom)
+            AND {WATERWAYS_TABLE_NAME}.type = 'artificial'
+    """)
 
 def make_water(
         sources, clean=False, cleandb=False, cleanfiles=False, bbox=None,
@@ -545,6 +567,7 @@ def make_water(
     process_sources(sources, cleandb=cleandb, cleanfiles=cleanfiles, procs=procs, debug=debug)
     load_waterways(sources, debug=debug)
     load_waterbodies(sources, debug=debug)
+    update_imaginary_waterways()
     load_watersheds(sources, debug=debug)
     load_networks(sources, debug=debug)
     return make_mbtiles(sources, path=path, bbox=bbox, debug=debug)
