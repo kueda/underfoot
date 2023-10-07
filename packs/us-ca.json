@@ -15,21 +15,6 @@
     "name": "California (state)",
     "osm": "http://download.geofabrik.de/north-america/us/california-latest.osm.pbf",
     "rock": [
-        "mf2342c",
-        "mf2337c",
-        "of94_622",
-        "of97_489",
-        "of98_354",
-        "mf2403c",
-        "of98_137",
-        "mf2402",
-        "sim2858",
-        "of96_252",
-        "of97_456",
-        "of97_744",
-        "ofr20151175",
-        "of99_014",
-        "i1874",
         "of2005_1305_ca"
     ],
     "water": [
