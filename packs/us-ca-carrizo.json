@@ -21,6 +21,8 @@
     "water": [
         "nhdplus_h_1803_hu4",
         "nhdplus_h_1806_hu4",
-        "tiger_ca_water"
+        "tiger_water_06029",
+        "tiger_water_06079",
+        "tiger_water_06083"
     ]
 }

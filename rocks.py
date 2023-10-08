@@ -309,7 +309,7 @@ def clean_sources(sources):
         shutil.rmtree(work_path)
 
 
-def make_mbtiles(sources, path="./rocks.mbtiles", bbox=None):
+def make_mbtiles(sources, path="./rocks.mbtiles", bbox=None, geojson_path=None):
     """Export rock units into am MBTiles file"""
     mbtiles_cmd = [
         "ogr2ogr",
@@ -323,7 +323,9 @@ def make_mbtiles(sources, path="./rocks.mbtiles", bbox=None):
         "-dsco", "MAXZOOM=14",
         "-dsco", "DESCRIPTION=\"Geological units\""
     ]
-    if bbox:
+    if geojson_path:
+        mbtiles_cmd += ["-clipdst", geojson_path]
+    elif bbox:
         mbtiles_cmd += [
             "-clipdst",
             str(bbox["left"]),
@@ -357,14 +359,15 @@ def make_rocks(
     clean=False,
     path="./rocks.mbtiles",
     procs=NUM_PROCESSES,
-    bbox=None
+    bbox=None,
+    geojson_path=None
 ):
     """Make rocks MBTiles from a collection of sources"""
     make_database()
     if clean:
         clean_sources(sources)
     load_units(sources, clean=clean, procs=procs)
-    mbtiles_path = make_mbtiles(sources, path=path, bbox=bbox)
+    mbtiles_path = make_mbtiles(sources, path=path, bbox=bbox, geojson_path=geojson_path)
     return mbtiles_path
 
 

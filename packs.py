@@ -180,6 +180,7 @@ def make_rocks_for_pack(pack_id, clean=False, procs=2):
     make_rocks(
         pack["rock"],
         bbox=pack["bbox"],
+        geojson_path=pack["geojson_path"],
         clean=clean,
         path=rocks_mbtiles_path,
         procs=procs)
@@ -227,9 +228,7 @@ def make_water_for_pack(pack_id, clean=False, procs=2):
     make_water(
         pack["water"],
         bbox=pack["bbox"],
-        # TODO make pack options to clip water / rocks / ways by the bbox
-        # or not. sometimes it makes more sense to include everythign in
-        # the sources
+        geojson_path=pack["geojson_path"],
         clean=clean,
         path=water_mbtiles_path,
         procs=procs)

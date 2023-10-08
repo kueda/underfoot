@@ -56,6 +56,7 @@ def generate_geojson(sources, args, data):
     if os.path.isfile(outpath):
         log(f"{outpath} exists, skipping GeoJSON generation...")
         return outpath
+    generate_sources(sources, args)
     pack_hulls = []
     for source in sources:
         source_output_path = f"sources/work-{source}/units.geojson"
@@ -235,7 +236,6 @@ if __name__ == "__main__":
     }
     if not data["id"] or len(data["id"]) == 0:
         raise ValueError("You must specify an ID")
-    generate_sources(data["rock"], args)
     geojson_path = generate_geojson(data["rock"], args, data)
     data["geojson"] = {
         "$ref": f"file://./{os.path.basename(geojson_path)}"

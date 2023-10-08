@@ -400,7 +400,7 @@ def load_networks(sources, debug=False):
             util.log(f"{source_table_name} doesn't exist, skipping...")
 
 
-def make_mbtiles(sources, path="./water.mbtiles", bbox=None, debug=False):
+def make_mbtiles(sources, path="./water.mbtiles", bbox=None, geojson_path=None, debug=False):
     """Export water into am MBTiles file"""
     if debug:
         util.log(f"water: making mbtiles for sources: {sources}")
@@ -428,14 +428,19 @@ def make_mbtiles(sources, path="./water.mbtiles", bbox=None, debug=False):
             table_name,
             "-a_srs", f"EPSG:{SRID}",
         ]
-        if bbox:
-            cmd += [
-                "-clipdst",
-                str(bbox["left"]),
-                str(bbox["bottom"]),
-                str(bbox["right"]),
-                str(bbox["top"])
-            ]
+        # Don't clip the waterways, useful to see connectivity across the
+        # entire watershed
+        if table_name != WATERWAYS_TABLE_NAME:
+            if geojson_path:
+                cmd += ["-clipdst", geojson_path]
+            elif bbox:
+                cmd += [
+                    "-clipdst",
+                    str(bbox["left"]),
+                    str(bbox["bottom"]),
+                    str(bbox["right"]),
+                    str(bbox["top"])
+                ]
         util.call_cmd(cmd, check=True)
     # 1. Write additional overview layers of perennial ways and large bodies
     waterways_overview_table_name = f"{WATERWAYS_TABLE_NAME}_overview"
@@ -454,7 +459,9 @@ def make_mbtiles(sources, path="./water.mbtiles", bbox=None, debug=False):
         "-nln", waterways_overview_table_name,
         "-a_srs", f"EPSG:{SRID}"
     ]
-    if bbox:
+    if geojson_path:
+        cmd += ["-clipdst", geojson_path]
+    elif bbox:
         cmd += [
             "-clipdst",
             str(bbox["left"]),
@@ -475,7 +482,9 @@ def make_mbtiles(sources, path="./water.mbtiles", bbox=None, debug=False):
         "-nln", waterbodies_overview_table_name,
         "-a_srs", f"EPSG:{SRID}"
     ]
-    if bbox:
+    if geojson_path:
+        cmd += ["-clipdst", geojson_path]
+    elif bbox:
         cmd += [
             "-clipdst",
             str(bbox["left"]),
@@ -557,7 +566,7 @@ def update_imaginary_waterways():
 
 def make_water(
         sources, clean=False, cleandb=False, cleanfiles=False, bbox=None,
-        path="./water.mbtiles", procs=NUM_PROCESSES, debug=False):
+        path="./water.mbtiles", procs=NUM_PROCESSES, debug=False, geojson_path=None):
     """Process and load all water sources and write them to a MBTiles file"""
     if debug:
         util.log("water: making database")
@@ -570,7 +579,7 @@ def make_water(
     update_imaginary_waterways()
     load_watersheds(sources, debug=debug)
     load_networks(sources, debug=debug)
-    return make_mbtiles(sources, path=path, bbox=bbox, debug=debug)
+    return make_mbtiles(sources, path=path, bbox=bbox, geojson_path=geojson_path, debug=debug)
 
 
 if __name__ == "__main__":
