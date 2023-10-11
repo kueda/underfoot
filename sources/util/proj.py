@@ -12,6 +12,7 @@ NAD83_CA_ALBERS = (
 )
 NAD83_UTM10_PROJ4 = "+proj=utm +zone=10 +datum=NAD83 +units=m +no_defs"
 NAD83_UTM11_PROJ4 = "+proj=utm +zone=11 +datum=NAD83 +units=m +no_defs"
+WGS84_UTM11_PROJ4 = "+proj=utm +zone=11 +datum=WGS84 +units=m +no_defs"
 GRS80_LONGLAT = "+proj=longlat +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +no_defs"
 EPSG_4326_PROJ4 = "+proj=longlat +datum=WGS84 +no_defs"
 SRS = EPSG_4326_PROJ4

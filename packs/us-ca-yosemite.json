@@ -2,10 +2,10 @@
     "admin1": "United States",
     "admin2": "California",
     "bbox": {
-        "bottom": 37.4,
-        "left": -120,
-        "right": -119,
-        "top": 38.3
+        "bottom": 37.10609534123446,
+        "left": -120.38211802690589,
+        "right": -118.4351676363082,
+        "top": 38.68819417598732
     },
     "description": "Yosemite National Park and surrounding areas of the Sierra Nevada mountains",
     "geojson": {
@@ -15,16 +15,21 @@
     "name": "Yosemite National Park and surrounding area, CA, USA",
     "osm": "http://download.geofabrik.de/north-america/us/california/norcal-latest.osm.pbf",
     "rock": [
+        "sim3318",
         "i1874",
+        "gam_25_walkerlake_1963_gis",
         "of2005_1305_ca"
     ],
     "water": [
-        "nhdplus_h_1605_hu4",
-        "nhdplus_h_1804_hu4",
         "nhdplus_h_1809_hu4",
+        "nhdplus_h_1804_hu4",
+        "nhdplus_h_1606_hu4",
+        "nhdplus_h_1605_hu4",
+        "tiger_water_06003",
         "tiger_water_06043",
         "tiger_water_06109",
         "tiger_water_06019",
+        "tiger_water_32005",
         "tiger_water_06051",
         "tiger_water_06039"
     ]

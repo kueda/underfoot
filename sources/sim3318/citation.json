@@ -1,0 +1,51 @@
+[
+	{
+		"id": "http://zotero.org/users/local/b90sdi4a/items/KE9JXDA7",
+		"type": "map",
+		"collection-title": "Scientific Investigations Map",
+		"language": "en",
+		"note": "collection-title: Scientific Investigations Map",
+		"publisher": "U.S. Geological Survey",
+		"scale": "1:50000",
+		"title": "Geologic Map of the Bodie Hills, California and Nevada",
+		"URL": "https://pubs.usgs.gov/sim/3318/",
+		"author": [
+			{
+				"family": "John",
+				"given": "David A."
+			},
+			{
+				"family": "Bray",
+				"given": "Edward A.",
+				"non-dropping-particle": "du"
+			},
+			{
+				"family": "Box",
+				"given": "Stephen E."
+			},
+			{
+				"family": "Vikre",
+				"given": "Peter G."
+			},
+			{
+				"family": "Rytuba",
+				"given": "James J."
+			},
+			{
+				"family": "Fleck",
+				"given": "Robert J."
+			},
+			{
+				"family": "Moring",
+				"given": "Barry C."
+			}
+		],
+		"issued": {
+			"date-parts": [
+				[
+					"2015"
+				]
+			]
+		}
+	}
+]
