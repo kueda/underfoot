@@ -154,7 +154,7 @@ def process_source(source_identifier, clean=False):
         util.log("Repairing invalid geometries...")
         util.run_sql(f"""
             UPDATE {work_source_table_name}
-            SET geom = ST_CollectionExtract(ST_MakeValid(geom))
+            SET geom = ST_CollectionExtract(ST_MakeValid(geom), 3)
             WHERE NOT ST_IsValid(geom)
         """)
         util.log("Removing polygon overlaps...")
@@ -163,9 +163,10 @@ def process_source(source_identifier, clean=False):
             f"DELETE FROM {work_source_table_name} "
             "WHERE ST_GeometryType(geom) = 'ST_GeometryCollection'"
         )
+        util.log("Repairing invalid geometries after removing overlaps...")
         util.run_sql(f"""
             UPDATE {work_source_table_name}
-            SET geom = ST_CollectionExtract(ST_MakeValid(geom))
+            SET geom = ST_CollectionExtract(ST_MakeValid(geom), 3)
             WHERE NOT ST_IsValid(geom)
         """)
         load_citation_for_source(source_identifier)
