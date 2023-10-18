@@ -154,7 +154,7 @@ def process_source(source_identifier, clean=False):
         util.log("Repairing invalid geometries...")
         util.run_sql(f"""
             UPDATE {work_source_table_name}
-            SET geom = ST_MakeValid(geom)
+            SET geom = ST_CollectionExtract(ST_MakeValid(geom))
             WHERE NOT ST_IsValid(geom)
         """)
         util.log("Removing polygon overlaps...")
@@ -165,7 +165,7 @@ def process_source(source_identifier, clean=False):
         )
         util.run_sql(f"""
             UPDATE {work_source_table_name}
-            SET geom = ST_MakeValid(geom)
+            SET geom = ST_CollectionExtract(ST_MakeValid(geom))
             WHERE NOT ST_IsValid(geom)
         """)
         load_citation_for_source(source_identifier)
@@ -397,5 +397,9 @@ if __name__ == "__main__":
         help="Number of processes to use in parallel"
     )
     args = parser.parse_args()
-    kwargs = { k: args[k] for k in args if args[k] and k in ("clean", "path", "procs")}
+    args_dict = vars(args)
+    kwargs = {
+        k: args_dict[k] for k in args_dict
+        if args_dict[k] and k in ("clean", "path", "procs")
+    }
     make_rocks(args.source, **kwargs)
