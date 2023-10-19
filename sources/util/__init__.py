@@ -197,12 +197,16 @@ def initialize_masks_table(mask_table_name, source_table_name, buff=0.01):
           ST_Multi(
             ST_MakeValid(
               ST_Buffer(
-                ST_Buffer(
-                  ST_MakeValid(
-                    ST_Union(geom)
-                  ),
-                  {buff},
-                  'join=mitre'
+                ST_MakeValid(
+                  ST_Buffer(
+                    ST_MakeValid(
+                      ST_Union(
+                          ST_MakeValid(geom)
+                      )
+                    ),
+                    {buff},
+                    'join=mitre'
+                  )
                 ),
                 -{buff},
                 'join=mitre'
@@ -229,16 +233,22 @@ def update_masks_table(mask_table_name, source_table_name, buff=0.01):
               ST_Multi(
                 (
                   SELECT
-                    ST_Buffer(
+                    ST_MakeValid(
                       ST_Buffer(
                         ST_MakeValid(
-                          ST_Union(ST_MakeValid(s.geom))
+                          ST_Buffer(
+                            ST_MakeValid(
+                              ST_Union(
+                                ST_MakeValid(s.geom)
+                              )
+                            ),
+                            {buff},
+                            'join=mitre'
+                          )
                         ),
-                        {buff},
+                        -{buff},
                         'join=mitre'
-                      ),
-                      -{buff},
-                      'join=mitre'
+                      )
                     )
                   FROM {source_table_name} s
                 )
