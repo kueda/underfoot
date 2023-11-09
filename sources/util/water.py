@@ -200,33 +200,33 @@ def process_nhdplus_hr_source_waterways(gdb_path, srs):
     call_cmd(cmd, shell=True, check=True)
 
 
-def process_nhdplus_hr_source_waterbodies(gdb_path, srs):
-    """Creates waterbodies.gpkg in the work dir"""
-    waterbodies_gpkg_path = WATERBODIES_FNAME
-    if os.path.isfile(waterbodies_gpkg_path):
-        log(f"{waterbodies_gpkg_path} exists, skipping...")
-        return
-    sql = """
+def waterbodies_sql(lyr_name):
+    """Make SQL for extracting waterbodies from an NHD layer"""
+    return f"""
         SELECT
           GNIS_ID AS waterbody_id,
           GNIS_ID AS source_id,
           'GNIS_ID' AS source_id_attr,
           GNIS_Name AS name,
           CASE
-          WHEN NHDWaterbody.FCode = 43624 THEN 'treatment'
-          WHEN NHDWaterbody.FCode = 43613 THEN 'storage'
-          WHEN NHDWaterbody.FCode = 43607 THEN 'evaporator'
-          WHEN NHDWaterbody.FCode = 46600 THEN 'swamp/marsh'
-          WHEN NHDWaterbody.FType = 436 THEN 'reservoir'
+          WHEN {lyr_name}.FCode = 36400 THEN 'foreshore'
+          WHEN {lyr_name}.FCode = 40309 THEN 'floodplain'
+          WHEN {lyr_name}.FCode = 43607 THEN 'evaporator'
+          WHEN {lyr_name}.FCode = 43613 THEN 'storage'
+          WHEN {lyr_name}.FCode = 43624 THEN 'treatment'
+          WHEN {lyr_name}.FCode = 46006 THEN 'stream/river'
+          WHEN {lyr_name}.FCode = 46600 THEN 'swamp/marsh'
+          WHEN {lyr_name}.FCode = 53700 THEN 'swamp/marsh'
+          WHEN {lyr_name}.FType = 436 THEN 'reservoir'
           ELSE 'lake/pond'
           END AS type,
           NOT (
             GNIS_Name LIKE '%reservoir%'
             OR NHDFcode.Description LIKE '%reservoir%'
-            OR NHDWaterbody.FType = 436
-            OR NHDWaterbody.FCode = 43607
-            OR NHDWaterbody.FCode = 43613
-            OR NHDWaterbody.FCode = 43624
+            OR {lyr_name}.FType = 436
+            OR {lyr_name}.FCode = 43607
+            OR {lyr_name}.FCode = 43613
+            OR {lyr_name}.FCode = 43624
           ) AS is_natural,
           LOWER(
             COALESCE(
@@ -236,11 +236,19 @@ def process_nhdplus_hr_source_waterbodies(gdb_path, srs):
           ) AS permanence,
           Shape AS geom
         FROM
-          NHDWaterbody
-            JOIN NHDFcode ON NHDFcode.FCode = NHDWaterbody.FCode
+          {lyr_name}
+            JOIN NHDFcode ON NHDFcode.FCode = {lyr_name}.FCode
         WHERE
-          NHDWaterbody.FCode NOT IN (56600, 56700)
+          {lyr_name}.FCode NOT IN (56600, 56700)
     """
+
+def process_nhdplus_hr_source_waterbodies(gdb_path, srs):
+    """Creates waterbodies.gpkg in the work dir"""
+    waterbodies_gpkg_path = WATERBODIES_FNAME
+    if os.path.isfile(waterbodies_gpkg_path):
+        log(f"{waterbodies_gpkg_path} exists, skipping...")
+        return
+    sql = waterbodies_sql("NHDWaterbody")
     sql = re.sub(r'\s+', " ", sql)
     cmd = f"""
         ogr2ogr \
@@ -249,6 +257,22 @@ def process_nhdplus_hr_source_waterbodies(gdb_path, srs):
           -overwrite \
           {waterbodies_gpkg_path} \
           {gdb_path} \
+          -dialect sqlite \
+          -nln waterbodies \
+          -nlt MULTIPOLYGON \
+          -sql "{sql}"
+    """
+    call_cmd(cmd, shell=True, check=True)
+    sql = waterbodies_sql("NHDArea")
+    sql = re.sub(r'\s+', " ", sql)
+    cmd = f"""
+        ogr2ogr \
+          -s_srs '{srs}' \
+          -t_srs '{SRS}' \
+          {waterbodies_gpkg_path} \
+          {gdb_path} \
+          -append \
+          -update \
           -dialect sqlite \
           -nln waterbodies \
           -nlt MULTIPOLYGON \

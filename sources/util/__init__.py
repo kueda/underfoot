@@ -25,7 +25,7 @@ def log(msg="", **kwargs):
 
 def extless_basename(path):
     """Like basename but without the need to explicitly list an extension"""
-    if re.match(r".*\.[A-z0-9]+$", path):
+    if re.match(r".*\.[A-Za-z0-9]+$", path):
         return os.path.splitext(os.path.basename(path))[0]
     return os.path.split(path)[-1]
 
