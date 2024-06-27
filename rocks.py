@@ -310,11 +310,12 @@ def clean_sources(sources):
         shutil.rmtree(work_path)
 
 
-def make_mbtiles(sources, path="./rocks.mbtiles", bbox=None, geojson_path=None):
+def make_mbtiles(sources, path="./rocks.mbtiles", bbox=None, geojson_path=None, use_pmtiles=False):
     """Export rock units into am MBTiles file"""
+    if use_pmtiles:
+        path = path.replace("mbtiles", "pmtiles")
     mbtiles_cmd = [
         "ogr2ogr",
-        "-f", "MBTILES",
         path,
         f"PG:dbname={DBNAME}",
         "-sql", "SELECT id::text AS id, lithology, min_age, controlled_span, geom FROM rock_units",
@@ -336,22 +337,27 @@ def make_mbtiles(sources, path="./rocks.mbtiles", bbox=None, geojson_path=None):
         ]
     util.call_cmd(mbtiles_cmd)
     columns = ["id"] + rocks.METADATA_COLUMN_NAMES + ["source"]
-    util.add_table_from_query_to_mbtiles(
-        table_name=f"{FINAL_TABLE_NAME}_attrs",
-        dbname=DBNAME,
-        query=f"SELECT {', '.join(columns)} FROM {FINAL_TABLE_NAME}",
-        mbtiles_path=path,
-        index_columns=["id"])
-    sources_sql = ",".join([f"'{s}'" for s in sources])
-    util.add_table_from_query_to_mbtiles(
-        table_name=CITATIONS_TABLE_NAME,
-        dbname=DBNAME,
-        query=f"""
-            SELECT * FROM {CITATIONS_TABLE_NAME}
-            WHERE source IN ({sources_sql})
-        """,
-        mbtiles_path=path,
-        index_columns=["source"])
+    if use_pmtiles:
+        # TODO write this data to CSV or something. PMTiles isn't a sqlite db
+        # so you can't just shove data in there
+        pass
+    else:
+        util.add_table_from_query_to_mbtiles(
+            table_name=f"{FINAL_TABLE_NAME}_attrs",
+            dbname=DBNAME,
+            query=f"SELECT {', '.join(columns)} FROM {FINAL_TABLE_NAME}",
+            mbtiles_path=path,
+            index_columns=["id"])
+        sources_sql = ",".join([f"'{s}'" for s in sources])
+        util.add_table_from_query_to_mbtiles(
+            table_name=CITATIONS_TABLE_NAME,
+            dbname=DBNAME,
+            query=f"""
+                SELECT * FROM {CITATIONS_TABLE_NAME}
+                WHERE source IN ({sources_sql})
+            """,
+            mbtiles_path=path,
+            index_columns=["source"])
     return os.path.abspath(path)
 
 
@@ -361,14 +367,20 @@ def make_rocks(
     path="./rocks.mbtiles",
     procs=NUM_PROCESSES,
     bbox=None,
-    geojson_path=None
+    geojson_path=None,
+    use_pmtiles=False
 ):
     """Make rocks MBTiles from a collection of sources"""
     make_database()
     if clean:
         clean_sources(sources)
     load_units(sources, clean=clean, procs=procs)
-    mbtiles_path = make_mbtiles(sources, path=path, bbox=bbox, geojson_path=geojson_path)
+    mbtiles_path = make_mbtiles(
+        sources,
+        path=path,
+        bbox=bbox,
+        geojson_path=geojson_path,
+        use_pmtiles=use_pmtiles)
     return mbtiles_path
 
 

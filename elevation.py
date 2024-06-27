@@ -151,12 +151,25 @@ def make_contours_for_tile(tile, clean=False):
         path for path in merge_file_paths if os.path.exists(path)
     ]
     merge_path = tile_file_path(tile.x, tile.y, tile.z, "merge.tif")
-    run(["gdal_merge.py", "-q", "-o", merge_path, *merge_file_paths], check=True)
-    run([
-        "gdal_contour", "-q", "-i", str(
-            interval), "-a", "elevation", merge_path,
-        merge_contours_path
-    ], check=True)
+    try:
+        run(["gdal_merge.py", "-q", "-o", merge_path, *merge_file_paths], check=True)
+    except CalledProcessError:
+        util.log("gdal_merge.py not working, trying another path")
+        run(["/usr/bin/gdal_merge.py", "-q", "-o", merge_path, *merge_file_paths], check=True)
+
+    try:
+        run([
+            "gdal_contour", "-q", "-i", str(
+                interval), "-a", "elevation", merge_path,
+            merge_contours_path
+        ], check=True)
+    except CalledProcessError:
+        util.log("gdal_contour not working, trying another path")
+        run([
+            "/usr/bin/gdal_contour", "-q", "-i", str(
+                interval), "-a", "elevation", merge_path,
+            merge_contours_path
+        ], check=True)
     # Get the bounding box of this tile in lat/lon, project into the source
     # coordinate system (Pseudo Mercator) so ogr2ogr can clip it before
     # importing into PostGIS
@@ -219,9 +232,14 @@ async def make_contours_mbtiles(
     nelat=None,
     geojson=None,
     mbtiles_zoom=None,
-    clean=False, procs=2, path="./contours.mbtiles"
+    clean=False,
+    procs=2,
+    path="./contours.mbtiles",
+    use_pmtiles=False
 ):
     """Make the mbtiles for contours"""
+    if use_pmtiles:
+        path = path.replace("mbtiles", "pmtiles")
     make_database()
     zooms = [zoom]
     if not mbtiles_zoom:
@@ -249,7 +267,6 @@ async def make_contours_mbtiles(
     # fill it with (i.e. what contour resolution)
     cmd = [
         "ogr2ogr",
-        "-f", "MBTILES",
         path,
         f"PG:dbname={DBNAME}",
         TABLE_NAME,
@@ -271,7 +288,8 @@ def make_contours(
     mbtiles_zoom=None,
     clean=False,
     procs=2,
-    path="./contours.mbtiles"
+    path="./contours.mbtiles",
+    use_pmtiles=False
 ):
     """Seemingly useless method so we can export a synchronous method that calls async code"""
     mbtiles_path = asyncio.run(
@@ -285,7 +303,8 @@ def make_contours(
             mbtiles_zoom=mbtiles_zoom,
             clean=clean,
             procs=procs,
-            path=path
+            path=path,
+            use_pmtiles=use_pmtiles
         )
     )
     return mbtiles_path

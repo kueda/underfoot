@@ -199,8 +199,10 @@ def load_place_nodes_data(data_path, pack=None):
     )
 
 
-def make_ways_mbtiles(path):
+def make_ways_mbtiles(path, use_pmtiles=False):
     """Export ways into the MBTiles using different zoom levels for different types"""
+    if use_pmtiles:
+        path = path.replace("mbtiles", "pmtiles")
     if os.path.exists(path):
         os.remove(path)
     gpkg_path = f"{util.basename_for_path(path)}.gpkg"
@@ -254,8 +256,10 @@ def make_ways_mbtiles(path):
     os.remove(gpkg_path)
 
 
-def make_context_mbtiles(path):
+def make_context_mbtiles(path, use_pmtiles=False):
     """Make context mbtiles"""
+    if use_pmtiles:
+        path = path.replace("mbtiles", "pmtiles")
     if os.path.exists(path):
         os.remove(path)
     gpkg_path = f"{util.basename_for_path(path)}.gpkg"
@@ -286,7 +290,7 @@ def make_context_mbtiles(path):
     util.call_cmd(re.sub(r'\s+', " ", cmd).strip(), shell=True)
     os.remove(gpkg_path)
 
-def make_ways(pbf_url, clean=False, pack=None, path="./ways.mbtiles"):
+def make_ways(pbf_url, clean=False, pack=None, path="./ways.mbtiles", use_pmtiles=False):
     r"""Make an MBTiles files for OSM ways data given an OSM PBF export URL
 
     Parameters
@@ -306,11 +310,11 @@ def make_ways(pbf_url, clean=False, pack=None, path="./ways.mbtiles"):
         con = database_connection(recreate=True)
         con.close()
     load_ways_data(filename, pack=pack)
-    make_ways_mbtiles(path)
+    make_ways_mbtiles(path, use_pmtiles=use_pmtiles)
     return path
 
 
-def make_context(pbf_url, clean=False, pack=None, path="./context.mbtiles"):
+def make_context(pbf_url, clean=False, pack=None, path="./context.mbtiles", use_pmtiles=False):
     """Makes an mbtiles with contextual geographic info from OSM"""
     if not pbf_url or len(pbf_url) == 0:
         raise ValueError("You must specify a PBF URL")
@@ -321,7 +325,7 @@ def make_context(pbf_url, clean=False, pack=None, path="./context.mbtiles"):
     load_natural_ways_data(filename, pack=pack)
     load_natural_nodes_data(filename, pack=pack)
     load_place_nodes_data(filename, pack=pack)
-    make_context_mbtiles(path)
+    make_context_mbtiles(path, use_pmtiles=use_pmtiles)
 
 if __name__ == "__main__":
     PATH = make_ways(sys.argv[0])
