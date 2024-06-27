@@ -14,9 +14,10 @@ sudo apt-get install -y \
   python-is-python3 \
   python3 \
   python3-dev \
-  python3-gdal \
   python3-pip \
   sqlite3 \
   unzip \
   virtualenv \
   zip
+pip install numpy
+pip install GDAL==$(gdal-config --version) --global-option=build_ext --global-option="-I/usr/include/gdal"
