@@ -153,21 +153,19 @@ def make_contours_for_tile(tile, clean=False):
     merge_path = tile_file_path(tile.x, tile.y, tile.z, "merge.tif")
     try:
         run(["gdal_merge.py", "-q", "-o", merge_path, *merge_file_paths], check=True)
-    except (CalledProcessError, AttributeError):
+    except (CalledProcessError, AttributeError, ImportError):
         util.log("gdal_merge.py not working, trying another path")
         run(["/usr/bin/gdal_merge.py", "-q", "-o", merge_path, *merge_file_paths], check=True)
 
     try:
         run([
-            "gdal_contour", "-q", "-i", str(
-                interval), "-a", "elevation", merge_path,
+            "gdal_contour", "-q", "-i", str(interval), "-a", "elevation", merge_path,
             merge_contours_path
         ], check=True)
-    except (CalledProcessError, AttributeError):
+    except (CalledProcessError, AttributeError, ImportError):
         util.log("gdal_contour not working, trying another path")
         run([
-            "/usr/bin/gdal_contour", "-q", "-i", str(
-                interval), "-a", "elevation", merge_path,
+            "/usr/bin/gdal_contour", "-q", "-i", str(interval), "-a", "elevation", merge_path,
             merge_contours_path
         ], check=True)
     # Get the bounding box of this tile in lat/lon, project into the source
