@@ -7,6 +7,10 @@ on:
         description: A pack IDs (e.g. 'us-ca-oakland')
         type: string
         required: true
+      use_pmtiles:
+        description: Output PMTiles instead of MBTiles
+        required: false
+        type: boolean
     secrets:
       DO_SPACES_KEY:
         required: true
@@ -46,17 +50,18 @@ jobs:
           key: cache-source-work-rocks-2-${{ inputs.pack }}-${{ hashFiles(format('packs/{0}.json', inputs.pack)) }}
 
       - name: Build rocks
-        run: python packs.py ${{ inputs.pack }} --only rocks
+        run: |
+          python packs.py ${{ inputs.pack }} --only rocks ${{ inputs.use_pmtiles ? '--use-pmtiles' : '' }}
         env:
           PGHOST: 0.0.0.0
           PGUSER: underfoot
           PGPASSWORD: underfoot
 
-      - name: Upload rocks.mbtiles
+      - name: Upload rocks
         uses: actions/upload-artifact@v3
         with:
           name: ${{ inputs.pack }}-rocks
-          path: build/${{ inputs.pack }}/rocks.mbtiles
+          path: "build/${{ inputs.pack }}/rocks.${{ inputs.use_pmtiles ? 'pmtiles' : 'mbtiles' }}"
 
   water:
     name: Build water
@@ -88,17 +93,18 @@ jobs:
           key: cache-source-work-water-${{ inputs.pack }}-${{ hashFiles(format('packs/{0}.json', inputs.pack)) }}
 
       - name: Build water
-        run: python packs.py ${{ inputs.pack }} --only water
+        run: |
+          python packs.py ${{ inputs.pack }} --only water ${{ inputs.use_pmtiles ? '--use-pmtiles' : '' }}
         env:
           PGHOST: 0.0.0.0
           PGUSER: underfoot
           PGPASSWORD: underfoot
 
-      - name: Upload water.mbtiles
+      - name: Upload water
         uses: actions/upload-artifact@v3
         with:
           name: ${{ inputs.pack }}-water
-          path: build/${{ inputs.pack }}/water.mbtiles
+          path: "build/${{ inputs.pack }}/water.${{ inputs.use_pmtiles ? 'pmtiles' : 'mbtiles' }}"
 
   contours:
     name: Build contours
@@ -130,17 +136,18 @@ jobs:
           key: cache-elevation-${{ inputs.pack }}-${{ hashFiles(format('packs/{0}.json', inputs.pack)) }}
 
       - name: Build contours
-        run: python packs.py ${{ inputs.pack }} --only contours
+        run: |
+          python packs.py ${{ inputs.pack }} --only contours ${{ inputs.use_pmtiles ? '--use-pmtiles' : '' }}
         env:
           PGHOST: 0.0.0.0
           PGUSER: underfoot
           PGPASSWORD: underfoot
 
-      - name: Upload contours.mbtiles
+      - name: Upload contours
         uses: actions/upload-artifact@v3
         with:
           name: ${{ inputs.pack }}-contours
-          path: build/${{ inputs.pack }}/contours.mbtiles
+          path: "build/${{ inputs.pack }}/contours.${{ inputs.use_pmtiles ? 'pmtiles' : 'mbtiles' }}"
 
   osm:
     name: Build ways & context
@@ -180,23 +187,24 @@ jobs:
           key: cache-osm-${{ steps.get-osm-url.outputs.osm-url }}-${{ steps.calc-year-week.outputs.year-week }}
 
       - name: Build ways & context
-        run: python packs.py ${{ inputs.pack }} --only ways context
+        run: |
+          python packs.py ${{ inputs.pack }} --only ways context ${{ inputs.use_pmtiles ? '--use-pmtiles' : '' }}
         env:
           PGHOST: 0.0.0.0
           PGUSER: underfoot
           PGPASSWORD: underfoot
 
-      - name: Upload ways.mbtiles
+      - name: Upload ways
         uses: actions/upload-artifact@v3
         with:
           name: ${{ inputs.pack }}-ways
-          path: build/${{ inputs.pack }}/ways.mbtiles
+          path: "build/${{ inputs.pack }}/ways.${{ inputs.use_pmtiles ? 'pmtiles' : 'mbtiles' }}"
 
-      - name: Upload context.mbtiles
+      - name: Upload context
         uses: actions/upload-artifact@v3
         with:
           name: ${{ inputs.pack }}-context
-          path: build/${{ inputs.pack }}/context.mbtiles
+          path: "build/${{ inputs.pack }}/context.${{ inputs.use_pmtiles ? 'pmtiles' : 'mbtiles' }}"
 
   upload-pack:
     name: Archive and upload pack
@@ -221,13 +229,13 @@ jobs:
       - name: Zip up the pack
         run: |
           mkdir -p build/${{ inputs.pack }}
-          mv ${{ inputs.pack }}-rocks/rocks.mbtiles build/${{ inputs.pack }}/
-          mv ${{ inputs.pack }}-contours/contours.mbtiles build/${{ inputs.pack }}/
-          mv ${{ inputs.pack }}-water/water.mbtiles build/${{ inputs.pack }}/
-          mv ${{ inputs.pack }}-ways/ways.mbtiles build/${{ inputs.pack }}/
-          mv ${{ inputs.pack }}-context/context.mbtiles build/${{ inputs.pack }}/
+          mv ${{ inputs.pack }}-rocks/rocks.${{ inputs.use_pmtiles ? 'pmtiles' : 'mbtiles' }} build/${{ inputs.pack }}/
+          mv ${{ inputs.pack }}-contours/contours.${{ inputs.use_pmtiles ? 'pmtiles' : 'mbtiles' }} build/${{ inputs.pack }}/
+          mv ${{ inputs.pack }}-water/water.${{ inputs.use_pmtiles ? 'pmtiles' : 'mbtiles' }} build/${{ inputs.pack }}/
+          mv ${{ inputs.pack }}-ways/ways.${{ inputs.use_pmtiles ? 'pmtiles' : 'mbtiles' }} build/${{ inputs.pack }}/
+          mv ${{ inputs.pack }}-context/context.${{ inputs.use_pmtiles ? 'pmtiles' : 'mbtiles' }} build/${{ inputs.pack }}/
           cd build/
-          zip ${{ inputs.pack }}.zip ${{ inputs.pack }}/*.mbtiles
+          zip ${{ inputs.pack }}.zip ${{ inputs.pack }}/*.${{ inputs.use_pmtiles ? 'pmtiles' : 'mbtiles' }}
           cd ../
 
       - name: Make the manifest

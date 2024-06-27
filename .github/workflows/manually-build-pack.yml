@@ -9,6 +9,10 @@ on:
           e.g. "us-ca-oakland us-ca-la"
         required: true
         type: string
+      use_pmtiles:
+        description: Output PMTiles instead of MBTiles
+        required: false
+        type: boolean
 
 jobs:
   list-packs:
@@ -35,4 +39,5 @@ jobs:
     uses: kueda/underfoot/.github/workflows/build-pack.yml@main
     with:
       pack: ${{ matrix.pack }}
+      use_pmtiles: ${{ inputs.use_pmtiles }}
     secrets: inherit
