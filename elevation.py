@@ -153,7 +153,7 @@ def make_contours_for_tile(tile, clean=False):
     merge_path = tile_file_path(tile.x, tile.y, tile.z, "merge.tif")
     try:
         run(["gdal_merge.py", "-q", "-o", merge_path, *merge_file_paths], check=True)
-    except CalledProcessError:
+    except (CalledProcessError, AttributeError):
         util.log("gdal_merge.py not working, trying another path")
         run(["/usr/bin/gdal_merge.py", "-q", "-o", merge_path, *merge_file_paths], check=True)
 
@@ -163,7 +163,7 @@ def make_contours_for_tile(tile, clean=False):
                 interval), "-a", "elevation", merge_path,
             merge_contours_path
         ], check=True)
-    except CalledProcessError:
+    except (CalledProcessError, AttributeError):
         util.log("gdal_contour not working, trying another path")
         run([
             "/usr/bin/gdal_contour", "-q", "-i", str(
