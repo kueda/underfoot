@@ -36,8 +36,8 @@ jobs:
       fail-fast: false
       matrix:
         pack: ${{ fromJson(needs.list-packs.outputs.matrix) }}
-    uses: kueda/underfoot/.github/workflows/build-pack.yml@main
+    uses: kueda/underfoot/.github/workflows/build-pack.yml@pmtiles
     with:
       pack: ${{ matrix.pack }}
-      use_pmtiles: ${{ github.event.inputs.use_pmtiles == 'true' }}
+      use_pmtiles: ${{ inputs.use_pmtiles }}
     secrets: inherit
