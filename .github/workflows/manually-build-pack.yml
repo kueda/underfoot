@@ -39,5 +39,5 @@ jobs:
     uses: kueda/underfoot/.github/workflows/build-pack.yml@main
     with:
       pack: ${{ matrix.pack }}
-      use_pmtiles: ${{ inputs.use_pmtiles }}
+      use_pmtiles: ${{ github.event.inputs.use_pmtiles == 'true' }}
     secrets: inherit
