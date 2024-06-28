@@ -256,8 +256,8 @@ jobs:
           ls -l build/
           s3cmd put build/manifest.json s3://underfoot2/manifest.json
           s3cmd setacl s3://underfoot2/manifest.json --acl-public
-          s3cmd put build/${{ inputs.pack }}.zip s3://underfoot2/${{ inputs.pack }}.zip
-          s3cmd setacl s3://underfoot2/${{ inputs.pack }}.zip --acl-public
+          s3cmd put build/${{ inputs.pack }}${{ inputs.use_pmtiles && '.pmtiles' || '' }}.zip s3://underfoot2/${{ inputs.pack }}${{ inputs.use_pmtiles && '.pmtiles' || '' }}.zip
+          s3cmd setacl s3://underfoot2/${{ inputs.pack }}${{ inputs.use_pmtiles && '.pmtiles' || '' }}.zip --acl-public
 
       - name: Set up doctl
         uses: digitalocean/action-doctl@v2
