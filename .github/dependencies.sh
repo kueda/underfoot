@@ -19,5 +19,5 @@ sudo apt-get install -y \
   unzip \
   virtualenv \
   zip
-pip install numpy
+pip install "numpy<2.0"
 pip install GDAL==$(gdal-config --version) --global-option=build_ext --global-option="-I/usr/include/gdal"
