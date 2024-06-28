@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-sudo add-apt-repository ppa:ubuntugis/ubuntugis
+sudo add-apt-repository ppa:ubuntugis/ppa
 sudo add-apt-repository ppa:deadsnakes/ppa
 sudo apt-get update
 sudo apt-get install -y \

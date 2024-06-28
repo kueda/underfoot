@@ -20,91 +20,91 @@ on:
         required: true
 
 jobs:
-  rocks:
-    name: Build rocks
-    runs-on: ubuntu-22.04
-    services:
-      postgres:
-        image: postgis/postgis:12-2.5
-        env:
-          POSTGRES_USER: underfoot
-          POSTGRES_PASSWORD: underfoot
-          POSTGRES_DB: underfoot
-        ports:
-          - 5432:5432
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
-    steps:
-      - uses: actions/checkout@v3
+  # rocks:
+  #   name: Build rocks
+  #   runs-on: ubuntu-22.04
+  #   services:
+  #     postgres:
+  #       image: postgis/postgis:12-2.5
+  #       env:
+  #         POSTGRES_USER: underfoot
+  #         POSTGRES_PASSWORD: underfoot
+  #         POSTGRES_DB: underfoot
+  #       ports:
+  #         - 5432:5432
+  #       options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+  #   steps:
+  #     - uses: actions/checkout@v3
 
-      - name: Install Ubuntu dependencies
-        run: ./.github/dependencies.sh
+  #     - name: Install Ubuntu dependencies
+  #       run: ./.github/dependencies.sh
 
-      - name: Install Python dependencies
-        run: pip install -r requirements.txt && python setup.py
+  #     - name: Install Python dependencies
+  #       run: pip install -r requirements.txt && python setup.py
 
-      - id: cache-source-work-rocks
-        name: Cache source work for rocks
-        uses: actions/cache@v3
-        with:
-          path: sources/work-*
-          key: cache-source-work-rocks-2-${{ inputs.pack }}-${{ hashFiles(format('packs/{0}.json', inputs.pack)) }}
+  #     - id: cache-source-work-rocks
+  #       name: Cache source work for rocks
+  #       uses: actions/cache@v3
+  #       with:
+  #         path: sources/work-*
+  #         key: cache-source-work-rocks-2-${{ inputs.pack }}-${{ hashFiles(format('packs/{0}.json', inputs.pack)) }}
 
-      - name: Build rocks
-        run: |
-          python packs.py ${{ inputs.pack }} --only rocks ${{ inputs.use_pmtiles && '--use-pmtiles' }}
-        env:
-          PGHOST: 0.0.0.0
-          PGUSER: underfoot
-          PGPASSWORD: underfoot
+  #     - name: Build rocks
+  #       run: |
+  #         python packs.py ${{ inputs.pack }} --only rocks ${{ inputs.use_pmtiles && '--use-pmtiles' }}
+  #       env:
+  #         PGHOST: 0.0.0.0
+  #         PGUSER: underfoot
+  #         PGPASSWORD: underfoot
 
-      - name: Upload rocks
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ inputs.pack }}-rocks
-          path: "build/${{ inputs.pack }}/rocks.${{ inputs.use_pmtiles && 'pmtiles' || 'mbtiles' }}"
+  #     - name: Upload rocks
+  #       uses: actions/upload-artifact@v3
+  #       with:
+  #         name: ${{ inputs.pack }}-rocks
+  #         path: "build/${{ inputs.pack }}/rocks.${{ inputs.use_pmtiles && 'pmtiles' || 'mbtiles' }}"
 
-  water:
-    name: Build water
-    runs-on: ubuntu-22.04
-    services:
-      postgres:
-        image: postgis/postgis:12-2.5
-        env:
-          POSTGRES_USER: underfoot
-          POSTGRES_PASSWORD: underfoot
-          POSTGRES_DB: underfoot
-        ports:
-          - 5432:5432
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
-    steps:
-      - uses: actions/checkout@v3
+  # water:
+  #   name: Build water
+  #   runs-on: ubuntu-22.04
+  #   services:
+  #     postgres:
+  #       image: postgis/postgis:12-2.5
+  #       env:
+  #         POSTGRES_USER: underfoot
+  #         POSTGRES_PASSWORD: underfoot
+  #         POSTGRES_DB: underfoot
+  #       ports:
+  #         - 5432:5432
+  #       options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+  #   steps:
+  #     - uses: actions/checkout@v3
 
-      - name: Install Ubuntu dependencies
-        run: ./.github/dependencies.sh
+  #     - name: Install Ubuntu dependencies
+  #       run: ./.github/dependencies.sh
 
-      - name: Install Python dependencies
-        run: pip install -r requirements.txt && python setup.py
+  #     - name: Install Python dependencies
+  #       run: pip install -r requirements.txt && python setup.py
 
-      - id: cache-source-work-water
-        name: Cache source work for water
-        uses: actions/cache@v3
-        with:
-          path: sources/work-*
-          key: cache-source-work-water-${{ inputs.pack }}-${{ hashFiles(format('packs/{0}.json', inputs.pack)) }}
+  #     - id: cache-source-work-water
+  #       name: Cache source work for water
+  #       uses: actions/cache@v3
+  #       with:
+  #         path: sources/work-*
+  #         key: cache-source-work-water-${{ inputs.pack }}-${{ hashFiles(format('packs/{0}.json', inputs.pack)) }}
 
-      - name: Build water
-        run: |
-          python packs.py ${{ inputs.pack }} --only water ${{ inputs.use_pmtiles && '--use-pmtiles' }}
-        env:
-          PGHOST: 0.0.0.0
-          PGUSER: underfoot
-          PGPASSWORD: underfoot
+  #     - name: Build water
+  #       run: |
+  #         python packs.py ${{ inputs.pack }} --only water ${{ inputs.use_pmtiles && '--use-pmtiles' }}
+  #       env:
+  #         PGHOST: 0.0.0.0
+  #         PGUSER: underfoot
+  #         PGPASSWORD: underfoot
 
-      - name: Upload water
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ inputs.pack }}-water
-          path: "build/${{ inputs.pack }}/water.${{ inputs.use_pmtiles && 'pmtiles' || 'mbtiles' }}"
+  #     - name: Upload water
+  #       uses: actions/upload-artifact@v3
+  #       with:
+  #         name: ${{ inputs.pack }}-water
+  #         path: "build/${{ inputs.pack }}/water.${{ inputs.use_pmtiles && 'pmtiles' || 'mbtiles' }}"
 
   contours:
     name: Build contours
@@ -149,118 +149,118 @@ jobs:
           name: ${{ inputs.pack }}-contours
           path: "build/${{ inputs.pack }}/contours.${{ inputs.use_pmtiles && 'pmtiles' || 'mbtiles' }}"
 
-  osm:
-    name: Build ways & context
-    runs-on: ubuntu-22.04
-    services:
-      postgres:
-        image: postgis/postgis:12-2.5
-        env:
-          POSTGRES_USER: underfoot
-          POSTGRES_PASSWORD: underfoot
-          POSTGRES_DB: underfoot
-        ports:
-          - 5432:5432
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
-    steps:
-      - uses: actions/checkout@v3
+  # osm:
+  #   name: Build ways & context
+  #   runs-on: ubuntu-22.04
+  #   services:
+  #     postgres:
+  #       image: postgis/postgis:12-2.5
+  #       env:
+  #         POSTGRES_USER: underfoot
+  #         POSTGRES_PASSWORD: underfoot
+  #         POSTGRES_DB: underfoot
+  #       ports:
+  #         - 5432:5432
+  #       options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+  #   steps:
+  #     - uses: actions/checkout@v3
 
-      - name: Install Ubuntu dependencies
-        run: ./.github/dependencies.sh
+  #     - name: Install Ubuntu dependencies
+  #       run: ./.github/dependencies.sh
 
-      - name: Install Python dependencies
-        run: pip install -r requirements.txt && python setup.py
+  #     - name: Install Python dependencies
+  #       run: pip install -r requirements.txt && python setup.py
 
-      - name: Get current year week
-        id: calc-year-week
-        run: echo "year-week=$(date +'%Y-%U')" >> $GITHUB_OUTPUT
+  #     - name: Get current year week
+  #       id: calc-year-week
+  #       run: echo "year-week=$(date +'%Y-%U')" >> $GITHUB_OUTPUT
 
-      - name: Get OSM URL
-        id: get-osm-url
-        run: UNDERFOOT_PACK=${{ inputs.pack }} && echo "osm-url=$(jq -c -r .osm packs/$UNDERFOOT_PACK.json)" >> $GITHUB_OUTPUT
+  #     - name: Get OSM URL
+  #       id: get-osm-url
+  #       run: UNDERFOOT_PACK=${{ inputs.pack }} && echo "osm-url=$(jq -c -r .osm packs/$UNDERFOOT_PACK.json)" >> $GITHUB_OUTPUT
 
-      - name: Cache OSM download
-        id: cache-osm
-        uses: actions/cache@v3
-        with:
-          path: "*.osm.pbf"
-          key: cache-osm-${{ steps.get-osm-url.outputs.osm-url }}-${{ steps.calc-year-week.outputs.year-week }}
+  #     - name: Cache OSM download
+  #       id: cache-osm
+  #       uses: actions/cache@v3
+  #       with:
+  #         path: "*.osm.pbf"
+  #         key: cache-osm-${{ steps.get-osm-url.outputs.osm-url }}-${{ steps.calc-year-week.outputs.year-week }}
 
-      - name: Build ways & context
-        run: |
-          python packs.py ${{ inputs.pack }} --only ways context ${{ inputs.use_pmtiles && '--use-pmtiles' }}
-        env:
-          PGHOST: 0.0.0.0
-          PGUSER: underfoot
-          PGPASSWORD: underfoot
+  #     - name: Build ways & context
+  #       run: |
+  #         python packs.py ${{ inputs.pack }} --only ways context ${{ inputs.use_pmtiles && '--use-pmtiles' }}
+  #       env:
+  #         PGHOST: 0.0.0.0
+  #         PGUSER: underfoot
+  #         PGPASSWORD: underfoot
 
-      - name: Upload ways
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ inputs.pack }}-ways
-          path: "build/${{ inputs.pack }}/ways.${{ inputs.use_pmtiles && 'pmtiles' || 'mbtiles' }}"
+  #     - name: Upload ways
+  #       uses: actions/upload-artifact@v3
+  #       with:
+  #         name: ${{ inputs.pack }}-ways
+  #         path: "build/${{ inputs.pack }}/ways.${{ inputs.use_pmtiles && 'pmtiles' || 'mbtiles' }}"
 
-      - name: Upload context
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ inputs.pack }}-context
-          path: "build/${{ inputs.pack }}/context.${{ inputs.use_pmtiles && 'pmtiles' || 'mbtiles' }}"
+  #     - name: Upload context
+  #       uses: actions/upload-artifact@v3
+  #       with:
+  #         name: ${{ inputs.pack }}-context
+  #         path: "build/${{ inputs.pack }}/context.${{ inputs.use_pmtiles && 'pmtiles' || 'mbtiles' }}"
 
-  upload-pack:
-    name: Archive and upload pack
-    runs-on: ubuntu-22.04
-    needs:
-      - rocks
-      - water
-      - contours
-      - osm
-    steps:
-      - uses: actions/checkout@v3
+  # upload-pack:
+  #   name: Archive and upload pack
+  #   runs-on: ubuntu-22.04
+  #   needs:
+  #     - rocks
+  #     - water
+  #     - contours
+  #     - osm
+  #   steps:
+  #     - uses: actions/checkout@v3
 
-      - name: Install Ubuntu dependencies
-        run: ./.github/dependencies.sh
+  #     - name: Install Ubuntu dependencies
+  #       run: ./.github/dependencies.sh
 
-      - name: Install Python dependencies
-        run: pip install -r requirements.txt && python setup.py
+  #     - name: Install Python dependencies
+  #       run: pip install -r requirements.txt && python setup.py
 
-      - name: Download all MBTiles artifacts
-        uses: actions/download-artifact@v3
+  #     - name: Download all MBTiles artifacts
+  #       uses: actions/download-artifact@v3
 
-      - name: Zip up the pack
-        run: |
-          mkdir -p build/${{ inputs.pack }}
-          mv ${{ inputs.pack }}-rocks/rocks.${{ inputs.use_pmtiles && 'pmtiles' || 'mbtiles' }} build/${{ inputs.pack }}/
-          mv ${{ inputs.pack }}-contours/contours.${{ inputs.use_pmtiles && 'pmtiles' || 'mbtiles' }} build/${{ inputs.pack }}/
-          mv ${{ inputs.pack }}-water/water.${{ inputs.use_pmtiles && 'pmtiles' || 'mbtiles' }} build/${{ inputs.pack }}/
-          mv ${{ inputs.pack }}-ways/ways.${{ inputs.use_pmtiles && 'pmtiles' || 'mbtiles' }} build/${{ inputs.pack }}/
-          mv ${{ inputs.pack }}-context/context.${{ inputs.use_pmtiles && 'pmtiles' || 'mbtiles' }} build/${{ inputs.pack }}/
-          cd build/
-          zip ${{ inputs.pack }}.zip ${{ inputs.pack }}/*.${{ inputs.use_pmtiles && 'pmtiles' || 'mbtiles' }}
-          cd ../
+  #     - name: Zip up the pack
+  #       run: |
+  #         mkdir -p build/${{ inputs.pack }}
+  #         mv ${{ inputs.pack }}-rocks/rocks.${{ inputs.use_pmtiles && 'pmtiles' || 'mbtiles' }} build/${{ inputs.pack }}/
+  #         mv ${{ inputs.pack }}-contours/contours.${{ inputs.use_pmtiles && 'pmtiles' || 'mbtiles' }} build/${{ inputs.pack }}/
+  #         mv ${{ inputs.pack }}-water/water.${{ inputs.use_pmtiles && 'pmtiles' || 'mbtiles' }} build/${{ inputs.pack }}/
+  #         mv ${{ inputs.pack }}-ways/ways.${{ inputs.use_pmtiles && 'pmtiles' || 'mbtiles' }} build/${{ inputs.pack }}/
+  #         mv ${{ inputs.pack }}-context/context.${{ inputs.use_pmtiles && 'pmtiles' || 'mbtiles' }} build/${{ inputs.pack }}/
+  #         cd build/
+  #         zip ${{ inputs.pack }}.zip ${{ inputs.pack }}/*.${{ inputs.use_pmtiles && 'pmtiles' || 'mbtiles' }}
+  #         cd ../
 
-      - name: Make the manifest
-        run: |
-          python packs.py manifest --s3-bucket-url https://static.underfoot.rocks
+  #     - name: Make the manifest
+  #       run: |
+  #         python packs.py manifest --s3-bucket-url https://static.underfoot.rocks
 
-      - name: Set up s3cmd for Digital Ocean
-        uses: s3-actions/s3cmd@v1.2.0
-        with:
-          provider: digitalocean
-          region: sfo2
-          access_key: ${{ secrets.DO_SPACES_KEY }}
-          secret_key: ${{ secrets.DO_SPACES_SECRET }}
+  #     - name: Set up s3cmd for Digital Ocean
+  #       uses: s3-actions/s3cmd@v1.2.0
+  #       with:
+  #         provider: digitalocean
+  #         region: sfo2
+  #         access_key: ${{ secrets.DO_SPACES_KEY }}
+  #         secret_key: ${{ secrets.DO_SPACES_SECRET }}
 
-      - name: Upload pack to Digital Ocean
-        run: |
-          s3cmd put build/manifest.json s3://underfoot2/manifest.json
-          s3cmd setacl s3://underfoot2/manifest.json --acl-public
-          s3cmd put build/${{ inputs.pack }}.zip s3://underfoot2/${{ inputs.pack }}.zip
-          s3cmd setacl s3://underfoot2/${{ inputs.pack }}.zip --acl-public
+  #     - name: Upload pack to Digital Ocean
+  #       run: |
+  #         s3cmd put build/manifest.json s3://underfoot2/manifest.json
+  #         s3cmd setacl s3://underfoot2/manifest.json --acl-public
+  #         s3cmd put build/${{ inputs.pack }}.zip s3://underfoot2/${{ inputs.pack }}.zip
+  #         s3cmd setacl s3://underfoot2/${{ inputs.pack }}.zip --acl-public
 
-      - name: Set up doctl
-        uses: digitalocean/action-doctl@v2
-        with:
-          token: ${{ secrets.DO_ACCESS_TOKEN }}
+  #     - name: Set up doctl
+  #       uses: digitalocean/action-doctl@v2
+  #       with:
+  #         token: ${{ secrets.DO_ACCESS_TOKEN }}
 
-      - name: Flush the CDN cache
-        run: doctl compute cdn flush ee6a9baf-c5bd-423d-bbcf-305e3a3f5e40
+  #     - name: Flush the CDN cache
+  #       run: doctl compute cdn flush ee6a9baf-c5bd-423d-bbcf-305e3a3f5e40
