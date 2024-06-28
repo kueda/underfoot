@@ -229,13 +229,13 @@ jobs:
       - name: Zip up the pack
         run: |
           mkdir -p build/${{ inputs.pack }}
-          mv ${{ inputs.pack }}-rocks/rocks.${{ inputs.use_pmtiles && 'pmtiles' || 'mbtiles' }} build/${{ inputs.pack }}/
-          mv ${{ inputs.pack }}-contours/contours.${{ inputs.use_pmtiles && 'pmtiles' || 'mbtiles' }} build/${{ inputs.pack }}/
-          mv ${{ inputs.pack }}-water/water.${{ inputs.use_pmtiles && 'pmtiles' || 'mbtiles' }} build/${{ inputs.pack }}/
-          mv ${{ inputs.pack }}-ways/ways.${{ inputs.use_pmtiles && 'pmtiles' || 'mbtiles' }} build/${{ inputs.pack }}/
-          mv ${{ inputs.pack }}-context/context.${{ inputs.use_pmtiles && 'pmtiles' || 'mbtiles' }} build/${{ inputs.pack }}/
+          mv ${{ inputs.pack }}-rocks/* build/${{ inputs.pack }}/
+          mv ${{ inputs.pack }}-contours/* build/${{ inputs.pack }}/
+          mv ${{ inputs.pack }}-water/* build/${{ inputs.pack }}/
+          mv ${{ inputs.pack }}-ways/* build/${{ inputs.pack }}/
+          mv ${{ inputs.pack }}-context/* build/${{ inputs.pack }}/
           cd build/
-          zip ${{ inputs.pack }}.zip ${{ inputs.pack }}/*.${{ inputs.use_pmtiles && 'pmtiles' || 'mbtiles' }}
+          zip ${{ inputs.pack }}.${{ inputs.use_pmtiles && 'pmtiles.' || '' }}zip ${{ inputs.pack }}/*
           cd ../
 
       - name: Make the manifest
