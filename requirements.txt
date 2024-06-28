@@ -2,6 +2,7 @@ aiofiles
 Fiona
 httpx
 mercantile
+numpy<2.0
 pandas
 psycopg2
 pytest
