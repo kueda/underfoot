@@ -241,6 +241,7 @@ jobs:
       - name: Make the manifest
         run: |
           python packs.py manifest --s3-bucket-url https://static.underfoot.rocks
+          ls -l build/
 
       - name: Set up s3cmd for Digital Ocean
         uses: s3-actions/s3cmd@v1.2.0
@@ -252,6 +253,7 @@ jobs:
 
       - name: Upload pack to Digital Ocean
         run: |
+          ls -l build/
           s3cmd put build/manifest.json s3://underfoot2/manifest.json
           s3cmd setacl s3://underfoot2/manifest.json --acl-public
           s3cmd put build/${{ inputs.pack }}.zip s3://underfoot2/${{ inputs.pack }}.zip
