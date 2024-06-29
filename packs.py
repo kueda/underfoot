@@ -208,7 +208,10 @@ def make_rocks_for_pack(pack_id, clean=False, procs=2, use_pmtiles=False):
 def make_contours_for_pack(pack_id, clean=False, procs=2, use_pmtiles=False):
     """Make contours mbtiles given a pack"""
     pack_dir = get_pack_dir(pack_id, use_pmtiles)
-    contours_mbtiles_path = os.path.join(pack_dir, "contours.mbtiles")
+    fname = "contours.mbtiles"
+    if use_pmtiles:
+        fname = "contours.pmtiles"
+    contours_mbtiles_path = os.path.join(pack_dir, fname)
     if os.path.isfile(contours_mbtiles_path) and not clean:
         util.log(f"{contours_mbtiles_path} exists, skipping...")
         return

@@ -67,7 +67,7 @@ def tiles_from_geojson(geojson, zooms):
     return [mercantile.Tile(*tile) for tile in tiles]
 
 
-async def cache_tile(tile, client, clean=False, max_retries=3):
+async def cache_tile(tile, client, clean=False, max_retries=3, debug=False):
     """Caches a tile"""
     tile_path = f"{tile.z}/{tile.x}/{tile.y}.tif"
     url = f"https://s3.amazonaws.com/elevation-tiles-prod/geotiff/{tile_path}"
@@ -82,6 +82,8 @@ async def cache_tile(tile, client, clean=False, max_retries=3):
     # TODO handle errors, client abort, server abort
     for try_num in range(1, max_retries + 1):
         try:
+            if debug:
+                util.log(f"getting {url}")
             download = await client.get(url)
             if download.status_code != 200:
                 util.log(
@@ -93,7 +95,7 @@ async def cache_tile(tile, client, clean=False, max_retries=3):
                 async for chunk in download.aiter_bytes():
                     await outfile.write(chunk)
             break
-        except (asyncio.exceptions.TimeoutError, httpx.ConnectTimeout):
+        except (asyncio.exceptions.TimeoutError, httpx.ConnectTimeout, httpx.PoolTimeout):
             if try_num > max_retries:
                 util.log(
                     f"Request for {url} timed out {max_retries} times, "
