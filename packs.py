@@ -190,7 +190,8 @@ def get_pack_dir(pack_id, use_pmtiles=False):
 def make_rocks_for_pack(pack_id, clean=False, procs=2, use_pmtiles=False):
     """Make rocks mbtiles given a pack"""
     pack_dir = get_pack_dir(pack_id, use_pmtiles)
-    rocks_mbtiles_path = os.path.join(pack_dir, "rocks.mbtiles")
+    fname = "rocks.pmtiles" if use_pmtiles else "rocks.mbtiles"
+    rocks_mbtiles_path = os.path.join(pack_dir, fname)
     if os.path.isfile(rocks_mbtiles_path) and not clean:
         util.log(f"{rocks_mbtiles_path} exists, skipping...")
         return
@@ -208,9 +209,7 @@ def make_rocks_for_pack(pack_id, clean=False, procs=2, use_pmtiles=False):
 def make_contours_for_pack(pack_id, clean=False, procs=2, use_pmtiles=False):
     """Make contours mbtiles given a pack"""
     pack_dir = get_pack_dir(pack_id, use_pmtiles)
-    fname = "contours.mbtiles"
-    if use_pmtiles:
-        fname = "contours.pmtiles"
+    fname = "contours.pmtiles" if use_pmtiles else "contours.mbtiles"
     contours_mbtiles_path = os.path.join(pack_dir, fname)
     if os.path.isfile(contours_mbtiles_path) and not clean:
         util.log(f"{contours_mbtiles_path} exists, skipping...")
@@ -244,7 +243,8 @@ def make_contours_for_pack(pack_id, clean=False, procs=2, use_pmtiles=False):
 def make_water_for_pack(pack_id, clean=False, procs=2, use_pmtiles=False):
     """Make water mbtiles given a pack"""
     pack_dir = get_pack_dir(pack_id, use_pmtiles)
-    water_mbtiles_path = os.path.join(pack_dir, "water.mbtiles")
+    fname = "water.pmtiles" if use_pmtiles else "water.mbtiles"
+    water_mbtiles_path = os.path.join(pack_dir, fname)
     if os.path.isfile(water_mbtiles_path) and not clean:
         util.log(f"{water_mbtiles_path} exists, skipping...")
         return
@@ -262,7 +262,8 @@ def make_water_for_pack(pack_id, clean=False, procs=2, use_pmtiles=False):
 def make_ways_for_pack(pack_id, clean=False, use_pmtiles=False):
     """Make ways mbtiles given a pack"""
     pack_dir = get_pack_dir(pack_id, use_pmtiles)
-    ways_mbtiles_path = os.path.join(pack_dir, "ways.mbtiles")
+    fname = "ways.pmtiles" if use_pmtiles else "ways.mbtiles"
+    ways_mbtiles_path = os.path.join(pack_dir, fname)
     if os.path.isfile(ways_mbtiles_path) and not clean:
         util.log(f"{ways_mbtiles_path} exists, skipping...")
         return
@@ -277,7 +278,8 @@ def make_ways_for_pack(pack_id, clean=False, use_pmtiles=False):
 
 def make_context_for_pack(pack_id, clean=False, use_pmtiles=False):
     pack_dir = get_pack_dir(pack_id, use_pmtiles)
-    context_mbtiles_path = os.path.join(pack_dir, "context.mbtiles")
+    fname = "context.pmtiles" if use_pmtiles else "context.mbtiles"
+    context_mbtiles_path = os.path.join(pack_dir, fname)
     if os.path.isfile(context_mbtiles_path) and not clean:
         util.log(f"{context_mbtiles_path} exists, skipping...")
         return
