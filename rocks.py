@@ -337,27 +337,24 @@ def make_mbtiles(sources, path="./rocks.mbtiles", bbox=None, geojson_path=None, 
         ]
     util.call_cmd(mbtiles_cmd)
     columns = ["id"] + rocks.METADATA_COLUMN_NAMES + ["source"]
-    if use_pmtiles:
-        # TODO write this data to CSV or something. PMTiles isn't a sqlite db
-        # so you can't just shove data in there
-        pass
-    else:
-        util.add_table_from_query_to_mbtiles(
-            table_name=f"{FINAL_TABLE_NAME}_attrs",
-            dbname=DBNAME,
-            query=f"SELECT {', '.join(columns)} FROM {FINAL_TABLE_NAME}",
-            mbtiles_path=path,
-            index_columns=["id"])
-        sources_sql = ",".join([f"'{s}'" for s in sources])
-        util.add_table_from_query_to_mbtiles(
-            table_name=CITATIONS_TABLE_NAME,
-            dbname=DBNAME,
-            query=f"""
-                SELECT * FROM {CITATIONS_TABLE_NAME}
-                WHERE source IN ({sources_sql})
-            """,
-            mbtiles_path=path,
-            index_columns=["source"])
+    util.add_table_from_query_to_mbtiles(
+        table_name=f"{FINAL_TABLE_NAME}_attrs",
+        dbname=DBNAME,
+        query=f"SELECT {', '.join(columns)} FROM {FINAL_TABLE_NAME}",
+        mbtiles_path=path,
+        index_columns=["id"],
+        use_pmtiles=use_pmtiles)
+    sources_sql = ",".join([f"'{s}'" for s in sources])
+    util.add_table_from_query_to_mbtiles(
+        table_name=CITATIONS_TABLE_NAME,
+        dbname=DBNAME,
+        query=f"""
+            SELECT * FROM {CITATIONS_TABLE_NAME}
+            WHERE source IN ({sources_sql})
+        """,
+        mbtiles_path=path,
+        index_columns=["source"],
+        use_pmtiles=use_pmtiles)
     return os.path.abspath(path)
 
 

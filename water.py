@@ -533,26 +533,24 @@ def make_mbtiles(sources, path="./water.mbtiles", bbox=None, geojson_path=None, 
         -dsco CONF='{json.dumps(conf)}'
     """
     util.call_cmd(re.sub(r'\s+', " ", cmd).strip(), shell=True)
-    if use_pmtiles:
-        # TODO write these tables to CSV or something for PMTiles
-        pass
-    else:
-        util.add_table_from_query_to_mbtiles(
-            table_name=WATERWAYS_NETWORK_TABLE_NAME,
-            dbname=DBNAME,
-            query=f"SELECT * FROM {WATERWAYS_NETWORK_TABLE_NAME}",
-            mbtiles_path=path,
-            index_columns=["source_id", "to_source_id", "from_source_id"])
-        sources_sql = ",".join([f"'{s}'" for s in sources])
-        util.add_table_from_query_to_mbtiles(
-            table_name=CITATIONS_TABLE_NAME,
-            dbname=DBNAME,
-            query=f"""
-                SELECT * FROM {CITATIONS_TABLE_NAME}
-                WHERE source IN ({sources_sql})
-            """,
-            mbtiles_path=path,
-            index_columns=["source"])
+    util.add_table_from_query_to_mbtiles(
+        table_name=WATERWAYS_NETWORK_TABLE_NAME,
+        dbname=DBNAME,
+        query=f"SELECT * FROM {WATERWAYS_NETWORK_TABLE_NAME}",
+        mbtiles_path=path,
+        index_columns=["source_id", "to_source_id", "from_source_id"],
+        use_pmtiles=use_pmtiles)
+    sources_sql = ",".join([f"'{s}'" for s in sources])
+    util.add_table_from_query_to_mbtiles(
+        table_name=CITATIONS_TABLE_NAME,
+        dbname=DBNAME,
+        query=f"""
+            SELECT * FROM {CITATIONS_TABLE_NAME}
+            WHERE source IN ({sources_sql})
+        """,
+        mbtiles_path=path,
+        index_columns=["source"],
+        use_pmtiles=use_pmtiles)
     return path
 
 def update_imaginary_waterways():
