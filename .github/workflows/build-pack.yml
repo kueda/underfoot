@@ -216,7 +216,7 @@ jobs:
         run: pip install -r requirements.txt && python setup.py
 
       - name: Download all MBTiles artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.7
 
       - name: Zip up the pack
         run: |
