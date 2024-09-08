@@ -1,0 +1,36 @@
+{
+    "admin1": "United States",
+    "admin2": "California",
+    "bbox": {
+        "bottom": 38.950663670055704,
+        "left": -124.56869985094606 ,
+        "right": -121.97320529294143 ,
+        "top": 42.06463966550385 
+    },
+    "geojson": {
+        "$ref": "file://./us-ca-northwest.geojson"
+    },
+    "description": "Northwest of California, including the north coast, Klamath, and Shasta regions",
+    "id": "us-ca-northwest",
+    "name": "Northwestern California, USA",
+    "osm": "http://download.geofabrik.de/north-america/us/california-latest.osm.pbf",
+    "rock": [
+        "gam_11_redding_1962_gis",
+        "gam_23_weed_1963_gis",
+        "gam_24_ukiah_1960_gis"
+    ],
+    "water": [
+        "nhdplus_h_1801_hu4",
+        "nhdplus_h_1802_hu4",
+        "tiger_water_06015",
+        "tiger_water_06023",
+        "tiger_water_06045",
+        "tiger_water_06093",
+        "tiger_water_06105",
+        "tiger_water_06089",
+        "tiger_water_06103",
+        "tiger_water_06021",
+        "tiger_water_06033",
+        "tiger_water_06011"
+    ]
+}
