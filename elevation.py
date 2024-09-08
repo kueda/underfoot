@@ -152,6 +152,9 @@ def make_contours_for_tile(tile, clean=False):
     merge_file_paths = [
         path for path in merge_file_paths if os.path.exists(path)
     ]
+    # If for some reason no files exist for this tile or its buffer, just give up
+    if len(merge_file_paths) == 0:
+        return
     merge_path = tile_file_path(tile.x, tile.y, tile.z, "merge.tif")
     try:
         run(["gdal_merge.py", "-q", "-o", merge_path, *merge_file_paths], check=True)

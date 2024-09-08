@@ -426,5 +426,5 @@ def process_nhdplus_hr_source(
     process_nhdplus_hr_source_waterways_network(gdb_path)
     process_nhdplus_hr_source_citation(url)
     if not artifacts_generated(work_path):
-        raise FileNotFoundError(f"Failed tobuild artifacts for {gdb_name}")
+        raise FileNotFoundError(f"Failed to build artifacts for {gdb_name}")
     cleanup(work_path)
