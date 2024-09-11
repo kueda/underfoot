@@ -111,7 +111,7 @@ async def cache_tiles(tiles, clean=False):
     """Cache multiple tiles"""
     async with httpx.AsyncClient() as client:
         # using as_completed with tqdm (https://stackoverflow.com/a/37901797)
-        tasks = [cache_tile(tile, client, clean=clean) for tile in tiles]
+        tasks = [cache_tile(tile, client, clean=clean, debug=True) for tile in tiles]
         pbar = tqdm(
             asyncio.as_completed(tasks),
             total=len(tasks),
@@ -125,6 +125,9 @@ async def cache_tiles(tiles, clean=False):
 def make_contours_for_tile(tile, clean=False):
     """Make contours for a file"""
     # print("Making contours for {}".format(tile))
+    tile_path = tile_file_path(tile.x, tile.y, tile.z)
+    if not os.path.exists(tile_path):
+        raise FileNotFoundError(f"Tile file does not exist at {tile_path}")
     merge_contours_path = tile_file_path(
         tile.x,
         tile.y,
@@ -148,10 +151,13 @@ def make_contours_for_tile(tile, clean=False):
         [tile.x - 1, tile.y + 0], [tile.x + 0, tile.y + 0], [tile.x + 1, tile.y + 0],
         [tile.x - 1, tile.y + 1], [tile.x + 0, tile.y + 1], [tile.x + 1, tile.y + 1]
     ]
-    merge_file_paths = [tile_file_path(xy[0], xy[1], tile.z) for xy in merge_coords]
-    merge_file_paths = [
-        path for path in merge_file_paths if os.path.exists(path)
-    ]
+    target_merge_file_paths = [tile_file_path(xy[0], xy[1], tile.z) for xy in merge_coords]
+    merge_file_paths = []
+    for path in target_merge_file_paths:
+        if os.path.exists(path):
+            merge_file_paths.push(path)
+        else:
+            util.log(f"WARNING: tile path does not exist: {path}")
     # If for some reason no files exist for this tile or its buffer, just give up
     if len(merge_file_paths) == 0:
         return
