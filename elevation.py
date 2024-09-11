@@ -25,7 +25,6 @@ from sources import util
 
 
 TABLE_NAME = "contours"
-# CACHE_DIR = tempfile.mkdtemp(suffix="-elevation-tiles")
 CACHE_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "elevation-tiles")
 
 
@@ -82,14 +81,12 @@ async def cache_tile(tile, client, clean=False, max_retries=3, debug=False):
     """Caches a tile"""
     tile_path = f"{tile.z}/{tile.x}/{tile.y}.tif"
     url = f"https://s3.amazonaws.com/elevation-tiles-prod/geotiff/{tile_path}"
-    # util.log(f"tile url: {url}")
     file_path = tile_file_path(tile.x, tile.y, tile.z)
-    # util.log(f"file_path: {file_path}")
     dir_path = os.path.dirname(file_path)
-    # util.log(f"dir_path: {dir_path}")
     os.makedirs(dir_path, exist_ok=True)
     if os.path.exists(file_path):
-        util.log(f"cache_tile, path exists: {file_path}")
+        if debug:
+            util.log(f"cache_tile, path exists: {file_path}")
         if clean:
             os.remove(file_path)
         else:
@@ -97,21 +94,17 @@ async def cache_tile(tile, client, clean=False, max_retries=3, debug=False):
     # TODO handle errors, client abort, server abort
     async for try_num in async_range(1, max_retries + 1):
         try:
-            # if debug:
-            #     util.log(f"getting {url}")
+            if debug:
+                util.log(f"getting {url}")
             download = await client.get(url)
-            # util.log(f"download.status_code: {download.status_code}")
             if download.status_code != 200:
                 util.log(
                     f"Request for {url} failed with {download.status_code}, "
                     "skipping..."
                 )
                 return
-            util.log(f"opening tile path {file_path}")
             async with aiofiles.open(file_path, 'wb') as outfile:
-                util.log(f"writing bytes to {file_path}")
                 async for chunk in download.aiter_bytes():
-                    util.log(f"writing chunk to {file_path}")
                     await outfile.write(chunk)
             break
         except (
@@ -163,10 +156,8 @@ async def cache_tiles(tiles, clean=False):
 
 def make_contours_for_tile(tile, clean=False):
     """Make contours for a file"""
-    # print("Making contours for {}".format(tile))
     tile_path = tile_file_path(tile.x, tile.y, tile.z)
     dir_path = os.path.dirname(tile_path)
-    util.log(f"os.path.exists({dir_path}): {os.path.exists(dir_path)}")
     if not os.path.exists(tile_path):
         raise FileNotFoundError(f"Tile file does not exist at {tile_path}")
     merge_contours_path = tile_file_path(
