@@ -70,6 +70,12 @@ def tiles_from_geojson(geojson, zooms):
         ]
     return [mercantile.Tile(*tile) for tile in tiles]
 
+# https://stackoverflow.com/questions/51525604/how-to-iterate-over-a-range-asynchronously#51781911
+async def async_range(start, stop):
+    """Async version of range()"""
+    for i in range(start, stop):
+        yield i
+        await asyncio.sleep(0.0)
 
 async def cache_tile(tile, client, clean=False, max_retries=3, debug=False):
     """Caches a tile"""
@@ -88,7 +94,7 @@ async def cache_tile(tile, client, clean=False, max_retries=3, debug=False):
         else:
             return file_path
     # TODO handle errors, client abort, server abort
-    for try_num in range(1, max_retries + 1):
+    async for try_num in async_range(1, max_retries + 1):
         try:
             if debug:
                 util.log(f"getting {url}")
@@ -120,8 +126,8 @@ async def cache_tile(tile, client, clean=False, max_retries=3, debug=False):
             else:
                 if debug:
                     util.log(f"Sleeping for {try_num ** 3}s...")
-                # await asyncio.sleep(try_num ** 3)
-                time.sleep(try_num ** 3)
+                await asyncio.sleep(try_num ** 3)
+                # time.sleep(try_num ** 3)
 
 
 # Cache DEM tiles using asyncio for this presumably IO-bound process
