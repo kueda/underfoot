@@ -93,7 +93,9 @@ async def cache_tile(tile, client, clean=False, max_retries=3, debug=False):
                     "skipping..."
                 )
                 return
+            util.log(f"opening tile path {file_path}")
             async with aiofiles.open(file_path, 'wb') as outfile:
+                util.log(f"writing bytes to {file_path}")
                 async for chunk in download.aiter_bytes():
                     util.log(f"writing chunk to {file_path}")
                     await outfile.write(chunk)
