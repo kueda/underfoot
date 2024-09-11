@@ -72,10 +72,11 @@ async def cache_tile(tile, client, clean=False, max_retries=3, debug=False):
     """Caches a tile"""
     tile_path = f"{tile.z}/{tile.x}/{tile.y}.tif"
     url = f"https://s3.amazonaws.com/elevation-tiles-prod/geotiff/{tile_path}"
-    dir_path = os.path.join(CACHE_DIR, str(tile.z), str(tile.x))
     file_path = tile_file_path(tile.x, tile.y, tile.z)
+    dir_path = os.path.dirname(file_path)
     os.makedirs(dir_path, exist_ok=True)
     if os.path.exists(file_path):
+        util.log(f"cache_tile, path exists: {file_path}")
         if clean:
             os.remove(file_path)
         else:
