@@ -22,7 +22,8 @@ from sources import util
 
 
 TABLE_NAME = "contours"
-CACHE_DIR = tempfile.mkdtemp(suffix="-elevation-tiles")
+# CACHE_DIR = tempfile.mkdtemp(suffix="-elevation-tiles")
+CACHE_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "elevation-tiles")
 
 
 # pylint: disable=invalid-name
@@ -72,8 +73,11 @@ async def cache_tile(tile, client, clean=False, max_retries=3, debug=False):
     """Caches a tile"""
     tile_path = f"{tile.z}/{tile.x}/{tile.y}.tif"
     url = f"https://s3.amazonaws.com/elevation-tiles-prod/geotiff/{tile_path}"
+    util.log(f"tile url: {url}")
     file_path = tile_file_path(tile.x, tile.y, tile.z)
+    util.log(f"file_path: {file_path}")
     dir_path = os.path.dirname(file_path)
+    util.log(f"dir_path: {dir_path}")
     os.makedirs(dir_path, exist_ok=True)
     if os.path.exists(file_path):
         util.log(f"cache_tile, path exists: {file_path}")
@@ -116,7 +120,7 @@ async def cache_tiles(tiles, clean=False):
     """Cache multiple tiles"""
     async with httpx.AsyncClient() as client:
         # using as_completed with tqdm (https://stackoverflow.com/a/37901797)
-        tasks = [cache_tile(tile, client, clean=clean) for tile in tiles]
+        tasks = [cache_tile(tile, client, clean=clean, debug=True) for tile in tiles]
         pbar = tqdm(
             asyncio.as_completed(tasks),
             total=len(tasks),
@@ -131,6 +135,8 @@ def make_contours_for_tile(tile, clean=False):
     """Make contours for a file"""
     # print("Making contours for {}".format(tile))
     tile_path = tile_file_path(tile.x, tile.y, tile.z)
+    dir_path = os.path.dirname(tile_path)
+    util.log(f"os.path.exists({dir_path}): {os.path.exists(dir_path)}")
     if not os.path.exists(tile_path):
         raise FileNotFoundError(f"Tile file does not exist at {tile_path}")
     merge_contours_path = tile_file_path(
