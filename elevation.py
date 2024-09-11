@@ -86,33 +86,51 @@ async def cache_tile(tile, client, clean=False, max_retries=3, debug=False):
         else:
             return file_path
     # TODO handle errors, client abort, server abort
-    for try_num in range(1, max_retries + 1):
-        try:
-            if debug:
-                util.log(f"getting {url}")
-            download = await client.get(url)
-            if download.status_code != 200:
-                util.log(
-                    f"Request for {url} failed with {download.status_code}, "
-                    "skipping..."
-                )
-                return
-            util.log(f"opening tile path {file_path}")
-            async with aiofiles.open(file_path, 'wb') as outfile:
-                util.log(f"writing bytes to {file_path}")
-                async for chunk in download.aiter_bytes():
-                    util.log(f"writing chunk to {file_path}")
-                    await outfile.write(chunk)
-            break
-        except (asyncio.exceptions.TimeoutError, httpx.ConnectTimeout, httpx.PoolTimeout):
-            if try_num > max_retries:
-                util.log(
-                    f"Request for {url} timed out {max_retries} times, "
-                    "skipping..."
-                )
-            else:
-                # util.log(f"Sleeping for {try_num ** 3}s...")
-                await asyncio.sleep(try_num ** 3)
+    # for try_num in range(1, max_retries + 1):
+    #     try:
+    #         if debug:
+    #             util.log(f"getting {url}")
+    #         download = await client.get(url)
+    #         util.log(f"download.status_code: {download.status_code}")
+    #         if download.status_code != 200:
+    #             util.log(
+    #                 f"Request for {url} failed with {download.status_code}, "
+    #                 "skipping..."
+    #             )
+    #             return
+    #         util.log(f"opening tile path {file_path}")
+    #         async with aiofiles.open(file_path, 'wb') as outfile:
+    #             util.log(f"writing bytes to {file_path}")
+    #             async for chunk in download.aiter_bytes():
+    #                 util.log(f"writing chunk to {file_path}")
+    #                 await outfile.write(chunk)
+    #         break
+    #     except (asyncio.exceptions.TimeoutError, httpx.ConnectTimeout, httpx.PoolTimeout):
+    #         if try_num > max_retries:
+    #             util.log(
+    #                 f"Request for {url} timed out {max_retries} times, "
+    #                 "skipping..."
+    #             )
+    #         else:
+    #             if debug:
+    #                 util.log(f"Sleeping for {try_num ** 3}s...")
+    #             await asyncio.sleep(try_num ** 3)
+    if debug:
+        util.log(f"getting {url}")
+    download = await client.get(url)
+    util.log(f"download.status_code: {download.status_code}")
+    if download.status_code != 200:
+        util.log(
+            f"Request for {url} failed with {download.status_code}, "
+            "skipping..."
+        )
+        return
+    util.log(f"opening tile path {file_path}")
+    async with aiofiles.open(file_path, 'wb') as outfile:
+        util.log(f"writing bytes to {file_path}")
+        async for chunk in download.aiter_bytes():
+            util.log(f"writing chunk to {file_path}")
+            await outfile.write(chunk)
 
 
 # Cache DEM tiles using asyncio for this presumably IO-bound process
