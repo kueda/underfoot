@@ -100,7 +100,7 @@ async def cache_tile(tile, client, clean=False, max_retries=3, debug=False):
             # if debug:
             #     util.log(f"getting {url}")
             download = await client.get(url)
-            util.log(f"download.status_code: {download.status_code}")
+            # util.log(f"download.status_code: {download.status_code}")
             if download.status_code != 200:
                 util.log(
                     f"Request for {url} failed with {download.status_code}, "
@@ -141,16 +141,24 @@ async def cache_tile(tile, client, clean=False, max_retries=3, debug=False):
 async def cache_tiles(tiles, clean=False):
     """Cache multiple tiles"""
     async with httpx.AsyncClient() as client:
-        # using as_completed with tqdm (https://stackoverflow.com/a/37901797)
-        tasks = [cache_tile(tile, client, clean=clean, debug=True) for tile in tiles]
-        pbar = tqdm(
-            asyncio.as_completed(tasks),
-            total=len(tasks),
-            desc="Downloading DEM TIFs",
-            unit=" tiles"
-        )
-        for task in pbar:
-            await task
+        # Break it into chunks
+        chunk_size = 200
+        for i in range(0, len(tiles), chunk_size):
+            idx = i
+            # using as_completed with tqdm (https://stackoverflow.com/a/37901797)
+            tasks = [
+                cache_tile(tile, client, clean=clean, debug=True)
+                for tile in tiles[idx:idx+chunk_size]
+            ]
+            pbar = tqdm(
+                asyncio.as_completed(tasks),
+                total=len(tasks),
+                desc=f"Downloading DEM TIFs {idx}-{idx+chunk_size} ({len(tiles)} total)",
+                unit=" tiles"
+            )
+            for task in pbar:
+                await task
+            time.sleep(10)
 
 
 def make_contours_for_tile(tile, clean=False):
