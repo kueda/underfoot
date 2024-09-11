@@ -8,6 +8,7 @@ import argparse
 import asyncio
 import json
 import os
+import tempfile
 
 import aiofiles
 from fiona.transform import transform
@@ -21,13 +22,13 @@ from sources import util
 
 
 TABLE_NAME = "contours"
-CACHE_DIR = "./elevation-tiles"
+CACHE_DIR = tempfile.mkdtemp(suffix="-elevation-tiles")
 
 
 # pylint: disable=invalid-name
 def tile_file_path(x, y, z, ext="tif"):
     """Return tile file path for coordinates"""
-    return f"{CACHE_DIR}/{z}/{x}/{y}.{ext}"
+    return os.path.join(CACHE_DIR, str(z), str(x), f"{y}.{ext}")
 # pylint: enable=invalid-name
 
 
@@ -71,7 +72,7 @@ async def cache_tile(tile, client, clean=False, max_retries=3, debug=False):
     """Caches a tile"""
     tile_path = f"{tile.z}/{tile.x}/{tile.y}.tif"
     url = f"https://s3.amazonaws.com/elevation-tiles-prod/geotiff/{tile_path}"
-    dir_path = f"./{CACHE_DIR}/{tile.z}/{tile.x}"
+    dir_path = os.path.join(CACHE_DIR, str(tile.z), str(tile.x))
     file_path = tile_file_path(tile.x, tile.y, tile.z)
     os.makedirs(dir_path, exist_ok=True)
     if os.path.exists(file_path):
@@ -111,7 +112,7 @@ async def cache_tiles(tiles, clean=False):
     """Cache multiple tiles"""
     async with httpx.AsyncClient() as client:
         # using as_completed with tqdm (https://stackoverflow.com/a/37901797)
-        tasks = [cache_tile(tile, client, clean=clean, debug=True) for tile in tiles]
+        tasks = [cache_tile(tile, client, clean=clean) for tile in tiles]
         pbar = tqdm(
             asyncio.as_completed(tasks),
             total=len(tasks),
@@ -155,7 +156,7 @@ def make_contours_for_tile(tile, clean=False):
     merge_file_paths = []
     for path in target_merge_file_paths:
         if os.path.exists(path):
-            merge_file_paths.push(path)
+            merge_file_paths.append(path)
         else:
             util.log(f"WARNING: tile path does not exist: {path}")
     # If for some reason no files exist for this tile or its buffer, just give up
