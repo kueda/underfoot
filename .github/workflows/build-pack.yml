@@ -122,7 +122,7 @@ jobs:
     steps:
       - name: Check tile URLs work
         run: |
-          curl -v -f -o "/tmp/test.tif" "https://s3.amazonaws.com/elevation-tiles-prod/geotiff/12/646/1537.tif"
+          curl -v -f --fail-early --connect-timeout 30 --max-time 30 -o "/tmp/test.tif" "https://s3.amazonaws.com/elevation-tiles-prod/geotiff/12/646/1537.tif"
 
       - uses: actions/checkout@v4
 
