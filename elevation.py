@@ -95,6 +95,7 @@ async def cache_tile(tile, client, clean=False, max_retries=3, debug=False):
                 return
             async with aiofiles.open(file_path, 'wb') as outfile:
                 async for chunk in download.aiter_bytes():
+                    util.log(f"writing chunk to {file_path}")
                     await outfile.write(chunk)
             break
         except (asyncio.exceptions.TimeoutError, httpx.ConnectTimeout, httpx.PoolTimeout):
