@@ -8,6 +8,7 @@ import argparse
 import asyncio
 import json
 import os
+import random
 # import tempfile
 import time
 
@@ -81,11 +82,11 @@ async def cache_tile(tile, client, clean=False, max_retries=3, debug=False):
     """Caches a tile"""
     tile_path = f"{tile.z}/{tile.x}/{tile.y}.tif"
     url = f"https://s3.amazonaws.com/elevation-tiles-prod/geotiff/{tile_path}"
-    util.log(f"tile url: {url}")
+    # util.log(f"tile url: {url}")
     file_path = tile_file_path(tile.x, tile.y, tile.z)
-    util.log(f"file_path: {file_path}")
+    # util.log(f"file_path: {file_path}")
     dir_path = os.path.dirname(file_path)
-    util.log(f"dir_path: {dir_path}")
+    # util.log(f"dir_path: {dir_path}")
     os.makedirs(dir_path, exist_ok=True)
     if os.path.exists(file_path):
         util.log(f"cache_tile, path exists: {file_path}")
@@ -96,8 +97,8 @@ async def cache_tile(tile, client, clean=False, max_retries=3, debug=False):
     # TODO handle errors, client abort, server abort
     async for try_num in async_range(1, max_retries + 1):
         try:
-            if debug:
-                util.log(f"getting {url}")
+            # if debug:
+            #     util.log(f"getting {url}")
             download = await client.get(url)
             util.log(f"download.status_code: {download.status_code}")
             if download.status_code != 200:
@@ -117,17 +118,23 @@ async def cache_tile(tile, client, clean=False, max_retries=3, debug=False):
             asyncio.exceptions.TimeoutError,
             httpx.ConnectTimeout,
             httpx.PoolTimeout,
-            httpcore.ConnectTimeout):
+            httpcore.ConnectTimeout
+        ) as timeout_error:
+            util.log(f"Caught timeout error: {type(timeout_error).__name__}")
             if try_num > max_retries:
                 util.log(
                     f"Request for {url} timed out {max_retries} times, "
                     "skipping..."
                 )
             else:
+                # Wait to retry, with a little randomness
+                sleepytime = (try_num ** 3) + random.randrange(5, 20)
                 if debug:
-                    util.log(f"Sleeping for {try_num ** 3}s...")
-                await asyncio.sleep(try_num ** 3)
-                # time.sleep(try_num ** 3)
+                    util.log(f"Sleeping for {sleepytime}s...")
+                await asyncio.sleep(sleepytime)
+    if os.path.exists(file_path):
+        return file_path
+    raise FileNotFoundError(f"Failed to download {url}")
 
 
 # Cache DEM tiles using asyncio for this presumably IO-bound process
