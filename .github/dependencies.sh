@@ -1,7 +1,5 @@
 #!/bin/bash -e
 
-sudo add-apt-repository ppa:ubuntugis/ubuntugis-unstable
-sudo add-apt-repository ppa:deadsnakes/ppa
 sudo apt-get update
 sudo apt-get install -y \
   build-essential \
@@ -20,6 +18,12 @@ sudo apt-get install -y \
   virtualenv \
   zip
 
+# Compile and install imposm dependencies
+sudo apt-get install -y golang-go libleveldb-dev
+
+# Reinstall numpy
 pip uninstall numpy
 pip install "numpy<2.0"
+
+# Install GDAL python bindings
 pip install GDAL==$(gdal-config --version) --global-option=build_ext --global-option="-I/usr/include/gdal"

@@ -22,10 +22,10 @@ on:
 jobs:
   rocks:
     name: Build rocks
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     services:
       postgres:
-        image: postgis/postgis:12-2.5
+        image: postgis/postgis:16-3.5
         env:
           POSTGRES_USER: underfoot
           POSTGRES_PASSWORD: underfoot
@@ -39,8 +39,8 @@ jobs:
       - name: Install Ubuntu dependencies
         run: ./.github/dependencies.sh
 
-      - name: Install Python dependencies
-        run: pip install -r requirements.txt && python setup.py
+      - name: Install local dependencies
+        run: ./setup
 
       - id: cache-source-work-rocks
         name: Cache source work for rocks
@@ -65,10 +65,10 @@ jobs:
 
   water:
     name: Build water
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     services:
       postgres:
-        image: postgis/postgis:12-2.5
+        image: postgis/postgis:16-3.5
         env:
           POSTGRES_USER: underfoot
           POSTGRES_PASSWORD: underfoot
@@ -82,8 +82,8 @@ jobs:
       - name: Install Ubuntu dependencies
         run: ./.github/dependencies.sh
 
-      - name: Install Python dependencies
-        run: pip install -r requirements.txt && python setup.py
+      - name: Install local dependencies
+        run: ./setup
 
       - id: cache-source-work-water
         name: Cache source work for water
@@ -108,10 +108,10 @@ jobs:
 
   contours:
     name: Build contours
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     services:
       postgres:
-        image: postgis/postgis:12-2.5
+        image: postgis/postgis:16-3.5
         env:
           POSTGRES_USER: underfoot
           POSTGRES_PASSWORD: underfoot
@@ -125,8 +125,8 @@ jobs:
       - name: Install Ubuntu dependencies
         run: ./.github/dependencies.sh
 
-      - name: Install Python dependencies
-        run: pip install -r requirements.txt && python setup.py
+      - name: Install local dependencies
+        run: ./setup
 
       - name: Cache elevation tiles
         id: cache-elevation
@@ -151,10 +151,10 @@ jobs:
 
   osm:
     name: Build ways & context
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     services:
       postgres:
-        image: postgis/postgis:12-2.5
+        image: postgis/postgis:16-3.5
         env:
           POSTGRES_USER: underfoot
           POSTGRES_PASSWORD: underfoot
@@ -168,8 +168,8 @@ jobs:
       - name: Install Ubuntu dependencies
         run: ./.github/dependencies.sh
 
-      - name: Install Python dependencies
-        run: pip install -r requirements.txt && python setup.py
+      - name: Install local dependencies
+        run: ./setup
 
       - name: Get current year week
         id: calc-year-week
@@ -208,7 +208,7 @@ jobs:
 
   upload-pack:
     name: Archive and upload pack
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - rocks
       - water
@@ -220,8 +220,8 @@ jobs:
       - name: Install Ubuntu dependencies
         run: ./.github/dependencies.sh
 
-      - name: Install Python dependencies
-        run: pip install -r requirements.txt && python setup.py
+      - name: Install local dependencies
+        run: ./setup
 
       - name: Download all MBTiles artifacts
         uses: actions/download-artifact@v4

@@ -21,15 +21,11 @@ vagrant ssh
 git clone https://github.com/kueda/underfoot.git
 cd underfoot
 
-# Set up a python virtual environment
-virtualenv venv -p python3
-source venv/bin/activate
-
-# Install deps and some stuff for working with ESRI Arc/Info coverages
-pip install -r requirements.txt
-python setup.py
+# Install final dependencies
+./setup
 
 # Make a pack
+source venv/bin/activate
 python packs.py us-ca-oakland
 ```
 

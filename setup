@@ -2,17 +2,38 @@
 #
 #  Install and set up required software
 #
+
+if [ -d bin/e00compr ]; then
+    echo "E00CONV ALREADY SET UP"
+else
+  echo "SETTING UP E00CONV..."
+  (
+    mkdir -p bin && cd bin
+    curl -OL http://avce00.maptools.org/dl/e00compr-1.0.1.tar.gz
+    tar xzvf e00compr-1.0.1.tar.gz
+    ln -s e00compr-1.0.1 e00compr
+    cd e00compr-1.0.1
+    make
+  )
+fi
+
+if [ -f bin/imposm ]; then
+    echo "IMPOSM ALREADY SET UP"
+else
+  echo "SETTING UP IMPOSM..."
+  (
+    mkdir -p bin && cd bin
+    git clone https://github.com/omniscale/imposm3.git
+    cd imposm3
+    make build
+    cd ..
+    ln -s imposm3/imposm imposm
+  )
+fi
+
 echo "INSTALLING PYTHON PACKAGES..."
+virtualenv venv -p python3
+source venv/bin/activate
 pip install -r requirements.txt
-echo "DOWNLOADING E00CONV..."
-mkdir bin
-cd bin
-E00COMPR="e00compr-1.0.1"
-curl -OL http://avce00.maptools.org/dl/$E00COMPR.tar.gz
-tar xzvf $E00COMPR.tar.gz
-ln -s $E00COMPR e00compr
-cd $E00COMPR
-echo "MAKING E00CONV..."
-make
-cd ../../
+
 echo "DONE!"
