@@ -23,9 +23,10 @@ sudo apt-get install -y \
 echo "COMPILING AND INSTALLING IMPOSM DEPENDENCIES..."
 sudo apt-get install -y golang-go libleveldb-dev
 
-echo "REINSTALLING NUMPY 2"
-pip uninstall numpy
-pip install "numpy<2.0"
+# echo "UNINSTALLING NUMPY"
+# pip uninstall numpy
+# echo "REINSTALLING NUMPY 1"
+# pip install "numpy<2.0"
 
 echo "INSTALLING GDAL PYTHON BINDINGS..."
 pip install GDAL==$(gdal-config --version) --global-option=build_ext --global-option="-I/usr/include/gdal"
