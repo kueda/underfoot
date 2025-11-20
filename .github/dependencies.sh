@@ -1,6 +1,8 @@
 #!/bin/bash -e
 
+echo "UPDATING apt-get..."
 sudo apt-get update
+echo "INSTALLING APT PACKAGES..."
 sudo apt-get install -y \
   build-essential \
   gdal-bin \
@@ -18,12 +20,14 @@ sudo apt-get install -y \
   virtualenv \
   zip
 
-# Compile and install imposm dependencies
+echo "COMPILING AND INSTALLING IMPOSM DEPENDENCIES..."
 sudo apt-get install -y golang-go libleveldb-dev
 
-# Reinstall numpy
+echo "REINSTALLING NUMPY 2"
 pip uninstall numpy
 pip install "numpy<2.0"
 
-# Install GDAL python bindings
+echo "INSTALLING GDAL PYTHON BINDINGS..."
 pip install GDAL==$(gdal-config --version) --global-option=build_ext --global-option="-I/usr/include/gdal"
+
+echo "FINISHED INSTALLING SYSTEM PACKAGES"

@@ -199,10 +199,8 @@ def load_place_nodes_data(data_path, pack=None):
     )
 
 
-def make_ways_mbtiles(path, use_pmtiles=False):
-    """Export ways into the MBTiles using different zoom levels for different types"""
-    if use_pmtiles:
-        path = path.replace("mbtiles", "pmtiles")
+def make_ways_pmtiles(path):
+    """Export ways into the PMTiles using different zoom levels for different types"""
     if os.path.exists(path):
         os.remove(path)
     gpkg_path = f"{util.basename_for_path(path)}.gpkg"
@@ -256,10 +254,8 @@ def make_ways_mbtiles(path, use_pmtiles=False):
     os.remove(gpkg_path)
 
 
-def make_context_mbtiles(path, use_pmtiles=False):
-    """Make context mbtiles"""
-    if use_pmtiles:
-        path = path.replace("mbtiles", "pmtiles")
+def make_context_pmtiles(path):
+    """Make context pmtiles"""
     if os.path.exists(path):
         os.remove(path)
     gpkg_path = f"{util.basename_for_path(path)}.gpkg"
@@ -290,8 +286,8 @@ def make_context_mbtiles(path, use_pmtiles=False):
     util.call_cmd(re.sub(r'\s+', " ", cmd).strip(), shell=True)
     os.remove(gpkg_path)
 
-def make_ways(pbf_url, clean=False, pack=None, path="./ways.mbtiles", use_pmtiles=False):
-    r"""Make an MBTiles files for OSM ways data given an OSM PBF export URL
+def make_ways(pbf_url, clean=False, pack=None, path="./ways.pmtiles"):
+    r"""Make an PMTiles files for OSM ways data given an OSM PBF export URL
 
     Parameters
     ----------
@@ -310,12 +306,12 @@ def make_ways(pbf_url, clean=False, pack=None, path="./ways.mbtiles", use_pmtile
         con = database_connection(recreate=True)
         con.close()
     load_ways_data(filename, pack=pack)
-    make_ways_mbtiles(path, use_pmtiles=use_pmtiles)
+    make_ways_pmtiles(path)
     return path
 
 
-def make_context(pbf_url, clean=False, pack=None, path="./context.mbtiles", use_pmtiles=False):
-    """Makes an mbtiles with contextual geographic info from OSM"""
+def make_context(pbf_url, clean=False, pack=None, path="./context.pmtiles"):
+    """Makes an pmtiles with contextual geographic info from OSM"""
     if not pbf_url or len(pbf_url) == 0:
         raise ValueError("You must specify a PBF URL")
     filename = fetch_data(pbf_url, clean=clean)
@@ -325,8 +321,8 @@ def make_context(pbf_url, clean=False, pack=None, path="./context.mbtiles", use_
     load_natural_ways_data(filename, pack=pack)
     load_natural_nodes_data(filename, pack=pack)
     load_place_nodes_data(filename, pack=pack)
-    make_context_mbtiles(path, use_pmtiles=use_pmtiles)
+    make_context_pmtiles(path)
 
 if __name__ == "__main__":
     PATH = make_ways(sys.argv[0])
-    print(f"Created mbtiles at {PATH}")
+    print(f"Created pmtiles at {PATH}")

@@ -1,4 +1,4 @@
-"""Generate an MBTiles of contours from Mapzen / Amazon elevation tiles
+"""Generate an PMTiles of contours from Mapzen / Amazon elevation tiles
 (https://registry.opendata.aws/terrain-tiles/)"""
 
 
@@ -265,26 +265,23 @@ def make_contours_table(tiles, procs=2):
             pass
 
 
-async def make_contours_mbtiles(
+async def make_contours_pmtiles(
     zoom,
     swlon=None,
     swlat=None,
     nelon=None,
     nelat=None,
     geojson=None,
-    mbtiles_zoom=None,
+    pmtiles_zoom=None,
     clean=False,
     procs=2,
-    path="./contours.mbtiles",
-    use_pmtiles=False
+    path="./contours.pmtiles"
 ):
-    """Make the mbtiles for contours"""
-    if use_pmtiles:
-        path = path.replace("mbtiles", "pmtiles")
+    """Make the pmtiles for contours"""
     make_database()
     zooms = [zoom]
-    if not mbtiles_zoom:
-        mbtiles_zoom = zoom
+    if not pmtiles_zoom:
+        pmtiles_zoom = zoom
     print("Clearing out existing data...")
     if os.path.exists(path):
         os.remove(path)
@@ -303,16 +300,16 @@ async def make_contours_mbtiles(
         raise ValueError("You must specify a bounding box or a GeoJSON feature")
     await cache_tiles(tiles, clean=clean)
     make_contours_table(tiles, procs=procs)
-    # TODO make mbtiles_zoom into mbtiles_zooms which is a mapping between the
-    # desired zooms in the mbtiles and what zoom-level table in the database to
+    # TODO make pmtiles_zoom into pmtiles_zooms which is a mapping between the
+    # desired zooms in the pmtiles and what zoom-level table in the database to
     # fill it with (i.e. what contour resolution)
     cmd = [
         "ogr2ogr",
         path,
         f"PG:dbname={DBNAME}",
         TABLE_NAME,
-        "-dsco", f"MINZOOM={mbtiles_zoom}",
-        "-dsco", f"MAXZOOM={mbtiles_zoom}",
+        "-dsco", f"MINZOOM={pmtiles_zoom}",
+        "-dsco", f"MAXZOOM={pmtiles_zoom}",
         "-dsco", "DESCRIPTION=\"Elevation contours, 25m interval\""
     ]
     util.call_cmd(cmd)
@@ -326,34 +323,32 @@ def make_contours(
     nelon=None,
     nelat=None,
     geojson=None,
-    mbtiles_zoom=None,
+    pmtiles_zoom=None,
     clean=False,
     procs=2,
-    path="./contours.mbtiles",
-    use_pmtiles=False
+    path="./contours.pmtiles"
 ):
     """Seemingly useless method so we can export a synchronous method that calls async code"""
-    mbtiles_path = asyncio.run(
-        make_contours_mbtiles(
+    pmtiles_path = asyncio.run(
+        make_contours_pmtiles(
             zoom,
             swlon=swlon,
             swlat=swlat,
             nelon=nelon,
             nelat=nelat,
             geojson=geojson,
-            mbtiles_zoom=mbtiles_zoom,
+            pmtiles_zoom=pmtiles_zoom,
             clean=clean,
             procs=procs,
-            path=path,
-            use_pmtiles=use_pmtiles
+            path=path
         )
     )
-    return mbtiles_path
+    return pmtiles_path
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Make an MBTiles of contours given a bounding box and "
+        description="Make an PMTiles of contours given a bounding box and "
         "zoom range"
     )
     parser.add_argument("zoom", type=int, help="Single zoom or minimum zoom")
@@ -387,6 +382,6 @@ if __name__ == "__main__":
             clean=args.clean, procs=args.procs
         )
     if path:
-        print(f"MBTiles created at {path}")
+        print(f"PMTiles created at {path}")
     else:
-        print("Failed to generate MBTiles")
+        print("Failed to generate PMTiles")

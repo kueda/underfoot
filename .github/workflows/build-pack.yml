@@ -7,10 +7,6 @@ on:
         description: A pack IDs (e.g. 'us-ca-oakland')
         type: string
         required: true
-      use_pmtiles:
-        description: Output PMTiles instead of MBTiles
-        required: false
-        type: boolean
     secrets:
       DO_SPACES_KEY:
         required: true
@@ -51,7 +47,7 @@ jobs:
 
       - name: Build rocks
         run: |
-          python packs.py ${{ inputs.pack }} --only rocks ${{ inputs.use_pmtiles && '--use-pmtiles' }}
+          python packs.py ${{ inputs.pack }} --only rocks
         env:
           PGHOST: 0.0.0.0
           PGUSER: underfoot
@@ -61,7 +57,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.pack }}-rocks
-          path: "build/${{ inputs.pack }}${{ inputs.use_pmtiles && '.pmtiles' || '' }}/"
+          path: "build/${{ inputs.pack }}.pmtiles/"
 
   water:
     name: Build water
@@ -94,7 +90,7 @@ jobs:
 
       - name: Build water
         run: |
-          python packs.py ${{ inputs.pack }} --only water ${{ inputs.use_pmtiles && '--use-pmtiles' }}
+          python packs.py ${{ inputs.pack }} --only water
         env:
           PGHOST: 0.0.0.0
           PGUSER: underfoot
@@ -104,7 +100,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.pack }}-water
-          path: "build/${{ inputs.pack }}${{ inputs.use_pmtiles && '.pmtiles' || '' }}/"
+          path: "build/${{ inputs.pack }}.pmtiles/"
 
   contours:
     name: Build contours
@@ -137,7 +133,7 @@ jobs:
 
       - name: Build contours
         run: |
-          python packs.py ${{ inputs.pack }} --only contours ${{ inputs.use_pmtiles && '--use-pmtiles' }}
+          python packs.py ${{ inputs.pack }} --only contours
         env:
           PGHOST: 0.0.0.0
           PGUSER: underfoot
@@ -147,7 +143,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.pack }}-contours
-          path: "build/${{ inputs.pack }}${{ inputs.use_pmtiles && '.pmtiles' || '' }}/"
+          path: "build/${{ inputs.pack }}.pmtiles/"
 
   osm:
     name: Build ways & context
@@ -188,7 +184,7 @@ jobs:
 
       - name: Build ways & context
         run: |
-          python packs.py ${{ inputs.pack }} --only ways context ${{ inputs.use_pmtiles && '--use-pmtiles' }}
+          python packs.py ${{ inputs.pack }} --only ways context
         env:
           PGHOST: 0.0.0.0
           PGUSER: underfoot
@@ -198,13 +194,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.pack }}-ways
-          path: "build/${{ inputs.pack }}${{ inputs.use_pmtiles && '.pmtiles' || '' }}/"
+          path: "build/${{ inputs.pack }}.pmtiles/"
 
       - name: Upload context
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.pack }}-context
-          path: "build/${{ inputs.pack }}${{ inputs.use_pmtiles && '.pmtiles' || '' }}/"
+          path: "build/${{ inputs.pack }}.pmtiles/"
 
   upload-pack:
     name: Archive and upload pack
@@ -235,7 +231,7 @@ jobs:
           mv ${{ inputs.pack }}-ways/* build/${{ inputs.pack }}/
           mv ${{ inputs.pack }}-context/* build/${{ inputs.pack }}/
           cd build/
-          zip ${{ inputs.pack }}.${{ inputs.use_pmtiles && 'pmtiles.' || '' }}zip ${{ inputs.pack }}/*
+          zip ${{ inputs.pack }}.pmtiles.zip ${{ inputs.pack }}/*
           cd ../
 
       - name: Make the manifest
@@ -256,8 +252,8 @@ jobs:
         run: |
           s3cmd put build/manifest.json s3://underfoot2/manifest.json
           s3cmd setacl s3://underfoot2/manifest.json --acl-public
-          s3cmd put build/${{ inputs.pack }}${{ inputs.use_pmtiles && '.pmtiles' || '' }}.zip s3://underfoot2/${{ inputs.pack }}${{ inputs.use_pmtiles && '.pmtiles' || '' }}.zip
-          s3cmd setacl s3://underfoot2/${{ inputs.pack }}${{ inputs.use_pmtiles && '.pmtiles' || '' }}.zip --acl-public
+          s3cmd put build/${{ inputs.pack }}.pmtiles.zip s3://underfoot2/${{ inputs.pack }}.pmtiles.zip
+          s3cmd setacl s3://underfoot2/${{ inputs.pack }}.pmtiles.zip --acl-public
 
       - name: Set up doctl
         uses: digitalocean/action-doctl@v2

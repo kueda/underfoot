@@ -1,7 +1,7 @@
 """Methods for generating geologic data for Underfoot
 
 Main export is make_rocks, which should load everything into the database,
-export an MBTiles file, and return a list with the files you need.
+export an PMTiles file, and return a list with the files you need.
 """
 
 import argparse
@@ -310,11 +310,9 @@ def clean_sources(sources):
         shutil.rmtree(work_path)
 
 
-def make_mbtiles(sources, path="./rocks.mbtiles", bbox=None, geojson_path=None, use_pmtiles=False):
-    """Export rock units into am MBTiles file"""
-    if use_pmtiles:
-        path = path.replace("mbtiles", "pmtiles")
-    mbtiles_cmd = [
+def make_pmtiles(sources, path="./rocks.pmtiles", bbox=None, geojson_path=None):
+    """Export rock units into am PMTiles file"""
+    pmtiles_cmd = [
         "ogr2ogr",
         path,
         f"PG:dbname={DBNAME}",
@@ -326,64 +324,60 @@ def make_mbtiles(sources, path="./rocks.mbtiles", bbox=None, geojson_path=None, 
         "-dsco", "DESCRIPTION=\"Geological units\""
     ]
     if geojson_path:
-        mbtiles_cmd += ["-clipdst", geojson_path]
+        pmtiles_cmd += ["-clipdst", geojson_path]
     elif bbox:
-        mbtiles_cmd += [
+        pmtiles_cmd += [
             "-clipdst",
             str(bbox["left"]),
             str(bbox["bottom"]),
             str(bbox["right"]),
             str(bbox["top"])
         ]
-    util.call_cmd(mbtiles_cmd)
+    util.call_cmd(pmtiles_cmd)
     columns = ["id"] + rocks.METADATA_COLUMN_NAMES + ["source"]
-    util.add_table_from_query_to_mbtiles(
+    util.add_table_from_query_to_pmtiles(
         table_name=f"{FINAL_TABLE_NAME}_attrs",
         dbname=DBNAME,
         query=f"SELECT {', '.join(columns)} FROM {FINAL_TABLE_NAME}",
-        mbtiles_path=path,
-        index_columns=["id"],
-        use_pmtiles=use_pmtiles)
+        pmtiles_path=path,
+        index_columns=["id"])
     sources_sql = ",".join([f"'{s}'" for s in sources])
-    util.add_table_from_query_to_mbtiles(
+    util.add_table_from_query_to_pmtiles(
         table_name=CITATIONS_TABLE_NAME,
         dbname=DBNAME,
         query=f"""
             SELECT * FROM {CITATIONS_TABLE_NAME}
             WHERE source IN ({sources_sql})
         """,
-        mbtiles_path=path,
-        index_columns=["source"],
-        use_pmtiles=use_pmtiles)
+        pmtiles_path=path,
+        index_columns=["source"])
     return os.path.abspath(path)
 
 
 def make_rocks(
     sources,
     clean=False,
-    path="./rocks.mbtiles",
+    path="./rocks.pmtiles",
     procs=NUM_PROCESSES,
     bbox=None,
-    geojson_path=None,
-    use_pmtiles=False
+    geojson_path=None
 ):
-    """Make rocks MBTiles from a collection of sources"""
+    """Make rocks PMTiles from a collection of sources"""
     make_database()
     if clean:
         clean_sources(sources)
     load_units(sources, clean=clean, procs=procs)
-    mbtiles_path = make_mbtiles(
+    pmtiles_path = make_pmtiles(
         sources,
         path=path,
         bbox=bbox,
-        geojson_path=geojson_path,
-        use_pmtiles=use_pmtiles)
-    return mbtiles_path
+        geojson_path=geojson_path)
+    return pmtiles_path
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Make an MBTiles of geologic units from given source(s)")
+        description="Make an PMTiles of geologic units from given source(s)")
     parser.add_argument(
         "source",
         type=str,
@@ -399,7 +393,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--path",
         type=str,
-        help="Path to write the MBTiles file"
+        help="Path to write the PMTiles file"
     )
     parser.add_argument(
         "--procs",

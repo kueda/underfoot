@@ -259,39 +259,20 @@ def update_masks_table(mask_table_name, source_table_name, buff=0.01):
     """)
 
 
-def add_table_from_query_to_mbtiles(
+def add_table_from_query_to_pmtiles(
         table_name,
         dbname,
         query,
-        mbtiles_path,
-        index_columns=None,
-        use_pmtiles=False):
-    """Add a table to an MBTiles from a query to the Postgres db"""
+        pmtiles_path,
+        index_columns=None):
+    """Add a table as sidecar CSV files to a PMTiles from a query to the Postgres db"""
     if index_columns is None:
         index_columns = []
-    dirpath = os.path.dirname(mbtiles_path)
-    csv_path = os.path.join(dirpath, f"{extless_basename(mbtiles_path)}-{table_name}.csv")
+    dirpath = os.path.dirname(pmtiles_path)
+    csv_path = os.path.join(dirpath, f"{extless_basename(pmtiles_path)}-{table_name}.csv")
     call_cmd(
         f"psql {dbname} -c \"COPY ({query}) TO STDOUT WITH CSV HEADER\" > {csv_path}",  # noqa: E501
         shell=True, check=True)
-    # If we're using pmtiles, we can't write the data directly to the archive,
-    # so we leave the CSV files as sidecars
-    if use_pmtiles:
-        return
-    call_cmd([
-        "sqlite3",
-        "-csv",
-        mbtiles_path,
-        f".import {csv_path} {table_name}"
-    ])
-    os.remove(csv_path)
-    for index_column in index_columns:
-        sql = f"CREATE INDEX {table_name}_{index_column} ON {table_name}({index_column})"
-        call_cmd([
-            "sqlite3",
-            mbtiles_path,
-            sql
-        ], check=True)
 
 
 def unzip(path):

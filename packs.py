@@ -124,19 +124,9 @@ def local_built_packs():
         for path in glob(os.path.join(build_dir, "*.zip"))
     }
     for pack_id in pack_ids:
-        mbtiles_path = os.path.join(build_dir, f"{pack_id}.zip")
         pmtiles_path = os.path.join(build_dir, f"{pack_id}.pmtiles.zip")
         packs[pack_id] = {"id": pack_id}
         mtimes = []
-        if os.path.isfile(mbtiles_path):
-            packs[pack_id]["path"] = os.path.relpath(mbtiles_path, build_dir)
-            mtimes.append(
-                datetime.isoformat(
-                    datetime.fromtimestamp(
-                        os.path.getmtime(mbtiles_path)
-                    )
-                )
-            )
         if os.path.isfile(pmtiles_path):
             packs[pack_id]["pmtiles_path"] = os.path.relpath(pmtiles_path, build_dir)
             mtimes.append(
@@ -176,24 +166,23 @@ def s3_built_packs(s3_bucket_url):
     return packs
 
 
-def get_pack_dir(pack_id, use_pmtiles=False):
+def get_pack_dir(pack_id):
     """Get build dir for a specific pack"""
     build_dir = get_build_dir()
     pack_dir = os.path.join(build_dir, pack_id)
-    if use_pmtiles:
-        pack_dir += ".pmtiles"
+    pack_dir += ".pmtiles"
     if not os.path.isdir(pack_dir):
         os.makedirs(pack_dir)
     return pack_dir
 
 
-def make_rocks_for_pack(pack_id, clean=False, procs=2, use_pmtiles=False):
-    """Make rocks mbtiles given a pack"""
-    pack_dir = get_pack_dir(pack_id, use_pmtiles)
-    fname = "rocks.pmtiles" if use_pmtiles else "rocks.mbtiles"
-    rocks_mbtiles_path = os.path.join(pack_dir, fname)
-    if os.path.isfile(rocks_mbtiles_path) and not clean:
-        util.log(f"{rocks_mbtiles_path} exists, skipping...")
+def make_rocks_for_pack(pack_id, clean=False, procs=2):
+    """Make rocks pmtiles given a pack"""
+    pack_dir = get_pack_dir(pack_id)
+    fname = "rocks.pmtiles"
+    rocks_pmtiles_path = os.path.join(pack_dir, fname)
+    if os.path.isfile(rocks_pmtiles_path) and not clean:
+        util.log(f"{rocks_pmtiles_path} exists, skipping...")
         return
     pack = get_pack(pack_id)
     make_rocks(
@@ -201,31 +190,29 @@ def make_rocks_for_pack(pack_id, clean=False, procs=2, use_pmtiles=False):
         bbox=pack["bbox"],
         geojson_path=pack["geojson_path"],
         clean=clean,
-        path=rocks_mbtiles_path,
-        use_pmtiles=use_pmtiles,
+        path=rocks_pmtiles_path,
         procs=procs)
 
 
-def make_contours_for_pack(pack_id, clean=False, procs=2, use_pmtiles=False):
-    """Make contours mbtiles given a pack"""
-    pack_dir = get_pack_dir(pack_id, use_pmtiles)
-    fname = "contours.pmtiles" if use_pmtiles else "contours.mbtiles"
-    contours_mbtiles_path = os.path.join(pack_dir, fname)
-    if os.path.isfile(contours_mbtiles_path) and not clean:
-        util.log(f"{contours_mbtiles_path} exists, skipping...")
+def make_contours_for_pack(pack_id, clean=False, procs=2):
+    """Make contours pmtiles given a pack"""
+    pack_dir = get_pack_dir(pack_id)
+    fname = "contours.pmtiles"
+    contours_pmtiles_path = os.path.join(pack_dir, fname)
+    if os.path.isfile(contours_pmtiles_path) and not clean:
+        util.log(f"{contours_pmtiles_path} exists, skipping...")
         return
     pack = get_pack(pack_id)
     zoom = pack.get("zoom", 12)
-    mbtiles_zoom = zoom + 2
+    pmtiles_zoom = zoom + 2
     if "geojson" in pack:
         make_contours(
             zoom,
             geojson=pack["geojson"],
-            mbtiles_zoom=mbtiles_zoom,
+            pmtiles_zoom=pmtiles_zoom,
             clean=clean,
             procs=procs,
-            path=contours_mbtiles_path,
-            use_pmtiles=use_pmtiles)
+            path=contours_pmtiles_path)
         return
     make_contours(
         zoom,
@@ -233,20 +220,19 @@ def make_contours_for_pack(pack_id, clean=False, procs=2, use_pmtiles=False):
         swlat=pack["bbox"]["bottom"],
         nelon=pack["bbox"]["right"],
         nelat=pack["bbox"]["top"],
-        mbtiles_zoom=mbtiles_zoom,
-        path=contours_mbtiles_path,
+        pmtiles_zoom=pmtiles_zoom,
+        path=contours_pmtiles_path,
         clean=clean,
-        procs=procs,
-        use_pmtiles=use_pmtiles)
+        procs=procs)
 
 
-def make_water_for_pack(pack_id, clean=False, procs=2, use_pmtiles=False):
-    """Make water mbtiles given a pack"""
-    pack_dir = get_pack_dir(pack_id, use_pmtiles)
-    fname = "water.pmtiles" if use_pmtiles else "water.mbtiles"
-    water_mbtiles_path = os.path.join(pack_dir, fname)
-    if os.path.isfile(water_mbtiles_path) and not clean:
-        util.log(f"{water_mbtiles_path} exists, skipping...")
+def make_water_for_pack(pack_id, clean=False, procs=2):
+    """Make water pmtiles given a pack"""
+    pack_dir = get_pack_dir(pack_id)
+    fname = "water.pmtiles"
+    water_pmtiles_path = os.path.join(pack_dir, fname)
+    if os.path.isfile(water_pmtiles_path) and not clean:
+        util.log(f"{water_pmtiles_path} exists, skipping...")
         return
     pack = get_pack(pack_id)
     make_water(
@@ -254,54 +240,51 @@ def make_water_for_pack(pack_id, clean=False, procs=2, use_pmtiles=False):
         bbox=pack["bbox"],
         geojson_path=pack["geojson_path"],
         clean=clean,
-        path=water_mbtiles_path,
-        procs=procs,
-        use_pmtiles=use_pmtiles)
+        path=water_pmtiles_path,
+        procs=procs)
 
 
-def make_ways_for_pack(pack_id, clean=False, use_pmtiles=False):
-    """Make ways mbtiles given a pack"""
-    pack_dir = get_pack_dir(pack_id, use_pmtiles)
-    fname = "ways.pmtiles" if use_pmtiles else "ways.mbtiles"
-    ways_mbtiles_path = os.path.join(pack_dir, fname)
-    if os.path.isfile(ways_mbtiles_path) and not clean:
-        util.log(f"{ways_mbtiles_path} exists, skipping...")
+def make_ways_for_pack(pack_id, clean=False):
+    """Make ways pmtiles given a pack"""
+    pack_dir = get_pack_dir(pack_id)
+    fname = "ways.pmtiles"
+    ways_pmtiles_path = os.path.join(pack_dir, fname)
+    if os.path.isfile(ways_pmtiles_path) and not clean:
+        util.log(f"{ways_pmtiles_path} exists, skipping...")
         return
     pack = get_pack(pack_id)
     make_ways(
         pack["osm"],
         pack=pack,
         clean=clean,
-        path=ways_mbtiles_path,
-        use_pmtiles=use_pmtiles)
+        path=ways_pmtiles_path)
 
 
-def make_context_for_pack(pack_id, clean=False, use_pmtiles=False):
-    pack_dir = get_pack_dir(pack_id, use_pmtiles)
-    fname = "context.pmtiles" if use_pmtiles else "context.mbtiles"
-    context_mbtiles_path = os.path.join(pack_dir, fname)
-    if os.path.isfile(context_mbtiles_path) and not clean:
-        util.log(f"{context_mbtiles_path} exists, skipping...")
+def make_context_for_pack(pack_id, clean=False):
+    pack_dir = get_pack_dir(pack_id)
+    fname = "context.pmtiles"
+    context_pmtiles_path = os.path.join(pack_dir, fname)
+    if os.path.isfile(context_pmtiles_path) and not clean:
+        util.log(f"{context_pmtiles_path} exists, skipping...")
         return
     pack = get_pack(pack_id)
     make_context(
         pack["osm"],
         pack=pack,
         clean=clean,
-        path=context_mbtiles_path,
-        use_pmtiles=use_pmtiles)
+        path=context_pmtiles_path)
 
 
 def make_pack(pack_id, clean=False, clean_rocks=False, clean_water=False,
               clean_ways=False, clean_context=False, clean_contours=False,
-              use_pmtiles=False, procs=2):
+              procs=2):
     """Generate a pack and write it to the build directory"""
-    pack_dir = get_pack_dir(pack_id, use_pmtiles)
-    make_rocks_for_pack(pack_id, clean=(clean or clean_rocks), procs=procs, use_pmtiles=use_pmtiles)
-    make_water_for_pack(pack_id, clean=(clean or clean_water), procs=procs, use_pmtiles=use_pmtiles)
-    make_ways_for_pack(pack_id, clean=(clean or clean_ways), use_pmtiles=use_pmtiles)
-    make_context_for_pack(pack_id, clean=(clean or clean_context), use_pmtiles=use_pmtiles)
-    make_contours_for_pack(pack_id, clean=(clean or clean_contours), procs=procs, use_pmtiles=use_pmtiles)
+    pack_dir = get_pack_dir(pack_id)
+    make_rocks_for_pack(pack_id, clean=(clean or clean_rocks), procs=procs)
+    make_water_for_pack(pack_id, clean=(clean or clean_water), procs=procs)
+    make_ways_for_pack(pack_id, clean=(clean or clean_ways))
+    make_context_for_pack(pack_id, clean=(clean or clean_context))
+    make_contours_for_pack(pack_id, clean=(clean or clean_contours), procs=procs)
     return shutil.make_archive(
         pack_dir,
         format="zip",
@@ -349,7 +332,6 @@ def make_single_pack_from_args(args):
         clean_ways=args.clean_ways,
         clean_context=args.clean_context,
         clean_contours=args.clean_contours,
-        use_pmtiles=args.use_pmtiles,
         procs=args.procs)
     make_manifest(manifest_url=args.manifest_url, s3_bucket_url=args.s3_bucket_url)
     util.log(f"Pack available at {pack_path}")
@@ -408,11 +390,7 @@ if __name__ == "__main__":
         type=str,
         nargs="*",
         choices=["rocks", "water", "contours", "ways", "context"],
-        help="Only build selected MBTiles and don't generate the final pack archive")
-    parser.add_argument(
-        "--use-pmtiles",
-        action="store_true",
-        help="Use PMTiles instead of MBTiles")
+        help="Only build selected PMTiles and don't generate the final pack archive")
     args = parser.parse_args()
 
     if args.pack == "list":
@@ -427,29 +405,24 @@ if __name__ == "__main__":
             make_rocks_for_pack(
                 args.pack,
                 clean=args.clean,
-                procs=args.procs,
-                use_pmtiles=args.use_pmtiles)
+                procs=args.procs)
         if "water" in args.only:
             make_water_for_pack(
                 args.pack,
                 clean=args.clean,
-                procs=args.procs,
-                use_pmtiles=args.use_pmtiles)
+                procs=args.procs)
         if "contours" in args.only:
             make_contours_for_pack(
                 args.pack,
                 clean=args.clean,
-                procs=args.procs,
-                use_pmtiles=args.use_pmtiles)
+                procs=args.procs)
         if "ways" in args.only:
             make_ways_for_pack(
                 args.pack,
-                clean=args.clean,
-                use_pmtiles=args.use_pmtiles)
+                clean=args.clean)
         if "context" in args.only:
             make_context_for_pack(
                 args.pack,
-                clean=args.clean,
-                use_pmtiles=args.use_pmtiles)
+                clean=args.clean)
     else:
         make_single_pack_from_args(args)

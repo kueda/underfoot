@@ -400,13 +400,10 @@ def load_networks(sources, debug=False):
             util.log(f"{source_table_name} doesn't exist, skipping...")
 
 
-def make_mbtiles(sources, path="./water.mbtiles", bbox=None, geojson_path=None, debug=False,
-    use_pmtiles=False):
-    """Export water into am MBTiles file"""
-    if use_pmtiles:
-        path = path.replace("mbtiles", "pmtiles")
+def make_pmtiles(sources, path="./water.pmtiles", bbox=None, geojson_path=None, debug=False):
+    """Export water into am PMTiles file"""
     if debug:
-        util.log(f"water: making mbtiles for sources: {sources}")
+        util.log(f"water: making pmtiles for sources: {sources}")
     if os.path.exists(path):
         os.remove(path)
     # 1. Write ways, bodies, and sheds to separate layers of a single GeoPackage file
@@ -496,7 +493,7 @@ def make_mbtiles(sources, path="./water.mbtiles", bbox=None, geojson_path=None, 
             str(bbox["top"])
         ]
     util.call_cmd(cmd, check=True)
-    # 1. Use `-dsco CONF` to write all these layers to the mbtiles in one fell
+    # 1. Use `-dsco CONF` to write all these layers to the pmtiles in one fell
     # swoop
     conf = {
         WATERWAYS_TABLE_NAME: {
@@ -533,24 +530,22 @@ def make_mbtiles(sources, path="./water.mbtiles", bbox=None, geojson_path=None, 
         -dsco CONF='{json.dumps(conf)}'
     """
     util.call_cmd(re.sub(r'\s+', " ", cmd).strip(), shell=True)
-    util.add_table_from_query_to_mbtiles(
+    util.add_table_from_query_to_pmtiles(
         table_name=WATERWAYS_NETWORK_TABLE_NAME,
         dbname=DBNAME,
         query=f"SELECT * FROM {WATERWAYS_NETWORK_TABLE_NAME}",
-        mbtiles_path=path,
-        index_columns=["source_id", "to_source_id", "from_source_id"],
-        use_pmtiles=use_pmtiles)
+        pmtiles_path=path,
+        index_columns=["source_id", "to_source_id", "from_source_id"])
     sources_sql = ",".join([f"'{s}'" for s in sources])
-    util.add_table_from_query_to_mbtiles(
+    util.add_table_from_query_to_pmtiles(
         table_name=CITATIONS_TABLE_NAME,
         dbname=DBNAME,
         query=f"""
             SELECT * FROM {CITATIONS_TABLE_NAME}
             WHERE source IN ({sources_sql})
         """,
-        mbtiles_path=path,
-        index_columns=["source"],
-        use_pmtiles=use_pmtiles)
+        pmtiles_path=path,
+        index_columns=["source"])
     return path
 
 def update_imaginary_waterways():
@@ -571,9 +566,8 @@ def update_imaginary_waterways():
 
 def make_water(
         sources, clean=False, cleandb=False, cleanfiles=False, bbox=None,
-        path="./water.mbtiles", procs=NUM_PROCESSES, debug=False, geojson_path=None,
-        use_pmtiles=False):
-    """Process and load all water sources and write them to a MBTiles file"""
+        path="./water.pmtiles", procs=NUM_PROCESSES, debug=False, geojson_path=None):
+    """Process and load all water sources and write them to a PMTiles file"""
     if debug:
         util.log("water: making database")
     make_database()
@@ -585,13 +579,12 @@ def make_water(
     update_imaginary_waterways()
     load_watersheds(sources, debug=debug)
     load_networks(sources, debug=debug)
-    return make_mbtiles(sources, path=path, bbox=bbox, geojson_path=geojson_path, debug=debug,
-        use_pmtiles=use_pmtiles)
+    return make_pmtiles(sources, path=path, bbox=bbox, geojson_path=geojson_path, debug=debug)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Make an MBTiles of hydrological data from given source(s)"
+        description="Make an PMTiles of hydrological data from given source(s)"
     )
     parser.add_argument("source", type=str, nargs="+", help="Source(s)")
     parser.add_argument(
