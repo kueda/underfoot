@@ -54,7 +54,7 @@ def load_osm_from_pbf(data_path, pack=None):
     """Load OSM data from PBF export into a PostgreSQL database using"""
     read_args = [
         "import",
-        "-connection", f"postgis://{DB_USER}:{DB_PASSWORD}@localhost/{DBNAME}?prefix=NONE",
+        "-connection", f"postgis://{DB_USER}:{DB_PASSWORD}@localhost/{DBNAME}",
         "-mapping", "imposm-mapping.yml",
         "-read", data_path
     ]
@@ -106,7 +106,7 @@ def load_ways_data(data_path, pack=None):
               ) AS name,
               tags -> 'highway' AS highway,
               linestring
-            FROM ways
+            FROM osm_ways
             WHERE
               tags -> 'highway' IS NOT NULL
         """,
@@ -133,7 +133,7 @@ def load_natural_ways_data(data_path, pack=None):
                 tags -> 'natural' AS "natural",
                 ROUND(st_length(st_boundingdiagonal(linestring))::numeric, 2) AS diag_deg,
                 ST_ChaikinSmoothing(ST_Simplify(linestring, 200), 3) AS linestring
-            FROM natural_ways
+            FROM osm_natural_ways
             WHERE
                 tags -> 'natural' IS NOT NULL
                 AND tags -> 'highway' IS NULL
@@ -172,7 +172,7 @@ def load_natural_nodes_data(data_path, pack=None):
               tags -> 'ele' AS elevation_m,
               tags -> 'intermittent' AS intermittent,
               geom
-            FROM natural_nodes
+            FROM osm_natural_nodes
             WHERE
               tags -> 'natural' IN ('peak', 'saddle', 'spring')
         """,
