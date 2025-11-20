@@ -195,7 +195,7 @@ def load_place_nodes_data(data_path, pack=None):
               tags -> 'place' AS place,
               tags -> 'population' AS population,
               geom
-            FROM place_nodes
+            FROM osm_place_nodes
         """,
         dbname=DBNAME
     )
