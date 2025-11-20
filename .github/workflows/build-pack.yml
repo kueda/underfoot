@@ -47,6 +47,7 @@ jobs:
 
       - name: Build rocks
         run: |
+          source venv/bin/activate
           python packs.py ${{ inputs.pack }} --only rocks
         env:
           PGHOST: 0.0.0.0
@@ -134,6 +135,7 @@ jobs:
 
       - name: Build contours
         run: |
+          source venv/bin/activate
           python packs.py ${{ inputs.pack }} --only contours
         env:
           PGHOST: 0.0.0.0
@@ -185,6 +187,7 @@ jobs:
 
       - name: Build ways & context
         run: |
+          source venv/bin/activate
           python packs.py ${{ inputs.pack }} --only ways context
         env:
           PGHOST: 0.0.0.0
@@ -237,6 +240,7 @@ jobs:
 
       - name: Make the manifest
         run: |
+          source venv/bin/activate
           python packs.py manifest \
             --s3-bucket-url https://static.underfoot.rocks \
             --manifest-url https://static.underfoot.rocks/manifest.json
