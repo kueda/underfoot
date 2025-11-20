@@ -90,6 +90,7 @@ jobs:
 
       - name: Build water
         run: |
+          source venv/bin/activate
           python packs.py ${{ inputs.pack }} --only water
         env:
           PGHOST: 0.0.0.0
