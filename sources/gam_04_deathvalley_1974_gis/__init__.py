@@ -25,6 +25,5 @@ def run():
             "title": "FullName",
             "span": "Age",
             "description": "Descr"
-        },
-        lithology_from_description=True
+        }
     )

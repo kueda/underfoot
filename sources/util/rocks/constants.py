@@ -51,6 +51,7 @@ LITHOLOGY_PATTERN = re.compile(
     dolomite|
     dune sand|
     fanglomerate|
+    fault\sbreccia|
     felsic\smetavolcanic\srock|
     felsic\svolcanic\srock|
     gabbro|
@@ -180,6 +181,7 @@ LITHOLOGY_SYNONYMS = {
   "dolostone (dolomite)": "dolomite",
   "diamicton": "gravel",
   "fanglomerate": "alluvial fan",
+  "fault breccia": "tectonic breccia",
   "fill": "artificial",
   "glacier": "ice",
   "gneissic": "gneiss",
