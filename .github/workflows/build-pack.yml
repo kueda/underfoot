@@ -223,7 +223,7 @@ jobs:
       - name: Install local dependencies
         run: ./setup
 
-      - name: Download all MBTiles artifacts
+      - name: Download all PMTiles artifacts
         uses: actions/download-artifact@v4
 
       - name: Zip up the pack

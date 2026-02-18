@@ -263,11 +263,8 @@ def add_table_from_query_to_pmtiles(
         table_name,
         dbname,
         query,
-        pmtiles_path,
-        index_columns=None):
+        pmtiles_path):
     """Add a table as sidecar CSV files to a PMTiles from a query to the Postgres db"""
-    if index_columns is None:
-        index_columns = []
     dirpath = os.path.dirname(pmtiles_path)
     csv_path = os.path.join(dirpath, f"{extless_basename(pmtiles_path)}-{table_name}.csv")
     call_cmd(

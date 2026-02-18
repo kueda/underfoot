@@ -121,7 +121,7 @@ def local_built_packs():
     packs = {}
     pack_ids = {
         os.path.basename(path).split(".")[0]
-        for path in glob(os.path.join(build_dir, "*.zip"))
+        for path in glob(os.path.join(build_dir, "*.pmtiles.zip"))
     }
     for pack_id in pack_ids:
         pmtiles_path = os.path.join(build_dir, f"{pack_id}.pmtiles.zip")

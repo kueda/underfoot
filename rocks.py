@@ -339,8 +339,7 @@ def make_pmtiles(sources, path="./rocks.pmtiles", bbox=None, geojson_path=None):
         table_name=f"{FINAL_TABLE_NAME}_attrs",
         dbname=DBNAME,
         query=f"SELECT {', '.join(columns)} FROM {FINAL_TABLE_NAME}",
-        pmtiles_path=path,
-        index_columns=["id"])
+        pmtiles_path=path)
     sources_sql = ",".join([f"'{s}'" for s in sources])
     util.add_table_from_query_to_pmtiles(
         table_name=CITATIONS_TABLE_NAME,
@@ -349,8 +348,7 @@ def make_pmtiles(sources, path="./rocks.pmtiles", bbox=None, geojson_path=None):
             SELECT * FROM {CITATIONS_TABLE_NAME}
             WHERE source IN ({sources_sql})
         """,
-        pmtiles_path=path,
-        index_columns=["source"])
+        pmtiles_path=path)
     return os.path.abspath(path)
 
 

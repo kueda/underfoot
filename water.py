@@ -407,6 +407,7 @@ def make_pmtiles(sources, path="./water.pmtiles", bbox=None, geojson_path=None, 
     if os.path.exists(path):
         os.remove(path)
     # 1. Write ways, bodies, and sheds to separate layers of a single GeoPackage file
+    # TODO this always writes to the dir *this* script is in; it should write somewhere temporary and we should remove it after the pmtiles has been created
     gpkg_path = os.path.join(
         os.path.dirname(os.path.realpath(__file__)),
         f"{util.extless_basename(path)}.gpkg"
@@ -534,8 +535,7 @@ def make_pmtiles(sources, path="./water.pmtiles", bbox=None, geojson_path=None, 
         table_name=WATERWAYS_NETWORK_TABLE_NAME,
         dbname=DBNAME,
         query=f"SELECT * FROM {WATERWAYS_NETWORK_TABLE_NAME}",
-        pmtiles_path=path,
-        index_columns=["source_id", "to_source_id", "from_source_id"])
+        pmtiles_path=path)
     sources_sql = ",".join([f"'{s}'" for s in sources])
     util.add_table_from_query_to_pmtiles(
         table_name=CITATIONS_TABLE_NAME,
@@ -544,8 +544,7 @@ def make_pmtiles(sources, path="./water.pmtiles", bbox=None, geojson_path=None, 
             SELECT * FROM {CITATIONS_TABLE_NAME}
             WHERE source IN ({sources_sql})
         """,
-        pmtiles_path=path,
-        index_columns=["source"])
+        pmtiles_path=path)
     return path
 
 def update_imaginary_waterways():

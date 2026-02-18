@@ -71,7 +71,7 @@ Each source is an executable Python script that creates a directory at `sources/
     1. TODO
 1. A [GeoPackage](https://www.geopackage.org/) named `watersheds.gpkg` containing a single `watersheds` layer with the following properties:
     1. TODO
-1. A CSV named `waterways-network.csv` describing the connectivity and direction of flow in the `waterways`, using the `source_id` attribute.
+1. A CSV named `water-waterways-network.csv` describing the connectivity and direction of flow in the `waterways`, using the `source_id` attribute.
     1. `source_id`
     1. `to_source_id`
     1. `from_source_id`
