@@ -1,0 +1,38 @@
+{
+    "id": "us-ca-inyo",
+    "name": "Inyo County, California",
+    "description": "Inyo County, California, including Death Valley",
+    "admin1": "United States",
+    "admin2": "California",
+    "geojson": {
+        "$ref": "file://./us-ca-inyo.geojson"
+    },
+    "bbox": {
+        "bottom": 35.788935,
+        "left": -118.786736,
+        "right": -115.648032019625,
+        "top": 37.4649387662445
+    },
+    "osm": "https://download.geofabrik.de/north-america/us/california-latest.osm.pbf",
+    "rock": [
+        "sim3151",
+        "sim3040",
+        "gam_04_deathvalley_1974_gis",
+        "of2005_1305_ca"
+    ],
+    "water": [
+        "nhdplus_h_1809_hu4",
+        "nhdplus_h_1804_hu4",
+        "nhdplus_h_1803_hu4",
+        "nhdplus_h_1606_hu4",
+        "tiger_water_32009",
+        "tiger_water_06029",
+        "tiger_water_32023",
+        "tiger_water_06019",
+        "tiger_water_06107",
+        "tiger_water_32003",
+        "tiger_water_06051",
+        "tiger_water_06071",
+        "tiger_water_06027"
+    ]
+}

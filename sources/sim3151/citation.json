@@ -1,0 +1,19 @@
+[
+  {
+    "type": "map",
+    "publisher": "U.S. Geological Survey",
+    "scale": "1:50000",
+    "title": "Geologic Map of the southern Funeral Mountains including nearby Groundwater Discharge Sites in Death Valley National Park, California and Nevada",
+    "URL": "https://pubs.usgs.gov/sim/3151/",
+    "author": [
+      {"family": "Fridrich", "given": "C.J."},
+      {"family": "Thompson", "given": "R.A."},
+      {"family": "Slate", "given": "J.L."},
+      {"family": "Berry", "given": "M.E."},
+      {"family": "Machette", "given": "M.N."}
+    ],
+    "issued": {
+      "date-parts": [["2012"]]
+    }
+  }
+]

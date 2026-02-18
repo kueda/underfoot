@@ -1,0 +1,15 @@
+[
+  {
+    "type": "map",
+    "publisher": "U.S. Geological Survey",
+    "scale": "1:100000",
+    "title": "Surficial Geologic Map of the Darwin Hills 30' x 60' Quadrangle, Inyo County, California",
+    "URL": "https://pubs.usgs.gov/sim/3040/",
+    "author": [
+      {"family": "Jayko", "given": "A.S."}
+    ],
+    "issued": {
+      "date-parts": [["2009"]]
+    }
+  }
+]

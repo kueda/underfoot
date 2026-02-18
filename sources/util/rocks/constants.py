@@ -144,6 +144,8 @@ LOW_PRIORITY_LITHOLOGY_PATTERN = re.compile(
     carbonate\srock|
     colluvium|
     diorite|
+    evaporite|
+    exhalite|
     glacier|
     landslide|
     levee|
@@ -151,6 +153,8 @@ LOW_PRIORITY_LITHOLOGY_PATTERN = re.compile(
     sand|
     silt|
     unconsolidated\smaterial|
+    playa|
+    spring mound|
     water|
     metasedimentary|
     metamorphic\srock|
@@ -285,6 +289,8 @@ SEDIMENTARY_ROCKS = [
   "claystone",
   "conglomerate",
   "dolomite",
+  "evaporite",
+  "exhalite",
   "graywacke",
   "limestone",
   "mudstone",
@@ -315,6 +321,7 @@ NON_ROCKS = [
   "moraine",
   "sand",
   "silt",
+  "spring mound",
   "talus",
   "terrace",
   "till",

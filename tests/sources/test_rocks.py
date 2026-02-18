@@ -114,3 +114,15 @@ def test_infer_metadata_from_csv_row_disallows_unknown_lithology():
     row = {"lithology": "totally not a valid lithology", "title": "foo"}
     with pytest.raises(ValueError):
         rocks.infer_metadata_from_csv_row(row)
+
+
+def test_infer_metadata_from_csv_row_uses_description_for_lithology_when_specified():
+    row = {"title": "granite deposit", "description": "contains sandstone layers"}
+    inferred_row = rocks.infer_metadata_from_csv_row(row, lithology_from_description=True)
+    assert inferred_row["lithology"] == "sandstone"
+
+
+def test_infer_metadata_from_csv_row_does_not_use_description_for_lithology_by_default():
+    row = {"title": "granite deposit", "description": "contains sandstone layers"}
+    inferred_row = rocks.infer_metadata_from_csv_row(row)
+    assert inferred_row["lithology"] == "granite"

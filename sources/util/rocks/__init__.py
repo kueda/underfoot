@@ -362,7 +362,7 @@ def join_polygons_and_metadata(
     return output_path
 
 
-def infer_metadata_from_csv_row(row):
+def infer_metadata_from_csv_row(row, lithology_from_description=False):
     """Infer metadata from a row in a metadata file"""
     csv_lithology = row.get("lithology")
     csv_title = row.get("title")
@@ -373,10 +373,17 @@ def infer_metadata_from_csv_row(row):
         else:
             raise ValueError(f"Metadata CSV specified an unrecognized lithology: '{csv_lithology}'")
     if not row.get('lithology') or len(row['lithology']) == 0:
+        if lithology_from_description:
+            row['lithology'] = lithology_from_text(csv_description)
+        else:
+            row['lithology'] = lithology_from_text(csv_title)
+    if not row.get('lithology') or len(row['lithology']) == 0:
         row['lithology'] = lithology_from_text(csv_title)
     if not row.get('lithology') or len(row['lithology']) == 0:
         row['lithology'] = lithology_from_text(csv_description)
-    row['span'] = span_from_text(csv_title)
+    row['span'] = row.get('span')
+    if not row.get('span') or len(row['span']) == 0:
+        row['span'] = span_from_text(csv_title)
     if not row['span'] and row['lithology']:
         row['span'] = span_from_lithology(row['lithology'])
     if not row.get('span') and row.get('code'):
@@ -395,7 +402,7 @@ def infer_metadata_from_csv_row(row):
     return row
 
 
-def infer_metadata_from_csv(infile_path):
+def infer_metadata_from_csv(infile_path, lithology_from_description=False):
     """Fill in missing metadata columns in a CSV
 
     The metadata file *can* have every column, but in general it just has the
@@ -413,7 +420,7 @@ def infer_metadata_from_csv(infile_path):
             )
             writer.writeheader()
             for row in reader:
-                row = infer_metadata_from_csv_row(row)
+                row = infer_metadata_from_csv_row(row, lithology_from_description=lithology_from_description)
                 writer.writerow(row)
                 uncertain_row = row.copy()
                 uncertain_row['code'] = f"{row['code']}?"
@@ -504,6 +511,7 @@ def process_usgs_source(
     join_col_modifier=None,
     mappable_metadata_csv_path=None,
     mappable_metadata_mapping=None,
+    lithology_from_description=False,
 ):
     """Process units from a USGS Arc Info or MDB archive given a couple
     configurations.
@@ -609,7 +617,10 @@ def process_usgs_source(
     globs = glob(os.path.join(os.path.dirname(extracted_file_path), "*.met"))
     met_path = globs[0] if globs else None
     if metadata_csv_path:
-        metadata_path = infer_metadata_from_csv(metadata_csv_path)
+        metadata_path = infer_metadata_from_csv(
+            metadata_csv_path,
+            lithology_from_description=lithology_from_description
+        )
         if met_path:
             fill_in_custom_metadata_from_met(met_path, metadata_path)
     elif mappable_metadata_csv_path and mappable_metadata_mapping:
@@ -617,7 +628,10 @@ def process_usgs_source(
             mappable_metadata_csv_path,
             mappable_metadata_mapping
         )
-        metadata_path = infer_metadata_from_csv(mappable_metadata_path)
+        metadata_path = infer_metadata_from_csv(
+            mappable_metadata_path,
+            lithology_from_description=lithology_from_description
+        )
     elif met_path:
         data = metadata_from_usgs_met(met_path)
         with open(metadata_path, "w", encoding="utf-8") as metadata_file:
