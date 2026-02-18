@@ -642,6 +642,20 @@ def process_usgs_source(
         with open(metadata_path, "w", encoding="utf-8") as metadata_file:
             csv.writer(metadata_file).writerows(data)
 
+    log("CHECKING LITHOLOGY COVERAGE...")
+    with open(metadata_path, encoding="utf-8") as metadata_file:
+        reader = csv.DictReader(metadata_file)
+        missing = [
+            row for row in reader
+            if not row.get('lithology') and not row['code'].endswith('?')
+        ]
+    if missing:
+        log(f"  {len(missing)} unit(s) without lithology:")
+        for row in missing:
+            log(f"    {row['code']!r}: {row['title']}")
+    else:
+        log("  All units have lithology.")
+
     log("JOINING METADATA...")
     join_polygons_and_metadata(final_polygons_path, metadata_path,
       polygons_join_col=polygons_join_col)
