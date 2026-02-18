@@ -12,7 +12,10 @@ python create-pack.py rgm_004 of2005_1305_ca of2005_1305_nv \
 import argparse
 import json
 import os
+import shutil
 import tempfile
+import urllib.parse
+import urllib.request
 
 from sys import exit as sys_exit
 import fiona
@@ -56,7 +59,35 @@ def generate_geojson(sources, args, data):
     if os.path.isfile(outpath):
         log(f"{outpath} exists, skipping GeoJSON generation...")
         return outpath
-    generate_sources(sources, args)
+
+    # Pre-provided file (--geojson PATH)
+    if args.geojson:
+        log(f"Copying boundary from {args.geojson} to {outpath}")
+        shutil.copy2(args.geojson, outpath)
+        return outpath
+
+    # Interactive boundary selection
+    if args.interactive:
+        print("How would you like to define the pack boundary?")
+        print("  1. Auto-generate from source convex hulls (default)")
+        print("  2. Look up a county from TIGER county boundaries")
+        print("  3. Look up from Nominatim (OSM geocoder)")
+        print("  4. Provide a GeoJSON file path")
+        choice = input("Choice [1/2/3/4]: ").strip() or "1"
+        if choice == "2":
+            county = input("County name (without 'County', e.g. 'Inyo'): ").strip()
+            state = input("State name (e.g. 'California'): ").strip()
+            return find_tiger_county_geojson(county, state, outpath)
+        if choice == "3":
+            query = input("Nominatim search query: ").strip()
+            return find_nominatim_geojson(query, outpath)
+        if choice == "4":
+            src = input("GeoJSON file path: ").strip()
+            shutil.copy2(src, outpath)
+            return outpath
+        # choice "1" falls through to hull generation below
+
+    # Auto-generate from convex hulls (original behavior)
     pack_hulls = []
     for source in sources:
         source_output_path = f"sources/work-{source}/units.geojson"
@@ -66,17 +97,15 @@ def generate_geojson(sources, args, data):
             source_hull = shapely.geometrycollections(source_hulls)
             pack_hulls.append(source_hull)
     pack_hull = shapely.geometrycollections(pack_hulls).convex_hull
-    schema = {
-      'geometry': 'Polygon'
-    }
+    schema = {'geometry': 'Polygon'}
     log(f"Writing geojson to {outpath}")
     with fiona.open(outpath, "w", "GeoJSON", schema) as output:
-        output.write({
-            'geometry': mapping(pack_hull)
-        })
+        output.write({'geometry': mapping(pack_hull)})
     if args.interactive:
-        proceed = input(f"Generated a boundary GeoJSON at {outpath}, which you may want to edit. "
-                        "Proceed w/o editing? [Y/n]: ")
+        proceed = input(
+            f"Generated a boundary GeoJSON at {outpath}, which you may want to edit. "
+            "Proceed w/o editing? [Y/n]: "
+        )
         if proceed == "n":
             sys_exit()
     return outpath
@@ -155,26 +184,77 @@ def find_nhd_hu4_sources(geojson_path):
     return [f"nhdplus_h_{feature.properties['huc4']}_hu4" for feature in intersecting_features]
 
 
+TIGER_COUNTIES_GEOJSON_PATH = "tiger_counties.geojson"
+
+
+def ensure_tiger_counties():
+    """Download TIGER county shapefile and convert to GeoJSON if not present"""
+    if os.path.isfile(TIGER_COUNTIES_GEOJSON_PATH):
+        return
+    tiger_counties_shp_url = (
+        "https://www2.census.gov/geo/tiger/GENZ2022/shp/cb_2022_us_county_20m.zip"
+    )
+    with tempfile.TemporaryDirectory() as tmpdir:
+        zip_path = os.path.join(tmpdir, os.path.basename(tiger_counties_shp_url))
+        log(f"DOWNLOADING {tiger_counties_shp_url}")
+        call_cmd(["curl", "-L", "-o", zip_path, tiger_counties_shp_url])
+        call_cmd(["unzip", "-u", "-o", zip_path, "-d", tmpdir])
+        call_cmd([
+            "ogr2ogr", TIGER_COUNTIES_GEOJSON_PATH,
+            os.path.join(tmpdir, "cb_2022_us_county_20m.shp")
+        ])
+
+
+def find_tiger_county_geojson(county_name, state_name, outpath):
+    """Write a single-feature GeoJSON for the named county to outpath"""
+    ensure_tiger_counties()
+    with open(TIGER_COUNTIES_GEOJSON_PATH, encoding="utf-8") as f:
+        data = json.load(f)
+    matches = [
+        feat for feat in data["features"]
+        if feat["properties"]["NAME"].lower() == county_name.lower()
+        and feat["properties"]["STATE_NAME"].lower() == state_name.lower()
+    ]
+    if not matches:
+        raise ValueError(f"No county '{county_name}' found in '{state_name}'.")
+    if len(matches) > 1:
+        county_only = [m for m in matches if m["properties"]["LSAD"] == "06"]
+        if len(county_only) == 1:
+            matches = county_only
+        else:
+            raise ValueError(
+                f"Ambiguous: {[m['properties']['NAMELSAD'] for m in matches]}. "
+                "Use --geojson to provide a boundary directly."
+            )
+    log(f"Writing TIGER boundary for {county_name}, {state_name} to {outpath}")
+    with open(outpath, "w", encoding="utf-8") as f:
+        json.dump({"type": "FeatureCollection", "features": [matches[0]]}, f)
+    return outpath
+
+
+def find_nominatim_geojson(query, outpath):
+    """Write a single-feature GeoJSON from Nominatim geocoder to outpath"""
+    params = urllib.parse.urlencode({
+        "q": query, "format": "geojson", "polygon_geojson": "1", "limit": "1"
+    })
+    url = f"https://nominatim.openstreetmap.org/search?{params}"
+    req = urllib.request.Request(url, headers={"User-Agent": "underfoot/create_pack.py"})
+    log(f"Querying Nominatim: {url}")
+    with urllib.request.urlopen(req) as response:
+        data = json.loads(response.read().decode("utf-8"))
+    if not data.get("features"):
+        raise ValueError(f"Nominatim returned no results for: '{query}'.")
+    log(f"Writing Nominatim boundary for '{query}' to {outpath}")
+    with open(outpath, "w", encoding="utf-8") as f:
+        json.dump({"type": "FeatureCollection", "features": [data["features"][0]]}, f)
+    return outpath
+
+
 def find_tiger_water_sources(geojson_path):
     """Find relevant TIGER water sources"""
-    tiger_counties_geojson_path = "tiger_counties.geojson"
-    if not os.path.isfile(tiger_counties_geojson_path):
-        tiger_counties_shp_url = (
-            "https://www2.census.gov/geo/tiger/GENZ2022/shp/cb_2022_us_county_20m.zip"
-        )
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tiger_counties_zip_path = os.path.join(tmpdir, os.path.basename(tiger_counties_shp_url))
-            if not os.path.isfile(tiger_counties_zip_path):
-                log(f"DOWNLOADING {tiger_counties_shp_url}")
-                call_cmd(["curl", "-L", "-o", tiger_counties_zip_path, tiger_counties_shp_url])
-                call_cmd(["unzip", "-u", "-o", tiger_counties_zip_path, "-d", tmpdir])
-                call_cmd([
-                    "ogr2ogr",
-                    tiger_counties_geojson_path,
-                    os.path.join(tmpdir, "cb_2022_us_county_20m.shp")
-                ])
+    ensure_tiger_counties()
     pack_geom = shapely_geometry_collection_from_geojson(geojson_path)
-    with fiona.open(tiger_counties_geojson_path) as counties:
+    with fiona.open(TIGER_COUNTIES_GEOJSON_PATH) as counties:
         intersecting_features = [
             feature for feature in counties
             if shape(feature.geometry).intersects(pack_geom)
@@ -216,6 +296,11 @@ if __name__ == "__main__":
         type=str,
         help="Description of this pack")
     parser.add_argument(
+        "--geojson",
+        type=str,
+        metavar="PATH",
+        help="Path to a pre-existing GeoJSON boundary file, skipping auto-generation")
+    parser.add_argument(
         "-i",
         "--interactive",
         action="store_true",
@@ -236,6 +321,7 @@ if __name__ == "__main__":
     }
     if not data["id"] or len(data["id"]) == 0:
         raise ValueError("You must specify an ID")
+    generate_sources(data["rock"], args)
     geojson_path = generate_geojson(data["rock"], args, data)
     data["geojson"] = {
         "$ref": f"file://./{os.path.basename(geojson_path)}"
@@ -245,5 +331,5 @@ if __name__ == "__main__":
     data["water"] = find_water_sources(geojson_path)
     outfile_path = os.path.join("packs", f"{data['id']}.json",)
     with open(outfile_path, "w", encoding="utf-8") as outfile:
-        json.dump(data, outfile, indent=True)
+        json.dump(data, outfile, indent=4)
     print(f"Pack created at {outfile_path}")

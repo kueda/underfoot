@@ -2,6 +2,9 @@
 *.pbf
 *.pyc
 *__pycache__*
+.claude-model
+.claude-prompts
+.claude/settings.local.json
 .sqliterc
 .vagrant/
 bin/
