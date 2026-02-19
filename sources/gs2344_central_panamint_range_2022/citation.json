@@ -1,0 +1,15 @@
+[
+  {
+    "type": "map",
+    "publisher": "Geological Society of America",
+    "scale": "1:20000",
+    "title": "Geologic map of central Panamint Range, California",
+    "URL": "https://pubs.geoscienceworld.org/gsa/geosphere/article/18/2/730/612442/",
+    "author": [
+      {"family": "Andrew", "given": "J.E."}
+    ],
+    "issued": {
+      "date-parts": [["2022"]]
+    }
+  }
+]

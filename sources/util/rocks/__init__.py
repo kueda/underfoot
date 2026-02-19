@@ -420,7 +420,10 @@ def infer_metadata_from_csv(infile_path, lithology_from_description=False):
             )
             writer.writeheader()
             for row in reader:
-                row = infer_metadata_from_csv_row(row, lithology_from_description=lithology_from_description)
+                row = infer_metadata_from_csv_row(
+                    row,
+                    lithology_from_description=lithology_from_description
+                )
                 writer.writerow(row)
                 uncertain_row = row.copy()
                 uncertain_row['code'] = f"{row['code']}?"

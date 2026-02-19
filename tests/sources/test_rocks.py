@@ -106,6 +106,18 @@ def test_infer_metadata_from_csv_row_uses_lithology_column_over_inferred_litholo
     inferred_row = rocks.infer_metadata_from_csv_row(row)
     assert inferred_row["lithology"] == row["lithology"]
 
+def test_infer_metadata_from_csv_row_uses_lithology_from_title_over_description():
+    # row = {"title": "alluvium", "description": "gravel"}
+    row = {
+        "code": "Qa",
+        "title": "alluvium",
+        "description": "Unconsolidated silt and sand and gravel deposited in active stream channels.",
+        "span": "Holocene",
+        "lithology": ""
+    }
+    inferred_row = rocks.infer_metadata_from_csv_row(row)
+    assert inferred_row["lithology"] == row["title"]
+
 def test_infer_metadata_from_csv_row_allows_known_lithology():
     row = {"lithology": "sandstone", "title": "foo"}
     assert rocks.infer_metadata_from_csv_row(row)["lithology"] == "sandstone"

@@ -1,7 +1,7 @@
 {
     "id": "us-ca-inyo",
     "name": "Inyo County, California",
-    "description": "Inyo County, California, including Death Valley",
+    "description": "Including Owens Valley and Death Valley",
     "admin1": "United States",
     "admin2": "California",
     "geojson": {
@@ -15,6 +15,9 @@
     },
     "osm": "https://download.geofabrik.de/north-america/us/california-latest.osm.pbf",
     "rock": [
+        "gs2342_southern_panamint_valley_2022",
+        "gs2344_central_panamint_range_2022",
+        "gs2341_slate_range_crossing_2022",
         "sim3151",
         "sim3040",
         "gam_04_deathvalley_1974_gis",

@@ -1,0 +1,15 @@
+[
+  {
+    "type": "map",
+    "publisher": "Geological Society of America",
+    "scale": "1:20000",
+    "title": "Geologic map of southern Panamint Valley, southern Panamint Range, and central Slate Range, California, USA",
+    "URL": "https://pubs.geoscienceworld.org/gsa/geosphere/article/18/2/726/612441/",
+    "author": [
+      {"family": "Andrew", "given": "J.E."}
+    ],
+    "issued": {
+      "date-parts": [["2022"]]
+    }
+  }
+]
