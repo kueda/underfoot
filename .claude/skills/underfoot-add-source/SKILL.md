@@ -106,8 +106,8 @@ GAM sources that use `mappable_metadata_csv_path` skip this file because the des
 CSV is bundled in the download.
 
 **The `description` field is critical.** It is the primary text shown to users and the
-main input for lithology inference. Do not leave it blank. Populate it from the
-publication's pamphlet PDF (the Description of Map Units section).
+main input for lithology inference. Populate it from the publication's pamphlet PDF
+(the Description of Map Units section).
 
 To read a PDF pamphlet, you need `pdftotext` (from poppler):
 
@@ -123,7 +123,9 @@ pdftotext -layout pamphlet.pdf - | less
 ```
 
 **If `pdftotext` is not installed, ask the user to install poppler before proceeding.**
-Do not leave descriptions blank and move on — stop and ask.
+
+Some units may legitimately have no description in the source — leave those blank rather
+than fabricating text. But before giving up on a unit, ask the user (see below).
 
 ## Tools (in this skill directory)
 
@@ -193,13 +195,33 @@ California GAM sources follow: `gam_<NN>_<location>_<YYYY>_gis`
 - `location` = lowercase, underscores, no hyphens
 - `YYYY` = publication year
 
+## Asking the User for Help with Descriptions
+
+PDF text extraction is imperfect. Multi-column layouts, complex formatting, and map
+symbols interspersed with text all cause regex and `pdftotext` to miss or mangle
+description blocks. A human can often find and paste a passage in seconds.
+
+**Ask the user when:**
+- You have tried the PDF text and cannot locate a description for a unit after a
+  reasonable search (2–3 targeted attempts).
+- The extracted text for a unit looks garbled or truncated.
+- Several units are missing descriptions and you suspect a section of the PDF was not
+  captured cleanly.
+
+**How to ask:** List the unit codes and names you are missing, describe what section of
+the PDF they should be in (e.g., "Description of Map Units"), and ask the user to paste
+the text. Do not spend many more tool calls searching — it is faster for them to copy it.
+
+**When a description genuinely doesn't exist** (the user confirms it's not in the PDF,
+or the unit is too minor to have one), leave `description` blank. Do not fabricate text.
+
 ## Checklist
 
 - [ ] `sources/<name>/__init__.py` with `run()` and `process_usgs_source` call
 - [ ] `sources/<name>/citation.json` — array of one CSL-JSON map object
 - [ ] `sources/<name>.py` — thin entry-point that imports `run` and calls it under `__main__`
 - [ ] `sources/<name>/units.csv` — only if archive has no machine-readable CSV
-- [ ] `description` field populated from pamphlet PDF (do NOT leave blank; requires poppler)
+- [ ] `description` field populated from pamphlet PDF (requires poppler; ask user if stuck; blank is ok when description genuinely doesn't exist)
 - [ ] citation `URL` points to publication page, not the ZIP
 - [ ] `issued.date-parts` is `[["YYYY"]]`
 - [ ] `srs` determined from `.prj` file or metadata, not assumed
