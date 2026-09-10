@@ -86,6 +86,13 @@ docker compose run --rm app pytest
 ```
 
 Coverage is limited; tests live in `tests/` and `tests/sources/`. CI
-(`.github/workflows/run-tests.yml`) still runs them on Python 3.8 while the image
-has 3.12, so a test can pass locally and still fail in CI on version
-differences.
+(`.github/workflows/run-tests.yml`) runs them in the same image, so local and CI
+are both Python 3.12.
+
+## CI
+
+`.github/workflows/build-image.yml` builds `Dockerfile` once per commit and
+pushes `ghcr.io/<repo>/app:<sha>`; `run-tests.yml` and `build-pack.yml` run in
+container jobs on that image (with a `postgis/postgis:16-3.5` service
+container), so the build environment is defined in exactly one place. `Dockerfile`
+is arch-agnostic: developers build arm64 locally, CI builds amd64.
