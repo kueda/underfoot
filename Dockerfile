@@ -94,6 +94,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # python3-gdal: /usr/bin/gdal_merge.py (the hardcoded fallback in elevation.py).
 # Nothing in the Python source imports osgeo, so there is no pip GDAL build.
 
+# GDAL's ODBC driver auto-registers MDB Tools by searching only the amd64
+# multiarch lib dir, so .mdb sources (sim3109, sim3206) fail on arm64. Register
+# it explicitly under the name GDAL's .mdb connection strings ask for.
+RUN mdbodbc="$(find /usr/lib -name libmdbodbc.so -print -quit)" \
+    && { \
+      echo ''; \
+      echo '[Microsoft Access Driver (*.mdb, *.accdb)]'; \
+      echo 'Description=MDB Tools ODBC'; \
+      echo "Driver=$mdbodbc"; \
+      echo "Setup=$mdbodbc"; \
+      echo 'FileUsage=1'; \
+      echo 'UsageCount=1'; \
+    } >> /etc/odbcinst.ini
+
 COPY --from=builder /out/bin/imposm  /usr/local/bin/imposm
 COPY --from=builder /out/bin/e00conv /usr/local/bin/e00conv
 COPY --from=pydeps  /opt/venv        /opt/venv
