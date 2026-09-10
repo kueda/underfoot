@@ -12,6 +12,13 @@ on:
         description: The pushed image reference, tagged with the commit SHA
         value: ${{ jobs.build.outputs.image }}
 
+# A single push can trigger two callers at once (run-tests + build-*-packs).
+# Serialize per commit so they don't run the identical build in parallel and
+# race the shared :buildcache tag. Never cancel: a running build has dependents.
+concurrency:
+  group: build-image-${{ github.sha }}
+  cancel-in-progress: false
+
 jobs:
   build:
     name: Build and push app image
