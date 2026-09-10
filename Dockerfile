@@ -97,8 +97,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # GDAL's ODBC driver auto-registers MDB Tools by searching only the amd64
 # multiarch lib dir, so .mdb sources (sim3109, sim3206) fail on arm64. Register
 # it explicitly under the name GDAL's .mdb connection strings ask for.
-RUN mdbodbc="$(find /usr/lib -name libmdbodbc.so -print -quit)" \
-    && { \
+RUN set -eu; \
+    mdbodbc="$(find /usr/lib -name libmdbodbc.so -print -quit)"; \
+    test -n "$mdbodbc" || { echo 'libmdbodbc.so not found' >&2; exit 1; }; \
+    { \
       echo ''; \
       echo '[Microsoft Access Driver (*.mdb, *.accdb)]'; \
       echo 'Description=MDB Tools ODBC'; \
