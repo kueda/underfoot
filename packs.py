@@ -308,7 +308,7 @@ def make_all_packs_from_args(args):
                 clean_context=args.clean_context,
                 clean_contours=args.clean_contours,
                 procs=args.procs)
-            util.log(f"Pack available at {pack_path}")
+            util.log(f"Pack available at {os.path.relpath(pack_path)}")
         except: # pylint: disable=bare-except
             fails.append(pack_id)
             util.log(f"FAILED ON PACK {pack_id}, MOVING ON...")
@@ -334,7 +334,7 @@ def make_single_pack_from_args(args):
         clean_contours=args.clean_contours,
         procs=args.procs)
     make_manifest(manifest_url=args.manifest_url, s3_bucket_url=args.s3_bucket_url)
-    util.log(f"Pack available at {pack_path}")
+    util.log(f"Pack available at {os.path.relpath(pack_path)}")
 
 
 if __name__ == "__main__":
