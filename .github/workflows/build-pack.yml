@@ -211,6 +211,8 @@ jobs:
 
       - name: Download all PMTiles artifacts
         uses: actions/download-artifact@v4
+        with:
+          pattern: ${{ inputs.pack }}-*
 
       - name: Zip up the pack
         run: |

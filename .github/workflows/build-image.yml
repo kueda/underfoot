@@ -19,6 +19,11 @@ jobs:
     permissions:
       contents: read
       packages: write
+    env:
+      # Don't upload the build-record (.dockerbuild) artifact; it is unused and
+      # a bare actions/download-artifact in build-pack.yml chokes on it.
+      DOCKER_BUILD_RECORD_UPLOAD: false
+      DOCKER_BUILD_SUMMARY: false
     outputs:
       image: ${{ steps.ref.outputs.image }}
     steps:
