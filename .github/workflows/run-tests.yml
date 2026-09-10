@@ -2,6 +2,11 @@ name: Run tests
 
 on: [push]
 
+permissions:
+  actions: write      # skip-duplicate-actions cancels superseded runs
+  contents: read
+  packages: write     # build-image.yml pushes to GHCR
+
 jobs:
   skip-duplicates:
     name: Skip duplicate runs
@@ -10,19 +15,20 @@ jobs:
       - uses: fkirc/skip-duplicate-actions@master
         with:
           github_token: ${{ github.token }}
+
+  image:
+    needs: skip-duplicates
+    uses: ./.github/workflows/build-image.yml
+
   run-pytest:
     name: Run pytest
-    needs: skip-duplicates
-    runs-on: ubuntu-latest
+    needs: image
+    runs-on: ubuntu-24.04
+    container:
+      image: ${{ needs.image.outputs.image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.8'
-      - name: Display Python version
-        run: python -c "import sys; print(sys.version)"
-      - name: Install dependencies
-        run: if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-      - name: Run pytest
-        run: pytest -v
+      - run: pytest -v

@@ -10,7 +10,14 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: read
+  packages: write     # build-image.yml pushes to GHCR
+
 jobs:
+  image:
+    uses: ./.github/workflows/build-image.yml
+
   list-packs:
     name: List packs
     runs-on: ubuntu-latest
@@ -27,12 +34,13 @@ jobs:
 
   build-packs:
     name: Build pack
-    needs: list-packs
+    needs: [image, list-packs]
     strategy:
       fail-fast: false
       matrix:
         pack: ${{ fromJson(needs.list-packs.outputs.matrix) }}
-    uses: kueda/underfoot/.github/workflows/build-pack.yml
+    uses: ./.github/workflows/build-pack.yml
     with:
       pack: ${{ matrix.pack }}
+      image: ${{ needs.image.outputs.image }}
     secrets: inherit

@@ -1,0 +1,60 @@
+name: Build image
+
+# Builds the app image (Dockerfile) once per commit and pushes it to GHCR, so
+# the test and pack-build jobs run inside it instead of reinstalling the whole
+# GDAL / imposm / Python toolchain on every run. Layer cache lives in a
+# :buildcache tag on the same GHCR repo (needs only packages: write).
+
+on:
+  workflow_call:
+    outputs:
+      image:
+        description: The pushed image reference, tagged with the commit SHA
+        value: ${{ jobs.build.outputs.image }}
+
+# A single push can trigger two callers at once (run-tests + build-*-packs).
+# Serialize per commit so they don't run the identical build in parallel and
+# race the shared :buildcache tag. Never cancel: a running build has dependents.
+concurrency:
+  group: build-image-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build and push app image
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    env:
+      # Don't upload the build-record (.dockerbuild) artifact; it is unused and
+      # a bare actions/download-artifact in build-pack.yml chokes on it.
+      DOCKER_BUILD_RECORD_UPLOAD: false
+      DOCKER_BUILD_SUMMARY: false
+    outputs:
+      image: ${{ steps.ref.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: ref
+        name: Compute image refs
+        run: |
+          repo=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "image=ghcr.io/${repo}/app:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          echo "cache=ghcr.io/${repo}/app:buildcache" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.ref.outputs.image }}
+          cache-from: type=registry,ref=${{ steps.ref.outputs.cache }}
+          cache-to: type=registry,ref=${{ steps.ref.outputs.cache }},mode=max

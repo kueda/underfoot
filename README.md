@@ -3,31 +3,31 @@ Underfoot is a mobile app for revealing the hydrological and geological world be
 
 Still reading? This repo is mostly for data prep. The Progressive Web App that shows this data is at https://github.com/kueda/underfoot-web.
 
-## Vagrant Setup
-You'll need to install [Vagrant](https://www.vagrantup.com/) and [VirtualBox](https://www.virtualbox.org/).
+## Setup
+You'll need [Docker](https://docs.docker.com/get-docker/) (Docker Desktop on macOS or Windows).
 ```bash
 git clone https://github.com/kueda/underfoot.git
 cd underfoot
-vagrant up # This will take a while
-vagrant ssh
 
-# Subsequent commands in the Vagrant VM
-
-# This is kind of optional. You could just run the code from /vagrant/, i.e. the
-# files on the host, but it might be a bit safer to clone them from the repo and
-# work on a separate clone. Then you have the awkwardness of copying files back
-# and forth if you're developing, or syncing folders
-# (https://www.vagrantup.com/docs/synced-folders/basic_usage.html). Up to you.
-git clone https://github.com/kueda/underfoot.git
-cd underfoot
-
-# Install final dependencies
-./setup
-
-# Make a pack
-source venv/bin/activate
-python packs.py us-ca-oakland
+docker compose build
+docker compose up -d db     # Postgres, reachable from the host at localhost:5433
+docker compose run --rm app python packs.py us-ca-oakland
 ```
+
+The database lives in the `pgdata` Docker volume and survives `docker compose
+down`. To inspect it in QGIS or `psql`, connect to host `localhost`, port
+`5433`, databases `underfoot` and `underfoot_osm`, user/password
+`underfoot` / `underfoot`.
+
+There is a `Makefile` for the common commands: `make build`, `make shell`, `make
+pack PACK=us-ca-oakland`, `make test`.
+
+### Running without Docker
+The pipeline runs on any Linux host with PostgreSQL/PostGIS 16 and GDAL >= 3.8.
+Install the apt packages from the `Dockerfile`'s `runtime` stage plus `golang-go
+libleveldb-dev libgeos-dev build-essential`, run `./setup` to build `bin/imposm`
+and `bin/e00compr` and create the venv, and export `PGHOST` / `PGUSER` /
+`PGPASSWORD`. This is not supported directly on macOS.
 
 # Adding Sources
 
@@ -84,5 +84,5 @@ If you'd like to contribute a source, please file an issue first proposing a new
 # Running Tests
 Coverage is pretty limited but there are a few.
 ```bash
-pytest
+docker compose run --rm app pytest
 ```

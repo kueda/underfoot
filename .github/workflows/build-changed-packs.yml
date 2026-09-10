@@ -5,6 +5,11 @@ on:
     paths: packs/*.json
     branches: main
 
+permissions:
+  actions: write      # skip-duplicate-actions cancels superseded runs
+  contents: read
+  packages: write     # build-image.yml pushes to GHCR
+
 jobs:
   skip-duplicates:
     runs-on: ubuntu-latest
@@ -12,6 +17,10 @@ jobs:
       - uses: fkirc/skip-duplicate-actions@master
         with:
           github_token: ${{ github.token }}
+
+  image:
+    needs: skip-duplicates
+    uses: ./.github/workflows/build-image.yml
 
   list-changed-packs:
     needs: skip-duplicates
@@ -21,7 +30,7 @@ jobs:
       - uses: actions/checkout@v4
 
       # Detect changed pack definitions
-      - uses: dorny/paths-filter@v2
+      - uses: dorny/paths-filter@v3
         id: filter
         with:
           list-files: shell
@@ -41,13 +50,14 @@ jobs:
 
   build-packs:
     name: Build packs
-    needs: list-changed-packs
+    needs: [image, list-changed-packs]
     if: ${{ needs.list-changed-packs.outputs.matrix }}
     strategy:
       fail-fast: false
       matrix:
         pack: ${{ fromJson(needs.list-changed-packs.outputs.matrix) }}
-    uses: kueda/underfoot/.github/workflows/build-pack.yml@main
+    uses: ./.github/workflows/build-pack.yml
     with:
       pack: ${{ matrix.pack }}
+      image: ${{ needs.image.outputs.image }}
     secrets: inherit

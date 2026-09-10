@@ -4,6 +4,7 @@ import json
 import os
 import re
 import sys
+from urllib.parse import quote
 import psycopg2
 
 from sources import util
@@ -19,7 +20,9 @@ PLACE_NODES_TABLE_NAME = "underfoot_place_nodes"
 
 def create_database():
     """Create the OSM database"""
-    util.call_cmd(["dropdb", "--if-exists", DBNAME], check=True)
+    # --force disconnects any other sessions (e.g. a QGIS connection) so a
+    # --clean rebuild of the OSM layers doesn't wedge
+    util.call_cmd(["dropdb", "--if-exists", "--force", DBNAME], check=True)
     util.call_cmd(["createdb", DBNAME])
     util.call_cmd([
       "psql", "-d", DBNAME,
@@ -50,11 +53,26 @@ def fetch_data(url, clean=False):
         ], check=True)
     return filename
 
+
+def imposm_connection_string(dbname=DBNAME):
+    """Build imposm's postgis:// connection string from libpq environment
+    variables, falling back to the module constants and localhost so bare-metal
+    and Vagrant (unix-socket peer auth) keep working with no env set."""
+    user = os.environ.get("PGUSER") or DB_USER
+    password = os.environ.get("PGPASSWORD") or DB_PASSWORD
+    host = os.environ.get("PGHOST") or "localhost"
+    port = os.environ.get("PGPORT")
+    netloc = f"{quote(user, safe='')}:{quote(password, safe='')}@{host}"
+    if port:
+        netloc += f":{port}"
+    return f"postgis://{netloc}/{dbname}"
+
+
 def load_osm_from_pbf(data_path, pack=None):
     """Load OSM data from PBF export into a PostgreSQL database using"""
     read_args = [
         "import",
-        "-connection", f"postgis://{DB_USER}:{DB_PASSWORD}@localhost/{DBNAME}",
+        "-connection", imposm_connection_string(),
         "-mapping", "imposm-mapping.yml",
         "-read", data_path
     ]
@@ -68,7 +86,8 @@ def load_osm_from_pbf(data_path, pack=None):
         "-deployproduction",
         "-overwritecache"
     ]
-    cmd = [os.path.join("bin", "imposm")] + read_args + write_args
+    imposm_bin = os.environ.get("UNDERFOOT_IMPOSM", os.path.join("bin", "imposm"))
+    cmd = [imposm_bin] + read_args + write_args
     # Load data from PBF into the database
     util.call_cmd(cmd)
 

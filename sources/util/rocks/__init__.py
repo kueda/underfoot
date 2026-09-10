@@ -21,6 +21,13 @@ from .. import (
 from ..proj import NAD27_UTM10_PROJ4, SRS
 from .constants import *
 
+# e00conv decompresses ArcInfo .e00 files. The default is relative to the source
+# work dir (sources/work-<name>/, which callers os.chdir into); the Docker image
+# overrides it with the absolute path to the binary it compiled.
+E00CONV = os.environ.get(
+    "UNDERFOOT_E00CONV", os.path.join("..", "..", "bin", "e00compr", "e00conv")
+)
+
 
 def lithology_from_text(text):
     """Extract normalized lithology from free text"""
@@ -448,7 +455,7 @@ def convert_e00_to_shapefiles(
             if not os.path.isfile(uncompressed_e00_path):
                 log("\tUncompressing e00")
                 call_cmd([
-                    "../../bin/e00compr/e00conv",
+                    E00CONV,
                     path,
                     uncompressed_e00_path
                 ])

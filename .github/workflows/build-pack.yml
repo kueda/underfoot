@@ -4,7 +4,11 @@ on:
   workflow_call:
     inputs:
       pack:
-        description: A pack IDs (e.g. 'us-ca-oakland')
+        description: A pack ID (e.g. 'us-ca-oakland')
+        type: string
+        required: true
+      image:
+        description: Prebuilt app image ref (from .github/workflows/build-image.yml)
         type: string
         required: true
     secrets:
@@ -15,10 +19,19 @@ on:
       DO_ACCESS_TOKEN:
         required: true
 
+permissions:
+  contents: read
+  packages: read      # pull the app image from GHCR
+
 jobs:
   rocks:
     name: Build rocks
     runs-on: ubuntu-24.04
+    container:
+      image: ${{ inputs.image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     services:
       postgres:
         image: postgis/postgis:16-3.5
@@ -26,33 +39,25 @@ jobs:
           POSTGRES_USER: underfoot
           POSTGRES_PASSWORD: underfoot
           POSTGRES_DB: underfoot
-        ports:
-          - 5432:5432
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+        options: >-
+          --health-cmd "pg_isready -U underfoot"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+          --shm-size 1g
+    env:
+      PGHOST: postgres
+      PGUSER: underfoot
+      PGPASSWORD: underfoot
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Ubuntu dependencies
-        run: ./.github/dependencies.sh
-
-      - name: Install local dependencies
-        run: ./setup
-
-      - id: cache-source-work-rocks
-        name: Cache source work for rocks
-        uses: actions/cache@v3
+      - name: Cache source work for rocks
+        uses: actions/cache@v4
         with:
           path: sources/work-*
-          key: cache-source-work-rocks-2-${{ inputs.pack }}-${{ hashFiles(format('packs/{0}.json', inputs.pack)) }}
+          key: cache-source-work-rocks-3-${{ inputs.pack }}-${{ hashFiles(format('packs/{0}.json', inputs.pack)) }}
 
       - name: Build rocks
-        run: |
-          source venv/bin/activate
-          python packs.py ${{ inputs.pack }} --only rocks
-        env:
-          PGHOST: 0.0.0.0
-          PGUSER: underfoot
-          PGPASSWORD: underfoot
+        run: python packs.py ${{ inputs.pack }} --only rocks
 
       - name: Upload rocks
         uses: actions/upload-artifact@v4
@@ -63,6 +68,11 @@ jobs:
   water:
     name: Build water
     runs-on: ubuntu-24.04
+    container:
+      image: ${{ inputs.image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     services:
       postgres:
         image: postgis/postgis:16-3.5
@@ -70,33 +80,25 @@ jobs:
           POSTGRES_USER: underfoot
           POSTGRES_PASSWORD: underfoot
           POSTGRES_DB: underfoot
-        ports:
-          - 5432:5432
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+        options: >-
+          --health-cmd "pg_isready -U underfoot"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+          --shm-size 1g
+    env:
+      PGHOST: postgres
+      PGUSER: underfoot
+      PGPASSWORD: underfoot
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Ubuntu dependencies
-        run: ./.github/dependencies.sh
-
-      - name: Install local dependencies
-        run: ./setup
-
-      - id: cache-source-work-water
-        name: Cache source work for water
-        uses: actions/cache@v3
+      - name: Cache source work for water
+        uses: actions/cache@v4
         with:
           path: sources/work-*
-          key: cache-source-work-water-${{ inputs.pack }}-${{ hashFiles(format('packs/{0}.json', inputs.pack)) }}
+          key: cache-source-work-water-3-${{ inputs.pack }}-${{ hashFiles(format('packs/{0}.json', inputs.pack)) }}
 
       - name: Build water
-        run: |
-          source venv/bin/activate
-          python packs.py ${{ inputs.pack }} --only water
-        env:
-          PGHOST: 0.0.0.0
-          PGUSER: underfoot
-          PGPASSWORD: underfoot
+        run: python packs.py ${{ inputs.pack }} --only water
 
       - name: Upload water
         uses: actions/upload-artifact@v4
@@ -107,6 +109,11 @@ jobs:
   contours:
     name: Build contours
     runs-on: ubuntu-24.04
+    container:
+      image: ${{ inputs.image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     services:
       postgres:
         image: postgis/postgis:16-3.5
@@ -114,33 +121,25 @@ jobs:
           POSTGRES_USER: underfoot
           POSTGRES_PASSWORD: underfoot
           POSTGRES_DB: underfoot
-        ports:
-          - 5432:5432
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+        options: >-
+          --health-cmd "pg_isready -U underfoot"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+          --shm-size 1g
+    env:
+      PGHOST: postgres
+      PGUSER: underfoot
+      PGPASSWORD: underfoot
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Ubuntu dependencies
-        run: ./.github/dependencies.sh
-
-      - name: Install local dependencies
-        run: ./setup
-
       - name: Cache elevation tiles
-        id: cache-elevation
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: elevation-tiles
           key: cache-elevation-${{ inputs.pack }}-${{ hashFiles(format('packs/{0}.json', inputs.pack)) }}
 
       - name: Build contours
-        run: |
-          source venv/bin/activate
-          python packs.py ${{ inputs.pack }} --only contours
-        env:
-          PGHOST: 0.0.0.0
-          PGUSER: underfoot
-          PGPASSWORD: underfoot
+        run: python packs.py ${{ inputs.pack }} --only contours
 
       - name: Upload contours
         uses: actions/upload-artifact@v4
@@ -151,6 +150,11 @@ jobs:
   osm:
     name: Build ways & context
     runs-on: ubuntu-24.04
+    container:
+      image: ${{ inputs.image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     services:
       postgres:
         image: postgis/postgis:16-3.5
@@ -158,17 +162,16 @@ jobs:
           POSTGRES_USER: underfoot
           POSTGRES_PASSWORD: underfoot
           POSTGRES_DB: underfoot
-        ports:
-          - 5432:5432
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+        options: >-
+          --health-cmd "pg_isready -U underfoot"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+          --shm-size 1g
+    env:
+      PGHOST: postgres
+      PGUSER: underfoot
+      PGPASSWORD: underfoot
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install Ubuntu dependencies
-        run: ./.github/dependencies.sh
-
-      - name: Install local dependencies
-        run: ./setup
 
       - name: Get current year week
         id: calc-year-week
@@ -176,23 +179,16 @@ jobs:
 
       - name: Get OSM URL
         id: get-osm-url
-        run: UNDERFOOT_PACK=${{ inputs.pack }} && echo "osm-url=$(jq -c -r .osm packs/$UNDERFOOT_PACK.json)" >> $GITHUB_OUTPUT
+        run: echo "osm-url=$(jq -c -r .osm packs/${{ inputs.pack }}.json)" >> $GITHUB_OUTPUT
 
       - name: Cache OSM download
-        id: cache-osm
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: "*.osm.pbf"
           key: cache-osm-${{ steps.get-osm-url.outputs.osm-url }}-${{ steps.calc-year-week.outputs.year-week }}
 
       - name: Build ways & context
-        run: |
-          source venv/bin/activate
-          python packs.py ${{ inputs.pack }} --only ways context
-        env:
-          PGHOST: 0.0.0.0
-          PGUSER: underfoot
-          PGPASSWORD: underfoot
+        run: python packs.py ${{ inputs.pack }} --only ways context
 
       - name: Upload ways
         uses: actions/upload-artifact@v4
@@ -217,14 +213,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Ubuntu dependencies
-        run: ./.github/dependencies.sh
-
-      - name: Install local dependencies
-        run: ./setup
-
       - name: Download all PMTiles artifacts
         uses: actions/download-artifact@v4
+        with:
+          pattern: ${{ inputs.pack }}-*
 
       - name: Zip up the pack
         run: |
@@ -238,12 +230,20 @@ jobs:
           zip ${{ inputs.pack }}.pmtiles.zip ${{ inputs.pack }}/*
           cd ../
 
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Make the manifest
         run: |
-          source venv/bin/activate
-          python packs.py manifest \
-            --s3-bucket-url https://static.underfoot.rocks \
-            --manifest-url https://static.underfoot.rocks/manifest.json
+          docker run --rm -v "$PWD:/app" -w /app \
+            --user "$(id -u):$(id -g)" -e HOME=/tmp ${{ inputs.image }} \
+            python packs.py manifest \
+              --s3-bucket-url https://static.underfoot.rocks \
+              --manifest-url https://static.underfoot.rocks/manifest.json
 
       - name: Set up s3cmd for Digital Ocean
         uses: s3-actions/s3cmd@v1.2.0

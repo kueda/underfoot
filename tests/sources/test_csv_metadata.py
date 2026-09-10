@@ -8,6 +8,9 @@ from sources.util.rocks import infer_metadata_from_csv_row
 
 def test_lithology():
     for path in Path("sources").rglob("units.csv"):
+        # Only the hand-authored source CSVs, not generated copies in work dirs
+        if "work-" in str(path):
+            continue
         with open(path, encoding="utf-8") as infile:
             reader = csv.DictReader(infile)
             for row in reader:

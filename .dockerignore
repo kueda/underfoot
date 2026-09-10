@@ -1,0 +1,7 @@
+# The image never COPYs application code (compose.yaml and CI bind-mount the repo
+# at /app). Only requirements.txt and vendor/ are needed in the build context, so
+# exclude everything else: the working tree carries multi-GB OSM PBFs, elevation
+# tiles, and build output that must never be uploaded to the daemon.
+*
+!requirements.txt
+!vendor/
