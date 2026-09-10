@@ -1,0 +1,44 @@
+name: underfoot
+
+services:
+  db:
+    # Multi-arch mirror of the official postgis/postgis image (which is amd64
+    # only); tracks the same Dockerfile, runs native on Apple Silicon. CI uses
+    # the official postgis/postgis:16-3.5 as a service container.
+    image: imresamu/postgis:16-3.5
+    environment:
+      POSTGRES_USER: underfoot
+      POSTGRES_PASSWORD: underfoot
+      POSTGRES_DB: underfoot
+    ports:
+      - "5433:5432"        # connect desktop QGIS to localhost:5433
+    shm_size: "1gb"        # rocks.py ST_Union/ST_Difference overflow the 64MB default
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U underfoot -d underfoot"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: underfoot-app:local
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGPORT: "5432"
+      PGUSER: underfoot
+      PGPASSWORD: underfoot
+    working_dir: /app
+    volumes:
+      - .:/app          # the image carries no app code; bind-mount the repo
+    stdin_open: true
+    tty: true
+
+volumes:
+  pgdata:
