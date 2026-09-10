@@ -6,7 +6,6 @@
 .claude-prompts
 .claude/settings.local.json
 .sqliterc
-.vagrant/
 bin/
 build/
 elevation-tiles/

@@ -1,6 +1,9 @@
 #!/bin/bash
 #
-#  Install and set up required software
+#  Bare-metal setup: build bin/imposm and bin/e00compr and create the venv.
+#  Most development uses the Docker image instead (see README.md); this is for
+#  running the pipeline directly on a Linux host. The apt package list lives in
+#  Dockerfile's `runtime` stage.
 #
 
 if [ -d bin/e00compr ]; then
@@ -8,12 +11,11 @@ if [ -d bin/e00compr ]; then
 else
   echo "SETTING UP E00CONV..."
   (
-    mkdir -p bin && cd bin
-    curl -OL http://avce00.maptools.org/dl/e00compr-1.0.1.tar.gz
-    tar xzvf e00compr-1.0.1.tar.gz
+    mkdir -p bin
+    tar xzf vendor/e00compr-1.0.1.tar.gz -C bin
+    cd bin
     ln -s e00compr-1.0.1 e00compr
-    cd e00compr-1.0.1
-    make
+    make -C e00compr-1.0.1 e00conv
   )
 fi
 
@@ -23,7 +25,7 @@ else
   echo "SETTING UP IMPOSM..."
   (
     mkdir -p bin && cd bin
-    git clone https://github.com/omniscale/imposm3.git
+    git clone --branch v0.14.2 --depth 1 https://github.com/omniscale/imposm3.git
     cd imposm3
     make build
     cd ..
