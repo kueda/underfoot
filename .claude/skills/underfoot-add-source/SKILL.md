@@ -109,20 +109,15 @@ CSV is bundled in the download.
 main input for lithology inference. Populate it from the publication's pamphlet PDF
 (the Description of Map Units section).
 
-To read a PDF pamphlet, you need `pdftotext` (from poppler):
+Reading a PDF pamphlet needs `pdftotext` (from poppler), which is in the Docker image.
+Extract text with layout preservation:
 
 ```
-brew install poppler   # macOS
-apt install poppler-utils  # Debian/Ubuntu
+docker compose run --rm app pdftotext -layout sources/<name>/pamphlet.pdf -
 ```
 
-Then extract text with layout preservation:
-
-```
-pdftotext -layout pamphlet.pdf - | less
-```
-
-**If `pdftotext` is not installed, ask the user to install poppler before proceeding.**
+On a bare-metal (non-Docker) checkout: `brew install poppler` (macOS) or
+`apt install poppler-utils` (Debian/Ubuntu).
 
 Some units may legitimately have no description in the source — leave those blank rather
 than fabricating text. But before giving up on a unit, ask the user (see below).
@@ -133,14 +128,16 @@ than fabricating text. But before giving up on a unit, ask the user (see below).
 Use this to discover the join column name and available columns before writing `__init__.py`:
 
 ```
-python .claude/skills/underfoot-add-source/scripts/inspect-dbf.py file.dbf [JOIN_COL]
+docker compose run --rm app \
+    python .claude/skills/underfoot-add-source/scripts/inspect-dbf.py file.dbf [JOIN_COL]
 ```
 
 **`scaffold-units-csv.py`** — generate a `units.csv` stub from the DBF with `code`,
 `title`, and `span` filled in, leaving `description` and `lithology` blank:
 
 ```
-python .claude/skills/underfoot-add-source/scripts/scaffold-units-csv.py \
+docker compose run --rm app \
+    python .claude/skills/underfoot-add-source/scripts/scaffold-units-csv.py \
     file.dbf sources/<name>/units.csv --code UNIT --title Descriptio --span Age
 ```
 
@@ -221,7 +218,7 @@ or the unit is too minor to have one), leave `description` blank. Do not fabrica
 - [ ] `sources/<name>/citation.json` — array of one CSL-JSON map object
 - [ ] `sources/<name>.py` — thin entry-point that imports `run` and calls it under `__main__`
 - [ ] `sources/<name>/units.csv` — only if archive has no machine-readable CSV
-- [ ] `description` field populated from pamphlet PDF (requires poppler; ask user if stuck; blank is ok when description genuinely doesn't exist)
+- [ ] `description` field populated from pamphlet PDF (`pdftotext`, in the image; ask user if stuck; blank is ok when description genuinely doesn't exist)
 - [ ] citation `URL` points to publication page, not the ZIP
 - [ ] `issued.date-parts` is `[["YYYY"]]`
 - [ ] `srs` determined from `.prj` file or metadata, not assumed
