@@ -15,6 +15,11 @@ on:
     branches: main
   workflow_dispatch:
 
+permissions:
+  actions: write      # skip-duplicate-actions cancels superseded runs
+  contents: read
+  packages: write     # build-image.yml pushes to GHCR
+
 jobs:
   skip-duplicates:
     runs-on: ubuntu-latest
@@ -22,6 +27,10 @@ jobs:
       - uses: fkirc/skip-duplicate-actions@master
         with:
           github_token: ${{ github.token }}
+
+  image:
+    needs: skip-duplicates
+    uses: ./.github/workflows/build-image.yml
 
   # https://code.dblock.org/2021/09/03/generating-task-matrix-by-looping-over-repo-files-with-github-actions.html
   list-packs:
@@ -37,12 +46,13 @@ jobs:
 
   build-packs:
     name: Build packs
-    needs: list-packs
+    needs: [image, list-packs]
     strategy:
       fail-fast: false
       matrix:
         pack: ${{ fromJson(needs.list-packs.outputs.matrix) }}
-    uses: kueda/underfoot/.github/workflows/build-pack.yml@main
+    uses: ./.github/workflows/build-pack.yml
     with:
       pack: ${{ matrix.pack }}
+      image: ${{ needs.image.outputs.image }}
     secrets: inherit
