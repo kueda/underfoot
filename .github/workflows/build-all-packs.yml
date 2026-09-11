@@ -24,7 +24,7 @@ jobs:
   skip-duplicates:
     runs-on: ubuntu-latest
     steps:
-      - uses: fkirc/skip-duplicate-actions@master
+      - uses: fkirc/skip-duplicate-actions@v5.3.2
         with:
           github_token: ${{ github.token }}
 
@@ -40,7 +40,7 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: set-matrix
         run: echo "matrix=$(ls packs/*.json | xargs -I'{}' basename {} .json | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
 

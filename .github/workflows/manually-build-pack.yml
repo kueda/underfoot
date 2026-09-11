@@ -25,7 +25,7 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Set the matrix output to a JSON array from a space-separated string
       # from the workflow_dispatch input
       - id: set-matrix
