@@ -1,0 +1,29 @@
+name: Clean up old GHCR images
+
+# build-image.yml pushes ghcr.io/<repo>/app:<sha> on every push to every
+# branch (plus a rewritten :buildcache tag). Nothing prunes them, so the package
+# grows without bound. Keep only the most recent N versions; the current
+# :buildcache version is always among the newest, so it is never touched, and
+# stale buildcache manifests fall off as untagged versions like any other.
+
+on:
+  schedule:
+    - cron: "30 4 * * 1"   # Mondays 04:30 UTC
+  workflow_dispatch:
+
+permissions:
+  packages: write
+
+jobs:
+  cleanup:
+    name: Prune app package versions
+    runs-on: ubuntu-latest
+    steps:
+      # owner defaults to this repo's owner; package-name is the path after the
+      # owner in the image ref (ghcr.io/<owner>/underfoot/app). If GITHUB_TOKEN
+      # is refused, pass a PAT with delete:packages via the `token` input.
+      - uses: actions/delete-package-versions@v5
+        with:
+          package-name: underfoot/app
+          package-type: container
+          min-versions-to-keep: 30

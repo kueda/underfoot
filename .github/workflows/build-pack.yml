@@ -48,10 +48,10 @@ jobs:
       PGUSER: underfoot
       PGPASSWORD: underfoot
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Cache source work for rocks
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: sources/work-*
           key: cache-source-work-rocks-3-${{ inputs.pack }}-${{ hashFiles(format('packs/{0}.json', inputs.pack)) }}
@@ -60,7 +60,7 @@ jobs:
         run: python packs.py ${{ inputs.pack }} --only rocks
 
       - name: Upload rocks
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.pack }}-rocks
           path: "build/${{ inputs.pack }}.pmtiles/"
@@ -89,10 +89,10 @@ jobs:
       PGUSER: underfoot
       PGPASSWORD: underfoot
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Cache source work for water
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: sources/work-*
           key: cache-source-work-water-3-${{ inputs.pack }}-${{ hashFiles(format('packs/{0}.json', inputs.pack)) }}
@@ -101,7 +101,7 @@ jobs:
         run: python packs.py ${{ inputs.pack }} --only water
 
       - name: Upload water
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.pack }}-water
           path: "build/${{ inputs.pack }}.pmtiles/"
@@ -130,10 +130,10 @@ jobs:
       PGUSER: underfoot
       PGPASSWORD: underfoot
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Cache elevation tiles
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: elevation-tiles
           key: cache-elevation-${{ inputs.pack }}-${{ hashFiles(format('packs/{0}.json', inputs.pack)) }}
@@ -142,7 +142,7 @@ jobs:
         run: python packs.py ${{ inputs.pack }} --only contours
 
       - name: Upload contours
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.pack }}-contours
           path: "build/${{ inputs.pack }}.pmtiles/"
@@ -171,7 +171,7 @@ jobs:
       PGUSER: underfoot
       PGPASSWORD: underfoot
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Get current year week
         id: calc-year-week
@@ -182,7 +182,7 @@ jobs:
         run: echo "osm-url=$(jq -c -r .osm packs/${{ inputs.pack }}.json)" >> $GITHUB_OUTPUT
 
       - name: Cache OSM download
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: "*.osm.pbf"
           key: cache-osm-${{ steps.get-osm-url.outputs.osm-url }}-${{ steps.calc-year-week.outputs.year-week }}
@@ -191,13 +191,13 @@ jobs:
         run: python packs.py ${{ inputs.pack }} --only ways context
 
       - name: Upload ways
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.pack }}-ways
           path: "build/${{ inputs.pack }}.pmtiles/"
 
       - name: Upload context
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.pack }}-context
           path: "build/${{ inputs.pack }}.pmtiles/"
@@ -211,10 +211,10 @@ jobs:
       - contours
       - osm
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Download all PMTiles artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: ${{ inputs.pack }}-*
 

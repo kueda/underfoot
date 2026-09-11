@@ -4,8 +4,13 @@
 # the Python venv, on the same Ubuntu 24.04 / GDAL 3.8 base the CI runner uses.
 # The app code is NOT copied in; it is bind-mounted at /app by compose.yaml and CI.
 
+# Pinned by digest for reproducible builds; the tag is kept for readability. This
+# is the multi-arch index digest, so buildx still selects arm64 locally / amd64
+# in CI. Refresh with: docker buildx imagetools inspect ubuntu:24.04
+ARG UBUNTU_REF=ubuntu:24.04@sha256:224a1869083a311ef3f13648a154ba79832fbef6364d31493642ca03082da254
+
 # ---- builder: compile the native tools ----
-FROM ubuntu:24.04 AS builder
+FROM ${UBUNTU_REF} AS builder
 
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -36,7 +41,7 @@ RUN tar xzf /src/e00compr-1.0.1.tar.gz -C /src \
 
 
 # ---- pydeps: build the Python virtualenv ----
-FROM ubuntu:24.04 AS pydeps
+FROM ${UBUNTU_REF} AS pydeps
 
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -63,7 +68,7 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 
 # ---- runtime: the image the pipeline runs in ----
-FROM ubuntu:24.04 AS runtime
+FROM ${UBUNTU_REF} AS runtime
 
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \

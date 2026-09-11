@@ -62,3 +62,27 @@ def test_load_osm_from_pbf_uses_env_binary_and_connection(monkeypatch):
     assert cmd[cmd.index("-connection") + 1] == (
         "postgis://underfoot:underfoot@db/underfoot_osm"
     )
+
+
+def test_load_osm_from_pbf_defaults_cachedir_into_the_tree(monkeypatch):
+    # imposm's default cachedir is /tmp/imposm3, which is ephemeral and grows to
+    # multiple GB for large extracts. Keep it in the working tree instead.
+    monkeypatch.delenv("UNDERFOOT_IMPOSM_CACHEDIR", raising=False)
+    captured = {}
+    monkeypatch.setattr(
+        osm.util, "call_cmd", lambda cmd, **kwargs: captured.setdefault("cmd", cmd)
+    )
+    osm.load_osm_from_pbf("norcal-latest.osm.pbf")
+    cmd = captured["cmd"]
+    assert cmd[cmd.index("-cachedir") + 1] == "imposm-cache"
+
+
+def test_load_osm_from_pbf_cachedir_from_env(monkeypatch):
+    monkeypatch.setenv("UNDERFOOT_IMPOSM_CACHEDIR", "/app/imposm-cache")
+    captured = {}
+    monkeypatch.setattr(
+        osm.util, "call_cmd", lambda cmd, **kwargs: captured.setdefault("cmd", cmd)
+    )
+    osm.load_osm_from_pbf("norcal-latest.osm.pbf")
+    cmd = captured["cmd"]
+    assert cmd[cmd.index("-cachedir") + 1] == "/app/imposm-cache"

@@ -68,12 +68,21 @@ def imposm_connection_string(dbname=DBNAME):
     return f"postgis://{netloc}/{dbname}"
 
 
+def imposm_cache_dir():
+    """Directory for imposm's leveldb build cache. imposm defaults it to
+    /tmp/imposm3, which is ephemeral and grows to multiple GB for large
+    extracts; keep it in the working tree (bind-mounted and roomy under Docker)
+    instead. Override with UNDERFOOT_IMPOSM_CACHEDIR."""
+    return os.environ.get("UNDERFOOT_IMPOSM_CACHEDIR", "imposm-cache")
+
+
 def load_osm_from_pbf(data_path, pack=None):
     """Load OSM data from PBF export into a PostgreSQL database using"""
     read_args = [
         "import",
         "-connection", imposm_connection_string(),
         "-mapping", "imposm-mapping.yml",
+        "-cachedir", imposm_cache_dir(),
         "-read", data_path
     ]
     # Get bounding box coordinates from the database... or maybe the source

@@ -10,6 +10,7 @@ bin/
 build/
 elevation-tiles/
 geofabrik_index.geojson
+imposm-cache/
 simplified_wbd_hu4.geojson
 sources/*/work*
 sources/work-*

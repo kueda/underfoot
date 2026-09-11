@@ -33,8 +33,11 @@ and Fiona compatibility. `pdftotext` (poppler, for source pamphlets) is in the
 image.
 
 On-disk caches (`sources/work-<name>/`, `elevation-tiles/`, `*.osm.pbf`,
-`build/`) live in the bind-mounted tree, so they persist and stay visible on the
-host. The `pgdata` Docker volume holds the database across `docker compose down`.
+`imposm-cache/`, `build/`) live in the bind-mounted tree, so they persist and
+stay visible on the host. `imposm-cache/` is imposm's leveldb build cache
+(`UNDERFOOT_IMPOSM_CACHEDIR` to relocate it); it can get large and is safe to
+delete. The `pgdata` Docker volume holds the database across `docker compose
+down`.
 
 A `Makefile` wraps the common commands: `make build`, `make shell`, `make pack
 PACK=us-ca-oakland`, `make test`, `make psql`.
