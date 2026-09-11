@@ -5,7 +5,9 @@ services:
     # Multi-arch mirror of the official postgis/postgis image (which is amd64
     # only); tracks the same Dockerfile, runs native on Apple Silicon. CI uses
     # the official postgis/postgis:16-3.5 as a service container.
-    image: imresamu/postgis:16-3.5
+    # Pinned by digest (community-maintained mirror); tag kept for readability.
+    # Refresh with: docker buildx imagetools inspect imresamu/postgis:16-3.5
+    image: imresamu/postgis:16-3.5@sha256:92031b614897082103c00729ea26e62f118ecb59b71e27b5c3ac3a8dc13bff23
     environment:
       POSTGRES_USER: underfoot
       POSTGRES_PASSWORD: underfoot
