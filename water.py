@@ -53,7 +53,7 @@ def process_source(source, clean=False, cleandb=False, cleanfiles=False, debug=F
         util.call_cmd(["python", path], check=True)
     elif source.startswith("nhdplus_"):
         process_nhdplus_hr_source(
-          os.path.join(os.path.realpath(__file__), "sources", source.upper()),
+          os.path.join(os.path.realpath(__file__), "sources", source),
           url="https://prd-tnm.s3.amazonaws.com/StagedProducts/Hydrography/NHDPlusHR/Beta/GDB/"
               f"{source.upper()}_GDB.zip",
           gdb_name=f"{source.upper()}_GDB.gdb"
@@ -220,28 +220,31 @@ def load_waterbodies(sources, debug=False):
     """)
     for source in sources:
         source_table_name = f"{source}_waterbodies"
-        util.run_sql(f"""
-            INSERT INTO {WATERBODIES_TABLE_NAME} (
-                name,
-                source,
-                source_id_attr,
-                source_id,
-                type,
-                is_natural,
-                permanence,
-                geom
-            )
-            SELECT
-                name,
-                '{source}',
-                source_id_attr,
-                source_id,
-                type,
-                is_natural::int,
-                permanence,
-                geom
-            FROM {source_table_name}
-        """)
+        try:
+            util.run_sql(f"""
+                INSERT INTO {WATERBODIES_TABLE_NAME} (
+                    name,
+                    source,
+                    source_id_attr,
+                    source_id,
+                    type,
+                    is_natural,
+                    permanence,
+                    geom
+                )
+                SELECT
+                    name,
+                    '{source}',
+                    source_id_attr,
+                    source_id,
+                    type,
+                    is_natural::int,
+                    permanence,
+                    geom
+                FROM {source_table_name}
+            """)
+        except psycopg2.errors.UndefinedTable:
+            util.log(f"{source_table_name} doesn't exist, skipping...")
 
 
 def load_watersheds(sources, debug=False):
