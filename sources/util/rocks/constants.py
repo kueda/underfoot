@@ -649,4 +649,37 @@ for span, dates in WIKI_SPANS.items():
            SPANS[span][0] - third,
            SPANS[span][1] + third
         ]
+# North American regional stages. These aren't in WIKI_SPANS because they're
+# not part of the controlled vocabulary, and their ages are approximations
+# based on the correlations with international stages described in
+# https://en.wikipedia.org/wiki/Pennsylvanian_(geology) and
+# https://en.wikipedia.org/wiki/Cisuralian
+REGIONAL_SPANS = {
+  # Lower half of the Moscovian
+  "atokan": [315.2, 311.1],
+  # Upper half of the Moscovian
+  "desmoinesian": [311.1, 307.0],
+  # Most of the Kasimovian
+  "missourian": [307.0, 303.7],
+  # Gzhelian and the uppermost Kasimovian
+  "virgilian": [303.7, 298.9],
+  # Asselian to mid-Artinskian
+  "wolfcampian": [298.9, 286.8],
+  # Mid-Artinskian to Kungurian
+  "leonardian": [286.8, 272.95],
+}
+for span, dates in REGIONAL_SPANS.items():
+    SPANS[span] = [d * 1000000 for d in dates]
 SPAN_PATTERN = re.compile(r'('+('|').join(SPANS.keys())+')', re.I)
+# Like SPAN_PATTERN, but only matches whole words, so it can be used to find
+# every span named in a piece of text without matching spans inside other
+# words, e.g. "now" in "unknown" or "recent" in "recently"
+SPAN_NAME_PATTERN = re.compile(r'\b('+('|').join(SPANS.keys())+r')\b', re.I)
+# Phrases that exclude part of a span, e.g. "Quaternary except the Holocene".
+# A minimum and maximum age can't represent a gap, so we don't guess at ages
+# for spans like these. Note that "not" is not one of these: spans say things
+# like "not divided" that exclude nothing.
+NEGATION_PATTERN = re.compile(
+  r'\b(except|excepting|excluding|exclusive of|other than|apart from)\b',
+  re.I
+)

@@ -1,0 +1,16 @@
+[
+  {
+    "type": "map",
+    "publisher": "New Mexico Bureau of Geology and Mineral Resources",
+    "scale": "1:500000",
+    "title": "Geologic Map Database of New Mexico, adapted from Geologic Map of New Mexico (Open-File Geologic Map OF-GM 304)",
+    "URL": "https://geoinfo.nmt.edu/publications/maps/geologic/ofgm/details.cfml?volume=304",
+    "DOI": "10.58799/OF-GM-304",
+    "author": [
+      {"family": "New Mexico Bureau of Geology and Mineral Resources"}
+    ],
+    "issued": {
+      "date-parts": [["2022"]]
+    }
+  }
+]

@@ -10,6 +10,10 @@ NAD83_CA_ALBERS = (
   "+proj=aea +lat_0=0 +lon_0=-120 +lat_1=34 +lat_2=40.5 +x_0=0 +y_0=-4000000 "
   "+ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs"
 )
+NAD83_NM_LAMBERT = (
+  "+proj=lcc +lat_0=39 +lon_0=-106 +lat_1=33 +lat_2=45 +x_0=0 +y_0=0 "
+  "+datum=NAD83 +units=m +no_defs"
+)
 NAD83_UTM10_PROJ4 = "+proj=utm +zone=10 +datum=NAD83 +units=m +no_defs"
 NAD83_UTM11_PROJ4 = "+proj=utm +zone=11 +datum=NAD83 +units=m +no_defs"
 WGS84_UTM11_PROJ4 = "+proj=utm +zone=11 +datum=WGS84 +units=m +no_defs"

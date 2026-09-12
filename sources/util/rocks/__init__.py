@@ -168,6 +168,33 @@ def controlled_span_from_span(text):
                 return container_span[0]
 
 
+def span_ages(span):
+    """
+    Look up the ages of a normalized span, treating "latest" and "earliest"
+    like "late" and "early" if the span isn't recognized as is
+    """
+    if span in SPANS:
+        return SPANS[span]
+    span = re.sub(r'\blatest\b', 'late', span)
+    span = re.sub(r'\bearliest\b', 'early', span)
+    return SPANS.get(span)
+
+
+def widest_ages_from_span_names(text):
+    """
+    Return the minimum and maximum ages of all the spans named in some text,
+    e.g. "Neogene, mostly Miocene", as a last resort for text that doesn't
+    describe a single span or a range of them
+    """
+    ages = [
+        SPANS[name.lower()] for name in SPAN_NAME_PATTERN.findall(text)
+        if name.lower() in SPANS
+    ]
+    if not ages:
+        return (None, None)
+    return (min(age[1] for age in ages), max(age[0] for age in ages))
+
+
 def ages_from_span(span):
     """
     Parses a text description of a time span using the names of geologic
@@ -186,10 +213,17 @@ def ages_from_span(span):
     max_age = None
     est_age = None
     span_to_span_pattern = r'(.+)\s+?(to|\-|and)\s+?(.+)'
-    part_to_part_span_pattern = r'(?P<part1>\w+)\s+?(to|\-)\s+?(?P<part2>\w+)\s+(?P<span>\w+)'
+    part_to_part_span_pattern = (
+        r'(?P<part1>\w+)\s+?(to|\-|and)\s+?(?P<part2>\w+)\s+(?P<span>\w+)'
+    )
+    ma_range_pattern = r'(\d+(?:\.\d+)?)\s*[–—-]\s*(\d+(?:\.\d+)?)\s*ma\b'
     if span is None:
         return (min_age, max_age, est_age)
     span = span.lower()
+    if NEGATION_PATTERN.search(span):
+        log(f"Not inferring ages from {span!r} because it excludes part of itself")
+        return (min_age, max_age, est_age)
+    ma_range_match = re.search(ma_range_pattern, span)
     span = span.replace('undivided', '')
     span = re.sub(r'\(.+\)', '', span).strip()
     span = span.replace('?-', ' -')
@@ -199,7 +233,7 @@ def ages_from_span(span):
     span = span.strip()
     if len(span) == 0:
         return (min_age, max_age, est_age)
-    ages = SPANS.get(span)
+    ages = span_ages(span)
     if ages:
         max_age = ages[0]
         min_age = ages[1]
@@ -207,18 +241,32 @@ def ages_from_span(span):
         min_ages = None
         max_ages = None
         if match := re.match(span_to_span_pattern, span):
-            min_ages = SPANS.get(match[1])
-            max_ages = SPANS.get(match[3])
+            min_ages = span_ages(match[1])
+            max_ages = span_ages(match[3])
         if not min_ages or not max_ages:
             if match := re.match(part_to_part_span_pattern, span):
                 part1 = f"{match.group('part1')} {match.group('span')}".lower()
                 part2 = f"{match.group('part2')} {match.group('span')}".lower()
-                min_ages = SPANS.get(part1)
-                max_ages = SPANS.get(part2)
-        if min_ages:
+                min_ages = span_ages(part1)
+                max_ages = span_ages(part2)
+        if min_ages and max_ages:
+            # Spans might go from young to old or old to young
+            min_age = min(min_ages[1], max_ages[1])
+            max_age = max(min_ages[0], max_ages[0])
+        elif min_ages:
             min_age = min_ages[1]
-        if max_ages:
+        elif max_ages:
             max_age = max_ages[0]
+    # Fall back to explicit ages in millions of years, e.g. "late Oligocene,
+    # 26–29 Ma"
+    if (min_age is None or max_age is None) and ma_range_match:
+        min_age, max_age = sorted(float(age) * 1000000 for age in ma_range_match.groups())
+    # Fall back to the widest ages of every span named in the text, e.g.
+    # "Neogene, mostly Miocene"
+    if min_age is None or max_age is None:
+        names_min_age, names_max_age = widest_ages_from_span_names(span)
+        if names_min_age is not None and names_max_age is not None:
+            min_age, max_age = names_min_age, names_max_age
     if min_age is not None and max_age is not None:
         est_age = int((min_age + max_age) / 2.0)
     return (min_age, max_age, est_age)
@@ -337,6 +385,36 @@ def metadata_from_csv(infile_path, mapping):
     return outfile_path
 
 
+def override_metadata_from_csv(infile_path, overrides_path):
+    """
+    Return a CSV with metadata from an existing CSV, overridden by non-blank
+    values in rows with the same code in an overrides CSV, e.g. to fix
+    lithologies that can't be inferred from the text
+    """
+    with open(overrides_path, encoding="utf-8") as overrides_file:
+        reader = csv.DictReader(overrides_file)
+        override_fieldnames = reader.fieldnames
+        overrides = {row["code"]: row for row in reader}
+    overridden_codes = set()
+    outfile_path = "metadata_with_overrides.csv"
+    with open(infile_path, encoding="utf-8") as infile:
+        reader = csv.DictReader(infile)
+        fieldnames = reader.fieldnames + [
+            col for col in override_fieldnames if col not in reader.fieldnames
+        ]
+        with open(outfile_path, 'w', encoding="utf-8") as outfile:
+            writer = csv.DictWriter(outfile, fieldnames=fieldnames)
+            writer.writeheader()
+            for row in reader:
+                if override := overrides.get(row["code"]):
+                    row.update({col: val for col, val in override.items() if val})
+                    overridden_codes.add(row["code"])
+                writer.writerow(row)
+    for code in overrides.keys() - overridden_codes:
+        log(f"  Override for {code!r} doesn't match any unit")
+    return outfile_path
+
+
 def join_polygons_and_metadata(
     polygons_path,
     metadata_path,
@@ -388,6 +466,10 @@ def infer_metadata_from_csv_row(row, lithology_from_description=False):
         row['lithology'] = lithology_from_text(csv_title)
     if not row.get('lithology') or len(row['lithology']) == 0:
         row['lithology'] = lithology_from_text(csv_description)
+    # Sources that follow the GeMS schema classify units with a controlled
+    # GeoMaterial vocabulary, usually less specific than what the text gives us
+    if not row.get('lithology') and row.get('geomaterial'):
+        row['lithology'] = lithology_from_text(row['geomaterial'])
     row['span'] = row.get('span')
     if not row.get('span') or len(row['span']) == 0:
         row['span'] = span_from_text(csv_title)
@@ -401,11 +483,16 @@ def infer_metadata_from_csv_row(row, lithology_from_description=False):
         row['rock_type'] = rock_type_from_lithology(
             row['lithology']
         )
+    # Ages the source specifies, e.g. in an overrides CSV, win over anything we
+    # infer from the span, which lets you fix ages without rewriting the span
+    supplied_ages = {
+        col: row.get(col) for col in ("min_age", "max_age", "est_age") if row.get(col)
+    }
     if row['span']:
-        min_age, max_age, est_age = ages_from_span(row['span'])
-        row['min_age'] = min_age
-        row['max_age'] = max_age
-        row['est_age'] = est_age
+        row['min_age'], row['max_age'], row['est_age'] = ages_from_span(row['span'])
+    row.update(supplied_ages)
+    if 'est_age' not in supplied_ages and row.get('min_age') and row.get('max_age'):
+        row['est_age'] = int((float(row['min_age']) + float(row['max_age'])) / 2.0)
     return row
 
 
@@ -476,12 +563,21 @@ def convert_e00_to_shapefiles(
     return polygon_paths
 
 
-def convert_mdb_to_shapefiles(mdb_path, layer_name):
-    """Convert an ESRI Personal Geodatabase (MDB) file to an array of shapefile paths"""
-    log("CONVERTING MDB TO SHAPEFILES...")
+def convert_geodatabase_to_shapefiles(gdb_path, layer_name):
+    """Convert a layer in an ESRI Personal Geodatabase (MDB) or File
+    Geodatabase (GDB) to an array of shapefile paths"""
+    log("CONVERTING GEODATABASE TO SHAPEFILES...")
     shp_path = f"{layer_name}.shp"
-    call_cmd(["ogr2ogr", shp_path, mdb_path, layer_name])
+    call_cmd(["ogr2ogr", shp_path, gdb_path, layer_name])
     return [shp_path]
+
+
+def csv_from_layer(path, layer_name):
+    """Export a layer, e.g. a table in a geodatabase, to a CSV file"""
+    csv_path = f"{layer_name}.csv"
+    call_cmd(["rm", "-f", csv_path])
+    call_cmd(["ogr2ogr", "-f", "CSV", csv_path, path, layer_name])
+    return csv_path
 
 
 def apply_join_col_modifier(shapefile_path, join_col, join_col_modifier):
@@ -521,16 +617,19 @@ def process_usgs_source(
     join_col_modifier=None,
     mappable_metadata_csv_path=None,
     mappable_metadata_mapping=None,
+    mappable_metadata_layer_name=None,
+    metadata_overrides_csv_path=None,
     lithology_from_description=False,
 ):
-    """Process units from a USGS Arc Info or MDB archive given a couple
+    """Process units from a USGS Arc Info, MDB, or GDB archive given a couple
     configurations.
 
     Args:
       base_path: path to the source module's __init__.py
       url: URL of the gzipped tarball
       extracted_file_path: Relative path to the extracted file containing the
-        geodata, e.g. an e00 file
+        geodata, e.g. an e00 file. For 7z archives (including ArcGIS map
+        packages, .mpk), only this path is extracted
       polygon_pattern (optional): Pattern to use when finding the polygon ID
         column in the e00 arcs
       srs (optional): Proj4 coordinate reference string for the geodata.
@@ -545,7 +644,15 @@ def process_usgs_source(
       uncompress_e00: If the e00 is itself compressed, uncompress it with
         e00conv. Default is false.
       layer_name: Layer to pull out of extracted file if it contains multiple;
-        required for MDB
+        required for MDB and GDB
+      mappable_metadata_layer_name: Table in the geodatabase at
+        extracted_file_path to use instead of mappable_metadata_csv_path, e.g.
+        DescriptionOfMapUnits in sources that follow the GeMS schema. Requires
+        mappable_metadata_mapping
+      metadata_overrides_csv_path: Full path to a CSV with a code column and
+        any other metadata columns whose non-blank values override the mappable
+        metadata before inference, e.g. to fix lithologies. Requires
+        mappable_metadata_mapping
     """
     work_path = make_work_dir(base_path)
     os.chdir(work_path)
@@ -564,6 +671,10 @@ def process_usgs_source(
             or ".tar.Z" in download_path
         ):
             call_cmd(["tar", "xzvf", download_path])
+        elif download_path.endswith((".7z", ".mpk")):
+            # ArcGIS map packages are 7z archives that can bundle large
+            # datasets we don't need, so just extract the one we do
+            call_cmd(["7z", "x", "-y", download_path, extracted_file_path])
         elif use_unzip:
             unzip(download_path)
         else:
@@ -586,8 +697,8 @@ def process_usgs_source(
                 skip_polygonize_arcs=skip_polygonize_arcs,
                 polygon_pattern=polygon_pattern
             )
-        elif extracted_file_path.endswith(".mdb"):
-            polygon_paths = convert_mdb_to_shapefiles(
+        elif extracted_file_path.endswith((".mdb", ".gdb")):
+            polygon_paths = convert_geodatabase_to_shapefiles(
                 extracted_file_path,
                 layer_name
             )
@@ -626,6 +737,11 @@ def process_usgs_source(
     metadata_path = "data.csv"
     globs = glob(os.path.join(os.path.dirname(extracted_file_path), "*.met"))
     met_path = globs[0] if globs else None
+    if mappable_metadata_layer_name:
+        mappable_metadata_csv_path = csv_from_layer(
+            extracted_file_path,
+            mappable_metadata_layer_name
+        )
     if metadata_csv_path:
         metadata_path = infer_metadata_from_csv(
             metadata_csv_path,
@@ -638,6 +754,11 @@ def process_usgs_source(
             mappable_metadata_csv_path,
             mappable_metadata_mapping
         )
+        if metadata_overrides_csv_path:
+            mappable_metadata_path = override_metadata_from_csv(
+                mappable_metadata_path,
+                metadata_overrides_csv_path
+            )
         metadata_path = infer_metadata_from_csv(
             mappable_metadata_path,
             lithology_from_description=lithology_from_description
