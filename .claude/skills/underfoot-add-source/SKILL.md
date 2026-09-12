@@ -52,6 +52,29 @@ machine-readable description CSV (many GAM sources do). Use `metadata_csv_path` 
 to a hand-authored `sources/<name>/units.csv` when descriptions must be transcribed from a
 PDF pamphlet or image.
 
+**Geodatabases and map packages.** For an ESRI file geodatabase (`.gdb`) or personal
+geodatabase (`.mdb`), point `extracted_file_path` at it, set `layer_name` to the polygon
+layer, and set `mappable_metadata_layer_name` to a table of unit descriptions if it has one,
+instead of `mappable_metadata_csv_path`. Both take whatever names that geodatabase actually
+uses, so list them with `ogrinfo` first. `.mpk` (an ArcGIS map package) and `.7z` downloads
+are extracted with `7z`, and only `extracted_file_path` is extracted.
+
+**Sources that follow GeMS.** [GeMS](https://ngmdb.usgs.gov/Info/standards/GeMS/) is a
+schema used by many recent USGS and state survey maps. It is a convention about layer and
+column names, not a file format, so a `.gdb` may or may not follow it and nothing in
+`process_usgs_source` assumes it. Where a source does follow it, the polygon layer is
+`MapUnitPolys`, the unit descriptions are in `DescriptionOfMapUnits`, the two join on
+`MapUnit`, and each unit carries a controlled `GeoMaterial` term worth mapping as
+`"geomaterial": "GeoMaterial"` so it can serve as a last-resort lithology. See
+`sources/nmbgmr_ofgm_304/`.
+
+**Overrides for mappable metadata.** When lithology inference gets a few units wrong (e.g.
+"sand" from "Sandia Formation") or finds nothing, add a sparse
+`sources/<name>/overrides.csv` with a `code` column plus only the columns to override (e.g.
+`code,lithology`), and pass its full path as `metadata_overrides_csv_path`. Non-blank values
+replace the mapped values before inference, so `rock_type` and ages stay consistent.
+Lithologies must be known ones (see `LITHOLOGIES` in `sources/util/rocks/constants.py`).
+
 ### 2. `sources/<name>/citation.json` — CSL-JSON metadata
 
 ```json
@@ -165,7 +188,8 @@ descriptive enough to infer lithology on its own (e.g. it is an alphanumeric cod
 short label). Leave it out (defaults to `False`) when the title is self-describing.
 
 **`use_unzip`** — use `True` for `.zip` archives. For `.tar.gz` or raw `.e00` files, omit
-or use the appropriate decompression parameter.
+or use the appropriate decompression parameter. `.7z` and `.mpk` downloads are detected by
+extension and need no flag.
 
 ## `process_usgs_source` Key Parameters
 
@@ -173,13 +197,16 @@ or use the appropriate decompression parameter.
 |-----------|---------|
 | `base_path` | Always `os.path.realpath(__file__)` — locates the work dir and `citation.json` |
 | `url` | Download URL for the archive |
-| `extracted_file_path` | Path *inside* the archive to the shapefile or e00 |
+| `extracted_file_path` | Path *inside* the archive to the shapefile, e00, mdb, or gdb |
 | `srs` | Proj4 CRS string or constant — determine from `.prj` or metadata |
 | `use_unzip` | `True` for ZIP archives |
+| `layer_name` | Polygon layer inside an mdb or gdb, e.g. `MapUnitPolys` |
 | `polygons_join_col` | Column name to dissolve/join polygons — read from shapefile attributes |
 | `mappable_metadata_csv_path` | Path *inside* the archive to a bundled description CSV |
-| `mappable_metadata_mapping` | Maps CSV columns to `code/title/span/description` |
+| `mappable_metadata_layer_name` | Table in the gdb to use instead, e.g. `DescriptionOfMapUnits` |
+| `mappable_metadata_mapping` | Maps columns to `code/title/span/description` (optionally `geomaterial`) |
 | `metadata_csv_path` | Filesystem path to a hand-authored `units.csv` |
+| `metadata_overrides_csv_path` | Filesystem path to a sparse `overrides.csv` for mappable metadata |
 | `lithology_from_description` | `True` when title is not descriptive enough for lithology |
 
 Do **not** combine `mappable_metadata_csv_path` and `metadata_csv_path`.

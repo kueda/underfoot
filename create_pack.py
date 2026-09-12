@@ -136,7 +136,10 @@ def find_geofabrik_url(geojson_path):
     if not os.path.isfile(geofabrik_index_geojson_path):
         log(f"DOWNLOADING {geofabrik_index_geojson_url}")
         call_cmd(["curl", "-L", "-o", geofabrik_index_geojson_path, geofabrik_index_geojson_url])
-    pack_geom = shapely_geometry_collection_from_geojson(geojson_path)
+    # Shrink the pack by about 100 m so slivers along its edges don't rule out
+    # an extract, e.g. where a state boundary in the source data differs
+    # slightly from the one Geofabrik used
+    pack_geom = shapely_geometry_collection_from_geojson(geojson_path).buffer(-0.001)
     with fiona.open('geofabrik_index.geojson') as geofabrik_index:
         containing_features = [
             feature for feature in geofabrik_index

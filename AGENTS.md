@@ -29,8 +29,8 @@ The venv is baked into the image at `/opt/venv` and is on `PATH`, so there is no
 activation step. `bin/imposm` and `bin/e00compr/e00conv` are compiled into the
 image and selected via the `UNDERFOOT_IMPOSM` / `UNDERFOOT_E00CONV` env vars
 (their defaults keep bare-metal use working). `numpy` is pinned `<2.0` for GDAL
-and Fiona compatibility. `pdftotext` (poppler, for source pamphlets) is in the
-image.
+and Fiona compatibility. `pdftotext` (poppler, for source pamphlets) and `7z`
+(for ArcGIS `.mpk` map packages, which are 7z archives) are in the image.
 
 On-disk caches (`sources/work-<name>/`, `elevation-tiles/`, `*.osm.pbf`,
 `build/`) live in the bind-mounted tree, so they persist and stay visible on the
