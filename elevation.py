@@ -212,7 +212,7 @@ def make_contours_for_tile(tile, clean=False):
             merge_contours_path
         ], check=True)
     # Get the bounding box of this tile in lat/lon, project into the source
-    # coordinate system (Pseudo Mercator) so ogr2ogr can clip it before
+    # coordinate system (Pseudo Mercator) so we can clip to it before
     # importing into PostGIS
     bounds = mercantile.bounds(tile.x, tile.y, tile.z)
     bounds_x, bounds_y = transform(
@@ -220,6 +220,21 @@ def make_contours_for_tile(tile, clean=False):
         'EPSG:3857',
         [bounds.west, bounds.east],
         [bounds.south, bounds.north]
+    )
+    clip_minx, clip_miny, clip_maxx, clip_maxy = (
+        bounds_x[0], bounds_y[0], bounds_x[1], bounds_y[1]
+    )
+    # Clip to the tile boundaries and keep only the line parts of the result
+    # with ST_CollectionExtract, all within one SQLite/Spatialite-dialect
+    # query. Clipping with plain "-clipsrc" can leave stray Points alongside
+    # the LineStrings, turning the clipped geometry into a GeometryCollection
+    # that fails to COPY into the MULTILINESTRING contours column (issue #18).
+    layer_name = util.extless_basename(merge_contours_path)
+    clip_mbr = f"BuildMBR({clip_minx}, {clip_miny}, {clip_maxx}, {clip_maxy})"
+    clip_sql = (
+        f"SELECT id, elevation, "
+        f"ST_CollectionExtract(ST_Intersection(geometry, {clip_mbr}), 2) AS geometry "
+        f"FROM \"{layer_name}\" WHERE ST_Intersects(geometry, {clip_mbr})"
     )
     # Do a bunch of stuff, including clipping the lines back to the original
     # tile boundaries, projecting them into 4326, and loading them into a
@@ -231,20 +246,17 @@ def make_contours_for_tile(tile, clean=False):
             "-skipfailures",
             "-nln", TABLE_NAME,
             "-nlt", "MULTILINESTRING",
-            "-clipsrc", *[str(c) for c in [bounds_x[0], bounds_y[0], bounds_x[1], bounds_y[1]]],
+            "-dialect", "sqlite",
+            "-sql", clip_sql,
             "-f", "PostgreSQL", f"PG:dbname={DBNAME}",
             "-t_srs", f"EPSG:{SRID}",
             "--config", "PG_USE_COPY", "YES",
             merge_contours_path
         ], check=True)
     except CalledProcessError as ogrerror:
-        # Sometimes the ogr2ogr command results in a GeometryColleciton
-        # instead of a MultilineString, which returns an error when it tries
-        # to insert into the MULTILINESTRING contours table. Might have
-        # something to do with clipsrs leaving some points. Unfortunately the
-        # error doesn't seem to have any output I can use to make sure it's
-        # that error.
         util.log(f"Could not extract contours for {merge_contours_path}: {ogrerror}")
+        return tile
+    return None
 
 
 def make_contours_table(tiles, procs=2):
@@ -254,6 +266,24 @@ def make_contours_table(tiles, procs=2):
     """
     make_database()
     util.run_sql(f"DROP TABLE IF EXISTS {TABLE_NAME}")
+    # Create the table, with its MULTILINESTRING column, before starting the
+    # pool. Otherwise every worker's `ogr2ogr -append` tries to create it on
+    # its first write, and the first two workers to finish race each other to
+    # do so (issue #18).
+    util.run_sql(f"""
+        CREATE TABLE {TABLE_NAME} (
+            ogc_fid SERIAL,
+            PRIMARY KEY (ogc_fid),
+            id NUMERIC(8,0),
+            elevation NUMERIC(23,15),
+            wkb_geometry geometry(MULTILINESTRING,{SRID})
+        )
+    """)
+    util.run_sql(
+        f"CREATE INDEX {TABLE_NAME}_wkb_geometry_geom_idx "
+        f"ON {TABLE_NAME} USING GIST (wkb_geometry)"
+    )
+    failed_tiles = []
     with Pool(processes=procs) as pool:
         pbar = tqdm(
             pool.imap_unordered(make_contours_for_tile, tiles),
@@ -261,8 +291,14 @@ def make_contours_table(tiles, procs=2):
             unit=" tiles",
             total=len(tiles)
         )
-        for _ in pbar:
-            pass
+        for result in pbar:
+            if result is not None:
+                failed_tiles.append(result)
+    if failed_tiles:
+        util.log(
+            f"WARNING: failed to import contours for {len(failed_tiles)} of "
+            f"{len(tiles)} tile(s): {failed_tiles}"
+        )
 
 
 async def make_contours_pmtiles(
