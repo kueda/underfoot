@@ -29,14 +29,32 @@ E00CONV = os.environ.get(
 )
 
 
+def _first_match_by_priority(patterns, text):
+    """Search text with each pattern in order, returning the first match found.
+
+    Unlike a single combined alternation, this makes the patterns' list order
+    the match priority instead of letting it be overridden by where a given
+    pattern happens to match in the text.
+    """
+    for pattern in patterns:
+        match = pattern.search(text)
+        if match:
+            return match.group(0)
+    return None
+
+
 def lithology_from_text(text):
     """Extract normalized lithology from free text"""
     if not text:
         return
-    lithology_matches = LITHOLOGY_PATTERN.search(text)
-    if not lithology_matches:
-        lithology_matches = LOW_PRIORITY_LITHOLOGY_PATTERN.search(text)
-    lithology = (lithology_matches[0] if lithology_matches else '').lower()
+    lithology_match = _first_match_by_priority(LITHOLOGY_PRIORITY_PATTERNS, text)
+    if lithology_match is None:
+        lithology_match = LITHOLOGY_PATTERN.search(text)
+        lithology_match = lithology_match[0] if lithology_match else None
+    if lithology_match is None:
+        lithology_match = LOW_PRIORITY_LITHOLOGY_PATTERN.search(text)
+        lithology_match = lithology_match[0] if lithology_match else None
+    lithology = (lithology_match or '').lower()
     if lithology in LITHOLOGY_SYNONYMS:
         return LITHOLOGY_SYNONYMS[lithology]
     return lithology

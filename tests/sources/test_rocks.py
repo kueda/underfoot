@@ -211,6 +211,9 @@ def test_lithology_from_text_extracts_tectonic_wacke():
 def test_lithology_from_text_extracts_terrace():
     assert rocks.lithology_from_text("marine terrace") == "terrace"
 
+def test_lithology_from_text_extracts_lava_flow():
+    assert rocks.lithology_from_text("Basaltic to andesitic lava flows") == "lava flow"
+
 def test_lithology_from_text_extracts_everything_before_water():
     assert rocks.lithology_from_text("watery sandstone") == "sandstone"
     assert rocks.lithology_from_text("did you know granite needs water to form?") == "granite"

@@ -17,6 +17,16 @@ METADATA_COLUMN_NAMES = [
   "controlled_span",
 ]
 
+# Compound lithology terms whose own name contains, or is preceded by
+# qualifiers matching, another lithology term below (e.g. "basaltic lava
+# flow" contains "basaltic"). LITHOLOGY_PATTERN below picks whichever term
+# starts earliest in the text, so "basaltic" would otherwise win. These are
+# checked first, individually, in order, against the whole text, so list
+# order (not position in the text) decides precedence.
+LITHOLOGY_PRIORITY_PATTERNS = [
+  re.compile(r'lava\sflow', flags=re.I),
+]
+
 # Note that you should try to list substrings *after* longer strings, e.g. mud
 # after mudstone, otherwise "mudstone" in text will get matched to "mud"
 LITHOLOGY_PATTERN = re.compile(
@@ -232,6 +242,7 @@ IGNEOUS_ROCKS = [
   "hawaiite",
   "icelandite",
   "keratophyre",
+  "lava flow",
   "mafic volcanic rock",
   "microdiorite",
   "monzodiorite",
