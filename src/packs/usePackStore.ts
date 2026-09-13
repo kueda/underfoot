@@ -36,9 +36,14 @@ export function usePackStore(): PackStore {
     if (storedPack?.data) {
       // Instantiate a full Pack object so we have all the instance methods
       const localPack = Pack.fromPack(storedPack);
-      // Use the manifest's current updatedAt so we can detect if a newer version is available
+      // Use the manifest's current updatedAt so we can detect if a newer version is available.
+      // Also refresh pmtilesPath from the manifest: older stored packs may have lost it (see
+      // the pmtiles_path fix in download() below), which broke re-downloading updates.
       const manifestPack = manifest?.packs.find((pack: Pack) => pack.id === packId);
-      if (manifestPack) localPack.updatedAt = manifestPack.updatedAt;
+      if (manifestPack) {
+        localPack.updatedAt = manifestPack.updatedAt;
+        localPack.pmtilesPath = manifestPack.pmtilesPath;
+      }
       return localPack;
     }
     if (storedPack) {
@@ -122,6 +127,7 @@ export function usePackStore(): PackStore {
       description: pack.description,
       id: pack.id,
       name: pack.name,
+      pmtiles_path: pack.pmtilesPath,
       updated_at: pack.updatedAt,
     }, blob);
     storedPack.downloadedAt = new Date().toISOString();
