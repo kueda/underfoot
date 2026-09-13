@@ -19,8 +19,18 @@ export function buildBugReportUrl(): string {
   return `https://github.com/${REPO}/issues/new?${params.toString()}`;
 }
 
-// Opens a pre-filled GitHub issue in a new tab so the reporter can describe
-// the bug.
+// Opens a pre-filled GitHub issue so the reporter can describe the bug.
+//
+// Uses a real <a target="_blank"> click instead of window.open(): installed
+// PWAs often render window.open() targets in an app-owned popup rather than
+// handing them off to the system browser, but a genuine anchor click is more
+// reliably treated as an out-of-scope navigation and routed out to it.
 export function reportBug(): void {
-  window.open(buildBugReportUrl(), '_blank', 'noopener,noreferrer');
+  const link = document.createElement('a');
+  link.href = buildBugReportUrl();
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
