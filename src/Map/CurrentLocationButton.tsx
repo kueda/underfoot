@@ -3,7 +3,7 @@ import GpsFixedIcon from '@mui/icons-material/GpsFixed';
 import GpsNotFixedIcon from '@mui/icons-material/GpsNotFixed';
 import CircularProgress from '@mui/material/CircularProgress';
 import { ThemeProvider, createTheme, useTheme } from '@mui/material/styles';
-import maplibregl, { Marker } from 'maplibre-gl';
+import { Map, Marker } from 'maplibre-gl';
 import { useEffect, useRef, useState } from 'react';
 
 // https://devcodef1.com/news/1107627/custom-color-palette-in-material-ui
@@ -37,7 +37,7 @@ const customTheme = createTheme({
 });
 
 interface Props {
-  map?: maplibregl.Map;
+  map?: Map;
 }
 
 const CurrentLocationButton = ({ map }: Props) => {

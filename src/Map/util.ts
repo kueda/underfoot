@@ -1,3 +1,4 @@
+import type { Map, StyleSpecification } from 'maplibre-gl';
 import Papa from 'papaparse';
 import * as pmtiles from 'pmtiles';
 
@@ -8,7 +9,7 @@ import { ROCK_STYLE, WATER_STYLE } from './mapStyles';
 export function loadMapFromPackData(
   packData: UnzippedPackData,
   protocol: pmtiles.Protocol,
-  map: maplibregl.Map,
+  map: Map,
   mapType: string,
   setFeatures: React.Dispatch<React.SetStateAction<UnderfootFeatures>>,
   setCitations: React.Dispatch<React.SetStateAction<Citations>>,
@@ -16,7 +17,7 @@ export function loadMapFromPackData(
   let pmtilesBlob: Blob | undefined;
   let featuresBlob: Blob | undefined;
   let citationsBlob: Blob | undefined;
-  let style: maplibregl.StyleSpecification;
+  let style: StyleSpecification;
   if (mapType === 'rocks') {
     pmtilesBlob = packData.rocks_pmtiles;
     featuresBlob = packData.rocks_units_csv;

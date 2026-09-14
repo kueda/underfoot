@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import maplibregl, { Map, MapGeoJSONFeature, ScaleControl } from 'maplibre-gl';
+import { addProtocol, Map, type MapGeoJSONFeature, ScaleControl, setWorkerUrl } from 'maplibre-gl';
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import * as pmtiles from 'pmtiles';
 import Modal from '@mui/material/Modal';
@@ -67,9 +68,13 @@ window.fetch = async (...args) => {
   }
 };
 
-// add the PMTiles plugin to the maplibregl global.
+// MapLibre 6 can't find its worker script from inside a bundle, so point it at
+// the worker chunk Vite builds from the ?worker&url import above.
+setWorkerUrl(maplibreWorkerUrl);
+
+// add the PMTiles plugin to MapLibre's global protocol registry.
 const protocol = new pmtiles.Protocol();
-maplibregl.addProtocol('pmtiles', request => {
+addProtocol('pmtiles', request => {
   // Log tile requests for debugging
   const tileMatch = request.url.match(/pmtiles:\/\/(\w+)\/(\d+)\/(\d+)\/(\d+)/);
   const requestStart = performance.now();
@@ -150,7 +155,7 @@ export default function UnderfootMap() {
     if (!mapContainer.current) return;
 
     if (!map.current) {
-      map.current = new maplibregl.Map({
+      map.current = new Map({
         container: mapContainer.current,
         center: [-122, 38],
         zoom: 2,
