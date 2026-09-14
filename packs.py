@@ -205,11 +205,16 @@ def make_contours_for_pack(pack_id, clean=False, procs=2):
     pack = get_pack(pack_id)
     zoom = pack.get("zoom", 12)
     pmtiles_zoom = zoom + 2
+    # A lower minzoom than maxzoom gives the pmtiles a real zoom pyramid
+    # instead of a single fixed zoom, so a style can show a subset of
+    # contours (e.g. just the 100m ones) well before pmtiles_zoom.
+    pmtiles_minzoom = max(zoom - 2, 0)
     if "geojson" in pack:
         make_contours(
             zoom,
             geojson=pack["geojson"],
             pmtiles_zoom=pmtiles_zoom,
+            pmtiles_minzoom=pmtiles_minzoom,
             clean=clean,
             procs=procs,
             path=contours_pmtiles_path)
@@ -221,6 +226,7 @@ def make_contours_for_pack(pack_id, clean=False, procs=2):
         nelon=pack["bbox"]["right"],
         nelat=pack["bbox"]["top"],
         pmtiles_zoom=pmtiles_zoom,
+        pmtiles_minzoom=pmtiles_minzoom,
         path=contours_pmtiles_path,
         clean=clean,
         procs=procs)

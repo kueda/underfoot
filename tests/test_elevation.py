@@ -134,3 +134,58 @@ def test_make_contours_table_reports_failed_tiles(monkeypatch, capsys):
     output = capsys.readouterr().out
     assert "1" in output
     assert "823" in output
+
+
+def _stub_make_contours_pmtiles_pipeline(monkeypatch):
+    """Stub out everything make_contours_pmtiles does before it builds the
+    final ogr2ogr export command, so a test can inspect just that command.
+    """
+    monkeypatch.setattr(elevation, "make_database", lambda: None)
+    monkeypatch.setattr(elevation.os.path, "exists", lambda path: False)
+
+    async def fake_cache_tiles(tiles, clean=False):
+        return None
+
+    monkeypatch.setattr(elevation, "cache_tiles", fake_cache_tiles)
+    monkeypatch.setattr(elevation, "make_contours_table", lambda tiles, procs=2: None)
+    calls = []
+    monkeypatch.setattr(elevation.util, "call_cmd", lambda cmd: calls.append(cmd))
+    return calls
+
+
+def test_make_contours_pmtiles_honors_separate_minzoom(monkeypatch, tmp_path):
+    """A caller can pass a lower pmtiles_minzoom than pmtiles_zoom so the
+    exported PMTiles carries a real zoom pyramid (e.g. minzoom 10, maxzoom
+    14) instead of a single fixed zoom. This is what lets a lower-zoom style
+    layer show a subset of contours (e.g. just the 100m ones) starting well
+    before the pack's usual max zoom.
+    """
+    calls = _stub_make_contours_pmtiles_pipeline(monkeypatch)
+    path = str(tmp_path / "contours.pmtiles")
+
+    elevation.make_contours(
+        12, swlon=-122.4, swlat=37.6, nelon=-122.0, nelat=38.0,
+        pmtiles_zoom=14, pmtiles_minzoom=10, path=path
+    )
+
+    export_cmd = calls[-1]
+    assert export_cmd[0] == "ogr2ogr"
+    assert "MINZOOM=10" in export_cmd
+    assert "MAXZOOM=14" in export_cmd
+
+
+def test_make_contours_pmtiles_defaults_minzoom_to_maxzoom(monkeypatch, tmp_path):
+    """Without an explicit pmtiles_minzoom, behavior is unchanged from before
+    it existed: a single fixed zoom, since existing callers rely on this.
+    """
+    calls = _stub_make_contours_pmtiles_pipeline(monkeypatch)
+    path = str(tmp_path / "contours.pmtiles")
+
+    elevation.make_contours(
+        12, swlon=-122.4, swlat=37.6, nelon=-122.0, nelat=38.0,
+        pmtiles_zoom=14, path=path
+    )
+
+    export_cmd = calls[-1]
+    assert "MINZOOM=14" in export_cmd
+    assert "MAXZOOM=14" in export_cmd

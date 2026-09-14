@@ -309,6 +309,7 @@ async def make_contours_pmtiles(
     nelat=None,
     geojson=None,
     pmtiles_zoom=None,
+    pmtiles_minzoom=None,
     clean=False,
     procs=2,
     path="./contours.pmtiles"
@@ -318,6 +319,8 @@ async def make_contours_pmtiles(
     zooms = [zoom]
     if not pmtiles_zoom:
         pmtiles_zoom = zoom
+    if not pmtiles_minzoom:
+        pmtiles_minzoom = pmtiles_zoom
     print("Clearing out existing data...")
     if os.path.exists(path):
         os.remove(path)
@@ -344,7 +347,7 @@ async def make_contours_pmtiles(
         path,
         f"PG:dbname={DBNAME}",
         TABLE_NAME,
-        "-dsco", f"MINZOOM={pmtiles_zoom}",
+        "-dsco", f"MINZOOM={pmtiles_minzoom}",
         "-dsco", f"MAXZOOM={pmtiles_zoom}",
         "-dsco", "DESCRIPTION=\"Elevation contours, 25m interval\""
     ]
@@ -360,6 +363,7 @@ def make_contours(
     nelat=None,
     geojson=None,
     pmtiles_zoom=None,
+    pmtiles_minzoom=None,
     clean=False,
     procs=2,
     path="./contours.pmtiles"
@@ -374,6 +378,7 @@ def make_contours(
             nelat=nelat,
             geojson=geojson,
             pmtiles_zoom=pmtiles_zoom,
+            pmtiles_minzoom=pmtiles_minzoom,
             clean=clean,
             procs=procs,
             path=path
