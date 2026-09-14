@@ -1,6 +1,11 @@
 import jszip from 'jszip';
 import { PackBoundingBox, PackMetadata, UnzippedPackData } from './types';
 
+// Namespaces packs loaded from a local file so their ids can never collide
+// with a manifest pack's id (which would silently overwrite it in packStore
+// and confuse the "update available" check against manifest.updatedAt).
+const LOCAL_ID_PREFIX = 'local:';
+
 export class Pack {
   admin1: string;
   admin2: string;
@@ -45,6 +50,28 @@ export class Pack {
     return newPack;
   }
 
+  // Derives placeholder metadata for a pack loaded from a local file, since
+  // there's no manifest entry to supply a name/id. bbox and admin1/2 aren't
+  // read anywhere in the app today, so they're just zeroed/blanked out.
+  static metadataFromFileName(fileName: string): PackMetadata {
+    const base = fileName.replace(/\.pmtiles\.zip$/i, '').replace(/\.zip$/i, '');
+    const slug = base
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'pack';
+    return {
+      admin1: '',
+      admin2: '',
+      bbox: {
+        bottom: 0, left: 0, right: 0, top: 0,
+      },
+      description: `Loaded from ${fileName}`,
+      id: `${LOCAL_ID_PREFIX}${slug}`,
+      name: slug,
+      updated_at: new Date().toISOString(),
+    };
+  }
+
   // Unzips a freshly-downloaded pack archive once, up front, so later reads
   // (including on subsequent page loads) are plain blob lookups instead of
   // repeating the CPU-bound jszip decompression of the whole archive.
@@ -57,7 +84,12 @@ export class Pack {
     const zip = await jszip.loadAsync(zipBlob);
     const unzipped: UnzippedPackData = {};
     const zipPaths: string[] = [];
-    zip.forEach(path => zipPaths.push(path));
+    // Some zip writers (e.g. Python's shutil.make_archive) emit an explicit
+    // entry for the top-level directory itself; skip it rather than treat it
+    // as a missing file below.
+    zip.forEach((path, file) => {
+      if (!file.dir) zipPaths.push(path);
+    });
     await Promise.all(zipPaths.map(async path => {
       const fname = path.split('/').pop();
       if (!fname || !zip.file(path) || zip.file(path)?.dir) {

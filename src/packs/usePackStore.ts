@@ -3,7 +3,9 @@ import localforage from 'localforage';
 import { Pack } from './Pack';
 
 import { Manifest } from './Manifest';
-import { DownloadOptions, PackStore, RemoteManifest } from './types';
+import {
+  DownloadOptions, PackMetadata, PackStore, RemoteManifest,
+} from './types';
 
 const packStore = localforage.createInstance({ name: 'packStore' });
 const prefStore = localforage.createInstance({ name: 'prefStore' });
@@ -84,6 +86,19 @@ export function usePackStore(): PackStore {
     return packs.flat() as Pack[];
   }, [get, listLocal, manifest]);
 
+  // Unzips a pack archive and saves it to packStore, whether the blob came
+  // from a network download or a local file. Later pack loads (including on
+  // a fresh page load) are then plain blob lookups instead of repeating this
+  // decompression work.
+  const storePackFromBlob = useCallback(async (metadata: PackMetadata, blob: Blob) => {
+    const storedPack = await Pack.fromZip(metadata, blob);
+    storedPack.downloadedAt = new Date().toISOString();
+    await packStore.setItem(metadata.id, storedPack);
+    if (!currentPackId) {
+      setCurrent(metadata.id);
+    }
+  }, [currentPackId, setCurrent]);
+
   const download = useCallback(async (packId: string, options?: DownloadOptions) => {
     const opts = options || {};
     const pack = await get(packId);
@@ -118,9 +133,7 @@ export function usePackStore(): PackStore {
     }
     const blob = new Blob([chunksAll]);
 
-    // Unzip once here so later pack loads (including on a fresh page load)
-    // are plain blob lookups instead of repeating this decompression work.
-    const storedPack = await Pack.fromZip({
+    await storePackFromBlob({
       admin1: pack.admin1,
       admin2: pack.admin2,
       bbox: pack.bbox,
@@ -130,13 +143,16 @@ export function usePackStore(): PackStore {
       pmtiles_path: pack.pmtilesPath,
       updated_at: pack.updatedAt,
     }, blob);
-    storedPack.downloadedAt = new Date().toISOString();
-    // Save that pack to disk
-    await packStore.setItem(packId, storedPack);
-    if (!currentPackId) {
-      setCurrent(packId);
-    }
-  }, [currentPackId, get, setCurrent]);
+  }, [get, storePackFromBlob]);
+
+  // Loads a pack straight from a local .zip, bypassing the manifest/download
+  // flow entirely, so a pack built with `packs.py` can be viewed without
+  // hosting it anywhere first.
+  const addFromFile = useCallback(async (file: File): Promise<string> => {
+    const metadata = Pack.metadataFromFileName(file.name);
+    await storePackFromBlob(metadata, file);
+    return metadata.id;
+  }, [storePackFromBlob]);
 
   const remove = useCallback(async (packId: string) => {
     await packStore.removeItem(packId);
@@ -144,6 +160,7 @@ export function usePackStore(): PackStore {
   }, [currentPackId, setCurrent]);
 
   return {
+    addFromFile,
     currentPackId,
     download,
     error,

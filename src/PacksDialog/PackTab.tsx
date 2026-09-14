@@ -2,6 +2,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import DialogContentText from '@mui/material/DialogContentText';
 import List from '@mui/material/List';
 import TabPanel from '@mui/lab/TabPanel';
+import { ReactNode } from 'react';
 
 import { PackStore } from '../packs/types';
 import { Pack } from '../packs/Pack';
@@ -10,6 +11,7 @@ import PackListItem from './PackListItem';
 interface PackTabProps {
   currentPackId: string | null;
   description: string | null;
+  headerAction?: ReactNode;
   isOffline: boolean;
   loading: boolean;
   onChoose: (packId: string | null) => void;
@@ -24,6 +26,7 @@ interface PackTabProps {
 const PackTab = ({
   currentPackId,
   description,
+  headerAction,
   loading,
   onChoose,
   onDelete,
@@ -34,6 +37,7 @@ const PackTab = ({
   value,
 }: PackTabProps) => (
   <TabPanel value={value} sx={{ padding: 0 }}>
+    {headerAction}
     {loading && <CircularProgress />}
     {description && (
       <DialogContentText sx={{ textAlign: 'center', p: 4 }}>

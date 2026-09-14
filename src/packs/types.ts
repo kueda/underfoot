@@ -69,6 +69,7 @@ export interface DownloadOptions {
 }
 
 export interface PackStore {
+  addFromFile: (file: File) => Promise<string>;
   currentPackId: string | null;
   download: (packId: string, options?: DownloadOptions) => Promise<void>;
   get: (packId: string) => Promise<Pack | undefined>;

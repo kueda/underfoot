@@ -92,6 +92,7 @@ const contourLayers: LayerSpecification[] = [
     'source': 'contours',
     'source-layer': 'contours',
     'type': 'line',
+    'minzoom': 10,
     'paint': {
       'line-color': 'rgba(0,0,0,0.2)',
       'line-width': 1,
@@ -103,6 +104,7 @@ const contourLayers: LayerSpecification[] = [
     'source': 'contours',
     'source-layer': 'contours',
     'type': 'symbol',
+    'minzoom': 10,
     'paint': {
       'text-color': 'rgba(0,0,0,0.2)',
     },
@@ -120,6 +122,7 @@ const contourLayers: LayerSpecification[] = [
     'source': 'contours',
     'source-layer': 'contours',
     'type': 'line',
+    'minzoom': 12,
     'paint': {
       'line-color': 'rgba(0,0,0,0.08)',
       'line-width': 1,

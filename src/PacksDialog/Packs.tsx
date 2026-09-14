@@ -17,6 +17,7 @@ import {
   useSetCurrentPackId,
 } from '../useAppStore';
 import { usePackStore } from '../packs/usePackStore';
+import AddLocalPackButton from './AddLocalPackButton';
 import PackTab from './PackTab';
 
 export default function Packs() {
@@ -144,6 +145,16 @@ export default function Packs() {
             currentPackId={currentPackId}
             requestedPackId={requestedPackId}
             packStore={packStore}
+            headerAction={(
+              <AddLocalPackButton
+                packStore={packStore}
+                onAdd={packId => {
+                  setDownloadedPacks(null);
+                  packStore.setCurrent(packId);
+                  onChoose(packId);
+                }}
+              />
+            )}
             description={
               !loadingLocal && (downloadedPacks === null || downloadedPacks?.length === 0)
                 ? 'No packs downloaded yet.'
