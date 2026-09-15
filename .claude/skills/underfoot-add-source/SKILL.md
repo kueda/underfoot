@@ -7,6 +7,8 @@ description: Use when adding a new geologic data source to the underfoot project
 
 # Adding an Underfoot Geologic Source
 
+Paths in this skill are relative to `data/`, and commands run from `data/`.
+
 ## Overview
 
 Every geologic source requires **three files** (sometimes four). Missing any one means the
@@ -147,20 +149,23 @@ than fabricating text. But before giving up on a unit, ask the user (see below).
 
 ## Tools (in this skill directory)
 
+The app container only mounts `data/` (at `/app`), so these commands also mount this skill's
+`scripts/` directory at `/skill-scripts`.
+
 **`inspect-dbf.py`** — show unique values of a join column and all associated fields.
 Use this to discover the join column name and available columns before writing `__init__.py`:
 
 ```
-docker compose run --rm app \
-    python .claude/skills/underfoot-add-source/scripts/inspect-dbf.py file.dbf [JOIN_COL]
+docker compose run --rm -v "$PWD/../.claude/skills/underfoot-add-source/scripts:/skill-scripts:ro" \
+    app python /skill-scripts/inspect-dbf.py file.dbf [JOIN_COL]
 ```
 
 **`scaffold-units-csv.py`** — generate a `units.csv` stub from the DBF with `code`,
 `title`, and `span` filled in, leaving `description` and `lithology` blank:
 
 ```
-docker compose run --rm app \
-    python .claude/skills/underfoot-add-source/scripts/scaffold-units-csv.py \
+docker compose run --rm -v "$PWD/../.claude/skills/underfoot-add-source/scripts:/skill-scripts:ro" \
+    app python /skill-scripts/scaffold-units-csv.py \
     file.dbf sources/<name>/units.csv --code UNIT --title Descriptio --span Age
 ```
 

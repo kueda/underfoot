@@ -1,7 +1,7 @@
-Data prep repo for managing data packages for Underfoot, a mobile app for
-viewing geologic and hydrologic maps. The [Progressive Web
-App](https://github.com/kueda/underfoot-web) that displays this data lives in a
-separate repo.
+Data prep for managing data packages for Underfoot, a mobile app for viewing
+geologic and hydrologic maps. The Progressive Web App that displays this data
+lives in `../web/`. Paths and commands in this file are relative to `data/`, so
+run commands from this directory.
 
 Each pack is specified as a .json file in packs/, including basic metadata and
 lists of `rocks` sources for geology and `water` sources for hydrology. Each
@@ -89,12 +89,12 @@ docker compose run --rm app pytest
 ```
 
 Coverage is limited; tests live in `tests/` and `tests/sources/`. CI
-(`.github/workflows/run-tests.yml`) runs them in the same image, so local and CI
-are both Python 3.12.
+(`../.github/workflows/run-tests.yml`) runs them in the same image, so local and
+CI are both Python 3.12.
 
 ## CI
 
-`.github/workflows/build-image.yml` builds `Dockerfile` once per commit and
+`../.github/workflows/build-image.yml` builds `Dockerfile` once per commit and
 pushes `ghcr.io/<repo>/app:<sha>`; `run-tests.yml` and `build-pack.yml` run in
 container jobs on that image (with a `postgis/postgis:16-3.5` service
 container), so the build environment is defined in exactly one place. `Dockerfile`

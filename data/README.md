@@ -1,13 +1,11 @@
-# underfoot
-Underfoot is a mobile app for revealing the hydrological and geological world beneath your feet. Well, sort of. It's mostly just something I tinker with in my spare time. It'll probably never be done. If you're interested in a more fully-functional app for geological exploration, check out [rockd](https://rockd.org).
-
-Still reading? This repo is mostly for data prep. The Progressive Web App that shows this data is at https://github.com/kueda/underfoot-web.
+# underfoot data
+Data prep for [Underfoot](../README.md): Python scripts that download geologic and hydrologic sources, process them in PostGIS, and build the map packs that the [web app](../web/) displays.
 
 ## Setup
 You'll need [Docker](https://docs.docker.com/get-docker/) (Docker Desktop on macOS or Windows).
 ```bash
 git clone https://github.com/kueda/underfoot.git
-cd underfoot
+cd underfoot/data
 
 docker compose build
 docker compose up -d db     # Postgres, reachable from the host at localhost:5433
