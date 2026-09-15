@@ -1,0 +1,9 @@
+.DS_Store
+node_modules/
+.claude/settings.local.json
+.claude/worktrees/
+.claude-model
+.claude-prompts
+.husky/*.local
+.playwright-mcp/
+/docs/
