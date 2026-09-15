@@ -1,4 +1,4 @@
-const REPO = 'kueda/underfoot-web';
+const REPO = 'kueda/underfoot';
 
 // Builds a URL that opens a new GitHub issue pre-filled with the current map
 // view. The URL hash already encodes the pack, map type, and location (see
