@@ -1,0 +1,4 @@
+# Run eslint on staged files (see .lintstagedrc.mjs)
+npx lint-staged
+# Run TypeScript checks on all files
+npx tsc --noEmit

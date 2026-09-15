@@ -1,0 +1,153 @@
+:root {
+  font-family: Roboto, system-ui, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  overscroll-behavior: none;
+  overflow: hidden;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+}
+
+.wrapper {
+  background-color: lightyellow;
+  width: 100%;
+  height: 100%;
+  position: fixed;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.map,
+.map-wrapper {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+}
+
+.map { visibility: hidden; }
+.map.loaded { visibility: visible; }
+
+.map-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.map-wrapper > .add-icon {
+  z-index: 1;
+}
+
+.loading-modal {
+  z-index: 1102 !important;
+}
+
+.loading-modal .inner {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-modal .MuiModal-backdrop {
+  background-color: rgba(255, 255, 255, 0.8);
+}
+
+.MapBottomSheet {
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.MapBottomSheetHeader {
+  width: 100%;
+  background: none;
+  text-align: start;
+  padding: 20px;
+  display: flex;
+  flex-direction: row;
+  cursor: grab;
+}
+.vaul-dragging .MapBottomSheetHeader {
+  cursor: grabbing;
+}
+
+.MapBottomSheetHeaderContent {
+  flex-grow: 1;
+  overflow: hidden;
+}
+
+.MapBottomSheetHeaderContent h3 {
+  display: block;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.MapBottomSheet.open .MapBottomSheetHeader,
+.MapBottomSheet.open .MapBottomSheetHeaderContent h3 {
+  overflow: visible;
+  white-space: wrap;
+  height: auto !important;
+}
+
+.MapBottomSheetHeaderPreview {
+  display: flex;
+  flex-direction: row;
+}
+.MapBottomSheetHeaderPreview > * {
+  width: 50%;
+}
+.MapBottomSheetHeaderPreview label {
+  display: inline-block;
+  margin-inline-end: 5px;
+  font-weight: bold;
+}
+@media only screen and (max-width: 600px) {
+  .MapBottomSheetHeaderPreview label {
+    display: none;
+  }
+}
+
+.MapBottomSheetBody {
+  padding: 0 20px 20px 20px;
+  height: 100%;
+  user-select: text;
+}
+
+.scrollable .MapBottomSheetBody {
+  overflow-y: auto;
+}
+
+.maplibregl-ctrl-top-left,
+.maplibregl-ctrl-top-right {
+  top: 56px;
+}
+
+.maplibregl-ctrl-bottom-left,
+.maplibregl-ctrl-bottom-right {
+  bottom: 91px;
+}

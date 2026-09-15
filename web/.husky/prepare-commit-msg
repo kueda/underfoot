@@ -1,0 +1,8 @@
+# Team-wide prepare-commit-msg steps go here.
+
+# Per-developer local hook (optional, not committed; matched by *.local in .gitignore).
+# A sourced script inherits this hook's positional parameters ($1 message file,
+# $2 source, $3 commit), so the local hook receives them without passing "$@".
+if [ -f "$(dirname "$0")/prepare-commit-msg.local" ]; then
+  . "$(dirname "$0")/prepare-commit-msg.local"
+fi
