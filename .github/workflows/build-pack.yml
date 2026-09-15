@@ -23,6 +23,10 @@ permissions:
   contents: read
   packages: read      # pull the app image from GHCR
 
+defaults:
+  run:
+    working-directory: data
+
 jobs:
   rocks:
     name: Build rocks
@@ -53,8 +57,8 @@ jobs:
       - name: Cache source work for rocks
         uses: actions/cache@v5
         with:
-          path: sources/work-*
-          key: cache-source-work-rocks-3-${{ inputs.pack }}-${{ hashFiles(format('packs/{0}.json', inputs.pack)) }}
+          path: data/sources/work-*
+          key: cache-source-work-rocks-3-${{ inputs.pack }}-${{ hashFiles(format('data/packs/{0}.json', inputs.pack)) }}
 
       - name: Build rocks
         run: python packs.py ${{ inputs.pack }} --only rocks
@@ -63,7 +67,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.pack }}-rocks
-          path: "build/${{ inputs.pack }}.pmtiles/"
+          path: "data/build/${{ inputs.pack }}.pmtiles/"
 
   water:
     name: Build water
@@ -94,8 +98,8 @@ jobs:
       - name: Cache source work for water
         uses: actions/cache@v5
         with:
-          path: sources/work-*
-          key: cache-source-work-water-3-${{ inputs.pack }}-${{ hashFiles(format('packs/{0}.json', inputs.pack)) }}
+          path: data/sources/work-*
+          key: cache-source-work-water-3-${{ inputs.pack }}-${{ hashFiles(format('data/packs/{0}.json', inputs.pack)) }}
 
       - name: Build water
         run: python packs.py ${{ inputs.pack }} --only water
@@ -104,7 +108,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.pack }}-water
-          path: "build/${{ inputs.pack }}.pmtiles/"
+          path: "data/build/${{ inputs.pack }}.pmtiles/"
 
   contours:
     name: Build contours
@@ -135,8 +139,8 @@ jobs:
       - name: Cache elevation tiles
         uses: actions/cache@v5
         with:
-          path: elevation-tiles
-          key: cache-elevation-${{ inputs.pack }}-${{ hashFiles(format('packs/{0}.json', inputs.pack)) }}
+          path: data/elevation-tiles
+          key: cache-elevation-${{ inputs.pack }}-${{ hashFiles(format('data/packs/{0}.json', inputs.pack)) }}
 
       - name: Build contours
         run: python packs.py ${{ inputs.pack }} --only contours
@@ -145,7 +149,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.pack }}-contours
-          path: "build/${{ inputs.pack }}.pmtiles/"
+          path: "data/build/${{ inputs.pack }}.pmtiles/"
 
   osm:
     name: Build ways & context
@@ -184,7 +188,7 @@ jobs:
       - name: Cache OSM download
         uses: actions/cache@v5
         with:
-          path: "*.osm.pbf"
+          path: "data/*.osm.pbf"
           key: cache-osm-${{ steps.get-osm-url.outputs.osm-url }}-${{ steps.calc-year-week.outputs.year-week }}
 
       - name: Build ways & context
@@ -194,13 +198,13 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.pack }}-ways
-          path: "build/${{ inputs.pack }}.pmtiles/"
+          path: "data/build/${{ inputs.pack }}.pmtiles/"
 
       - name: Upload context
         uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.pack }}-context
-          path: "build/${{ inputs.pack }}.pmtiles/"
+          path: "data/build/${{ inputs.pack }}.pmtiles/"
 
   upload-pack:
     name: Archive and upload pack
@@ -217,6 +221,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           pattern: ${{ inputs.pack }}-*
+          path: data
 
       - name: Zip up the pack
         run: |

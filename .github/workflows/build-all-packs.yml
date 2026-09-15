@@ -3,15 +3,15 @@ name: Build all packs
 on:
   push:
     # Reprocess all packs if anything related to source processing changes.
-    # TODO come up with a better way to exclude sources/util/__init__.py
+    # TODO come up with a better way to exclude data/sources/util/__init__.py
     paths:
-      - sources/util/c*
-      - sources/util/m*
-      - sources/util/p*
-      - sources/util/r*
-      - sources/util/t*
-      - sources/util/u*
-      - sources/util/w*
+      - data/sources/util/c*
+      - data/sources/util/m*
+      - data/sources/util/p*
+      - data/sources/util/r*
+      - data/sources/util/t*
+      - data/sources/util/u*
+      - data/sources/util/w*
     branches: main
   workflow_dispatch:
 
@@ -42,7 +42,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - id: set-matrix
-        run: echo "matrix=$(ls packs/*.json | xargs -I'{}' basename {} .json | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
+        run: echo "matrix=$(ls data/packs/*.json | xargs -I'{}' basename {} .json | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
 
   build-packs:
     name: Build packs

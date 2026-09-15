@@ -2,7 +2,7 @@ name: Build changed packs
 
 on:
   push:
-    paths: packs/*.json
+    paths: data/packs/*.json
     branches: main
 
 permissions:
@@ -36,7 +36,7 @@ jobs:
           list-files: shell
           filters: |
             changed:
-              - added|modified: 'packs/*.json'
+              - added|modified: 'data/packs/*.json'
 
       # Convert paths into a list of pack IDs
       - id: set-matrix
