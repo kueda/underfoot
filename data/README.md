@@ -62,6 +62,9 @@ Each source is an executable Python script that creates a directory at `sources/
         1. `swamp/marsh`
         1. `reservoir`
         1. `lake/pond`
+        1. `foreshore`
+        1. `floodplain`
+        1. `stream/river`
     1. `is_natural`: boolean indicating whether or not the body was made by humans
     1. `permanence`: `perennial` or `ephemeral`
     1. `geom`: `MultiPolygon` geometry
