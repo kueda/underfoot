@@ -5,6 +5,7 @@ import json
 import os
 import re
 import shutil
+import tempfile
 from glob import glob
 from multiprocessing import Pool
 
@@ -409,131 +410,128 @@ def make_pmtiles(sources, path="./water.pmtiles", bbox=None, geojson_path=None, 
         util.log(f"water: making pmtiles for sources: {sources}")
     if os.path.exists(path):
         os.remove(path)
-    # 1. Write ways, bodies, and sheds to separate layers of a single GeoPackage file
-    # TODO this always writes to the dir *this* script is in; it should write somewhere temporary and we should remove it after the pmtiles has been created
-    gpkg_path = os.path.join(
-        os.path.dirname(os.path.realpath(__file__)),
-        f"{util.extless_basename(path)}.gpkg"
-    )
-    if os.path.exists(gpkg_path):
-        os.remove(gpkg_path)
     table_names = [
         WATERWAYS_TABLE_NAME,
         WATERBODIES_TABLE_NAME,
         WATERSHEDS_TABLE_NAME
     ]
-    for idx, table_name in enumerate(table_names):
-        cmd = ["ogr2ogr"]
-        if idx > 0:
-            cmd += ["-update"]
-        cmd += [
+    # Write ways, bodies, and sheds to separate layers of a single GeoPackage
+    # file in a temporary dir, since it's just an intermediate step towards
+    # the PMTiles file and doesn't need to stick around after this returns
+    with tempfile.TemporaryDirectory() as tmpdir:
+        gpkg_path = os.path.join(tmpdir, f"{util.extless_basename(path)}.gpkg")
+        for idx, table_name in enumerate(table_names):
+            cmd = ["ogr2ogr"]
+            if idx > 0:
+                cmd += ["-update"]
+            cmd += [
+                gpkg_path,
+                f"PG:dbname={DBNAME}",
+                table_name,
+                "-a_srs", f"EPSG:{SRID}",
+            ]
+            # Don't clip the waterways, useful to see connectivity across the
+            # entire watershed
+            if table_name != WATERWAYS_TABLE_NAME:
+                if geojson_path:
+                    cmd += ["-clipdst", geojson_path]
+                elif bbox:
+                    cmd += [
+                        "-clipdst",
+                        str(bbox["left"]),
+                        str(bbox["bottom"]),
+                        str(bbox["right"]),
+                        str(bbox["top"])
+                    ]
+            util.call_cmd(cmd, check=True)
+        # 1. Write additional overview layers of perennial ways and large bodies
+        waterways_overview_table_name = f"{WATERWAYS_TABLE_NAME}_overview"
+        waterbodies_overview_table_name = f"{WATERBODIES_TABLE_NAME}_overview"
+        cmd = [
+            "ogr2ogr",
+            "-update",
             gpkg_path,
             f"PG:dbname={DBNAME}",
-            table_name,
-            "-a_srs", f"EPSG:{SRID}",
+            "-sql", f"""
+                SELECT * FROM {WATERWAYS_TABLE_NAME}
+                WHERE
+                    name IS NOT NULL
+                    AND is_natural = 1 AND permanence = 'perennial'
+            """,
+            "-nln", waterways_overview_table_name,
+            "-a_srs", f"EPSG:{SRID}"
         ]
-        # Don't clip the waterways, useful to see connectivity across the
-        # entire watershed
-        if table_name != WATERWAYS_TABLE_NAME:
-            if geojson_path:
-                cmd += ["-clipdst", geojson_path]
-            elif bbox:
-                cmd += [
-                    "-clipdst",
-                    str(bbox["left"]),
-                    str(bbox["bottom"]),
-                    str(bbox["right"]),
-                    str(bbox["top"])
-                ]
+        if geojson_path:
+            cmd += ["-clipdst", geojson_path]
+        elif bbox:
+            cmd += [
+                "-clipdst",
+                str(bbox["left"]),
+                str(bbox["bottom"]),
+                str(bbox["right"]),
+                str(bbox["top"])
+            ]
         util.call_cmd(cmd, check=True)
-    # 1. Write additional overview layers of perennial ways and large bodies
-    waterways_overview_table_name = f"{WATERWAYS_TABLE_NAME}_overview"
-    waterbodies_overview_table_name = f"{WATERBODIES_TABLE_NAME}_overview"
-    cmd = [
-        "ogr2ogr",
-        "-update",
-        gpkg_path,
-        f"PG:dbname={DBNAME}",
-        "-sql", f"""
-            SELECT * FROM {WATERWAYS_TABLE_NAME}
-            WHERE
-                name IS NOT NULL
-                AND is_natural = 1 AND permanence = 'perennial'
-        """,
-        "-nln", waterways_overview_table_name,
-        "-a_srs", f"EPSG:{SRID}"
-    ]
-    if geojson_path:
-        cmd += ["-clipdst", geojson_path]
-    elif bbox:
-        cmd += [
-            "-clipdst",
-            str(bbox["left"]),
-            str(bbox["bottom"]),
-            str(bbox["right"]),
-            str(bbox["top"])
+        cmd = [
+            "ogr2ogr",
+            "-update",
+            gpkg_path,
+            f"PG:dbname={DBNAME}",
+            "-sql", f"""
+                SELECT * FROM {WATERBODIES_TABLE_NAME}
+                WHERE name IS NOT NULL AND ST_Area(geom) > 0.00001
+            """,
+            "-nln", waterbodies_overview_table_name,
+            "-a_srs", f"EPSG:{SRID}"
         ]
-    util.call_cmd(cmd, check=True)
-    cmd = [
-        "ogr2ogr",
-        "-update",
-        gpkg_path,
-        f"PG:dbname={DBNAME}",
-        "-sql", f"""
-            SELECT * FROM {WATERBODIES_TABLE_NAME}
-            WHERE name IS NOT NULL AND ST_Area(geom) > 0.00001
-        """,
-        "-nln", waterbodies_overview_table_name,
-        "-a_srs", f"EPSG:{SRID}"
-    ]
-    if geojson_path:
-        cmd += ["-clipdst", geojson_path]
-    elif bbox:
-        cmd += [
-            "-clipdst",
-            str(bbox["left"]),
-            str(bbox["bottom"]),
-            str(bbox["right"]),
-            str(bbox["top"])
-        ]
-    util.call_cmd(cmd, check=True)
-    # 1. Use `-dsco CONF` to write all these layers to the pmtiles in one fell
-    # swoop
-    conf = {
-        WATERWAYS_TABLE_NAME: {
-            "target_name": WATERWAYS_TABLE_NAME,
-            "minzoom": 9,
-            "maxzoom": 14
-        },
-        WATERBODIES_TABLE_NAME: {
-            "target_name": WATERBODIES_TABLE_NAME,
-            "minzoom": 9,
-            "maxzoom": 14
-        },
-        WATERSHEDS_TABLE_NAME: {
-            "target_name": WATERSHEDS_TABLE_NAME,
-            "minzoom": 7,
-            "maxzoom": 14
-        },
-        waterways_overview_table_name: {
-            "target_name": waterways_overview_table_name,
-            "minzoom": 7,
-            "maxzoom": 8
-        },
-        waterbodies_overview_table_name: {
-            "target_name": waterbodies_overview_table_name,
-            "minzoom": 7,
-            "maxzoom": 8
+        if geojson_path:
+            cmd += ["-clipdst", geojson_path]
+        elif bbox:
+            cmd += [
+                "-clipdst",
+                str(bbox["left"]),
+                str(bbox["bottom"]),
+                str(bbox["right"]),
+                str(bbox["top"])
+            ]
+        util.call_cmd(cmd, check=True)
+        # 1. Use `-dsco CONF` to write all these layers to the pmtiles in one fell
+        # swoop
+        conf = {
+            WATERWAYS_TABLE_NAME: {
+                "target_name": WATERWAYS_TABLE_NAME,
+                "minzoom": 9,
+                "maxzoom": 14
+            },
+            WATERBODIES_TABLE_NAME: {
+                "target_name": WATERBODIES_TABLE_NAME,
+                "minzoom": 9,
+                "maxzoom": 14
+            },
+            WATERSHEDS_TABLE_NAME: {
+                "target_name": WATERSHEDS_TABLE_NAME,
+                "minzoom": 7,
+                "maxzoom": 14
+            },
+            waterways_overview_table_name: {
+                "target_name": waterways_overview_table_name,
+                "minzoom": 7,
+                "maxzoom": 8
+            },
+            waterbodies_overview_table_name: {
+                "target_name": waterbodies_overview_table_name,
+                "minzoom": 7,
+                "maxzoom": 8
+            }
         }
-    }
-    cmd = f"""
-      ogr2ogr {path} {gpkg_path}
-        -dsco MAX_SIZE=5000000
-        -dsco MINZOOM=7
-        -dsco MAXZOOM=14
-        -dsco CONF='{json.dumps(conf)}'
-    """
-    util.call_cmd(re.sub(r'\s+', " ", cmd).strip(), shell=True)
+        cmd = f"""
+          ogr2ogr {path} {gpkg_path}
+            -dsco MAX_SIZE=5000000
+            -dsco MINZOOM=7
+            -dsco MAXZOOM=14
+            -dsco CONF='{json.dumps(conf)}'
+        """
+        util.call_cmd(re.sub(r'\s+', " ", cmd).strip(), shell=True)
     util.add_table_from_query_to_pmtiles(
         table_name=WATERWAYS_NETWORK_TABLE_NAME,
         dbname=DBNAME,

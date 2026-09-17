@@ -6,6 +6,33 @@ import water
 from sources import util
 
 
+def test_make_pmtiles_cleans_up_intermediate_gpkg(monkeypatch, tmp_path):
+    """Regression test: make_pmtiles used to write its intermediate
+    GeoPackage next to water.py (i.e. data/water.gpkg) and never delete it,
+    leaving a dangling multi-megabyte file after every pack build. It should
+    write that intermediate file to a temporary directory that's removed
+    once the PMTiles file has been built.
+    """
+    captured_gpkg_dirs = []
+
+    def fake_call_cmd(cmd, **kwargs):
+        args = cmd.split() if isinstance(cmd, str) else cmd
+        for arg in args:
+            if isinstance(arg, str) and arg.endswith(".gpkg"):
+                captured_gpkg_dirs.append(os.path.dirname(os.path.realpath(arg)))
+
+    monkeypatch.setattr(water.util, "call_cmd", fake_call_cmd)
+    monkeypatch.setattr(water.util, "add_table_from_query_to_pmtiles", lambda **kwargs: None)
+
+    water.make_pmtiles(["fake_source"], path=str(tmp_path / "water.pmtiles"))
+
+    water_py_dir = os.path.dirname(os.path.realpath(water.__file__))
+    assert captured_gpkg_dirs, "expected ogr2ogr calls referencing a .gpkg path"
+    for gpkg_dir in captured_gpkg_dirs:
+        assert gpkg_dir != water_py_dir
+        assert not os.path.isdir(gpkg_dir)
+
+
 def test_process_source_nhdplus_fallback_uses_matching_work_dir(monkeypatch):
     """The nhdplus_* fallback branch (for sources with no dedicated
     sources/<source>.py file, added in d979678b) must hand
