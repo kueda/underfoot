@@ -1,0 +1,7 @@
+# Web checks only run when staged changes touch web/. Deletions count too, since removing a
+# file can break type-checking elsewhere.
+if ! git diff --cached --quiet -- web/; then
+  # Run eslint on staged files (see web/.lintstagedrc.mjs)
+  # Run TypeScript checks on all files
+  (cd web && npx lint-staged && npx tsc --noEmit)
+fi

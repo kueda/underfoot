@@ -1,6 +1,6 @@
 name: Build image
 
-# Builds the app image (Dockerfile) once per commit and pushes it to GHCR, so
+# Builds the app image (data/Dockerfile) once per commit and pushes it to GHCR, so
 # the test and pack-build jobs run inside it instead of reinstalling the whole
 # GDAL / imposm / Python toolchain on every run. Layer cache lives in a
 # :buildcache tag on the same GHCR repo (needs only packages: write).
@@ -53,7 +53,7 @@ jobs:
 
       - uses: docker/build-push-action@v7
         with:
-          context: .
+          context: data
           push: true
           tags: ${{ steps.ref.outputs.image }}
           cache-from: type=registry,ref=${{ steps.ref.outputs.cache }}

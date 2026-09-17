@@ -1,0 +1,6 @@
+# Team-wide post-commit steps go here.
+
+# Per-developer local hook (optional, not committed; matched by *.local in .gitignore).
+if [ -f "$(dirname "$0")/post-commit.local" ]; then
+  . "$(dirname "$0")/post-commit.local"
+fi

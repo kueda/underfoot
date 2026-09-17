@@ -1,6 +1,11 @@
 name: Run tests
 
-on: [push]
+on:
+  push:
+    paths:
+      - data/**
+      - .github/workflows/run-tests.yml
+      - .github/workflows/build-image.yml
 
 permissions:
   actions: write      # skip-duplicate-actions cancels superseded runs
@@ -32,3 +37,4 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - run: pytest -v
+        working-directory: data

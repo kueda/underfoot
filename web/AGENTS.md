@@ -1,0 +1,1 @@
+- run `npm run lint` and `npm run build` after changes to validated typescript

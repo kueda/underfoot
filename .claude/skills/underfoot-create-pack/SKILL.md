@@ -5,6 +5,8 @@ description: Use when the user asks to create, add, or make a new underfoot pack
 
 # underfoot-create-pack
 
+Paths in this skill are relative to `data/`, and commands run from `data/`.
+
 ## Overview
 
 Pack files are JSON metadata files in `packs/` that bundle rock and water sources for a map
