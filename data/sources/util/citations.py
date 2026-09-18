@@ -1,5 +1,4 @@
 from . import make_work_dir, run_sql, run_sql_with_retries, log
-from psycopg2.errors import UndefinedTable
 import json
 import os
 import re
@@ -45,21 +44,34 @@ def citation_txt_from_csl_json_path(citation_json_path):
         return re.sub(r"\.+", ".", citation_txt)
 
 
-def load_citation_for_source(source_identifier):
-    """Reads citation info from JSON file for source and inserts it into the database"""
-    # Delete existing row, create table if missing
-    try:
-        run_sql(f"""
-            DELETE FROM {CITATIONS_TABLE_NAME}
-            WHERE source = '{source_identifier}'
-        """)
-    except UndefinedTable:
-        create_table()
+def find_citation_json_path(source_identifier):
+    """Path to the CSL JSON file for a source, or None if it has none
+
+    Prefers the copy in the source's work dir, which may have been generated
+    during the build, and falls back to the one checked in with the source.
+    Cached sources skip the build, so their work dir may not have a copy.
+    """
     path = os.path.join("sources", f"{source_identifier}.py")
     work_path = make_work_dir(path)
-    citation_json_path = os.path.join(work_path, "citation.json")
-    if not os.path.isfile(citation_json_path):
+    sources_path = os.path.dirname(work_path)
+    for dir_path in [work_path, os.path.join(sources_path, source_identifier)]:
+        citation_json_path = os.path.join(dir_path, "citation.json")
+        if os.path.isfile(citation_json_path):
+            return citation_json_path
+    return None
+
+
+def load_citation_for_source(source_identifier):
+    """Reads citation info from JSON file for source and inserts it into the database"""
+    create_table()
+    citation_json_path = find_citation_json_path(source_identifier)
+    # Only replace the existing row if there's a citation to replace it with
+    if not citation_json_path:
         return
+    run_sql(f"""
+        DELETE FROM {CITATIONS_TABLE_NAME}
+        WHERE source = '{source_identifier}'
+    """)
     log(f"Loading citation for {source_identifier}, path: {citation_json_path}")
     citation_txt = citation_txt_from_csl_json_path(citation_json_path)
     log(f"Loading citation for {source_identifier}: {citation_txt}")
