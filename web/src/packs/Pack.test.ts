@@ -22,7 +22,8 @@ describe('Pack', () => {
         'us-ca-oakland/rocks-rock_units_attrs.csv': 'rock units',
         'us-ca-oakland/rocks.pmtiles': 'rocks',
         'us-ca-oakland/water-citations.csv': 'water citations',
-        'us-ca-oakland/water-waterways-network.csv': 'waterways network',
+        // Named after its waterways_network table in data/water.py, hence the underscore
+        'us-ca-oakland/water-waterways_network.csv': 'waterways network',
         'us-ca-oakland/water.pmtiles': 'water',
         'us-ca-oakland/ways.pmtiles': 'ways',
       });
