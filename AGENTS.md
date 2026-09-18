@@ -22,7 +22,7 @@ changes on both sides.
 Run commands from inside `data/` or `web/`; neither subproject's commands work from the repo
 root. After changes:
 
-- TypeScript in `web/`: `npm run lint` and `npm run build`
+- TypeScript in `web/`: `npm run lint`, `npm test`, and `npm run build`
 - Python in `data/`: `docker compose run --rm app pytest`
 
 Git hooks are installed by `npm install` at the repo root (Husky, configured in `.husky/`). The

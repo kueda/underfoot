@@ -16,8 +16,8 @@ without a network connection.
 
 ## Requirements
 
-- Node.js 20 or newer (Vite 5 also runs on 18, but 20+ is recommended)
-- npm 10 or newer, which ships with Node 20
+- Node.js 22.13 or newer, which Vitest and jsdom need to run the tests
+- npm 10 or newer, which ships with Node 22
 
 ## Setup
 
@@ -65,8 +65,21 @@ The data behind those packs is produced by [`data/`](../data/) in this repo.
 | `npm run build` | Type-check with `tsc`, then build the production bundle to `dist/` |
 | `npm run preview` | Serve the built `dist/` locally |
 | `npm run lint` | Run ESLint over `src` (`.ts`/`.tsx`); zero warnings allowed |
+| `npm test` | Run the unit tests once |
+| `npm run test:watch` | Run the unit tests and rerun them on changes |
 
-There is no automated test suite yet.
+## Tests
+
+Unit tests use [Vitest](https://vitest.dev/) with
+[React Testing Library](https://testing-library.com/docs/react-testing-library/intro/) in a
+[jsdom](https://github.com/jsdom/jsdom) environment. Vitest reads its settings from the `test`
+block in `vite.config.ts`. Test files sit next to the code they test as `*.test.ts`.
+
+`src/test/setup.ts` runs before each test file. It replaces the browser's IndexedDB with
+[fake-indexeddb](https://github.com/dumbmatter/fakeIndexedDB), so tests exercise the real
+localForage storage, and it swaps jsdom's `Blob` for Node's so that blobs survive being stored.
+`src/test/packFixtures.ts` has helpers for building pack zips and faking
+`static.underfoot.rocks`.
 
 ## Git hooks
 
