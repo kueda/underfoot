@@ -21,8 +21,8 @@ import { PackStore } from '../packs/types';
 interface Props {
   currentPackId: string | null;
   onChoose?: (packId: string | null) => void;
-  onDelete?: () => void;
-  onDownload?: () => void;
+  onDelete?: () => void | Promise<void>;
+  onDownload?: () => void | Promise<void>;
   pack: Pack;
   packStore: PackStore;
   // A shared link points at this pack: scroll it into view and prompt to download.
@@ -66,6 +66,9 @@ const PackListItem = ({
     setAbortController(ac);
     packStore.download(pack.id, { onProgress: setDownloadProgress, signal: ac.signal })
       .then(() => (typeof (onDownload) === 'function' ? onDownload() : null))
+      // This row stays mounted through the refresh, so stop showing progress now that the
+      // refreshed pack list says the pack is downloaded
+      .then(() => setDownloadProgress(null))
       .then(() => (typeof (onChoose) === 'function' ? onChoose(pack.id) : null))
       .catch((e: Error) => {
         if (e?.message?.match(/aborted/)) {
