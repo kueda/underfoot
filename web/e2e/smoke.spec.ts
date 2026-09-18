@@ -17,6 +17,9 @@ const COLOR_TOLERANCE = 8;
 
 // A vertex of Palo Seco Creek in the fixture pack's water tiles, which flows into Sausal Creek
 const PALO_SECO_CREEK = { lat: 37.810733294812074, lng: -122.18337535858156 };
+// About 5px from that vertex at zoom 11, off to the side of the creek, and more than 10px from
+// any other waterway
+const NEAR_PALO_SECO_CREEK = { lat: 37.81161588879832, lng: -122.18207200824331 };
 // The color mapStyles.ts gives downstream traces. Nothing else on the water map is red.
 const TRACE_RGB = [227, 26, 28];
 
@@ -149,5 +152,16 @@ test('traces where water flows downstream from a waterway', async ({ page }) => 
   await expect(async () => {
     expect(await tracePixelCount(page)).toBe(0);
   }).toPass({ timeout: 10_000 });
+  expect(alerts).toEqual([]);
+});
+
+test('picks a waterway that is a few pixels from the crosshairs', async ({ page }) => {
+  const alerts = collectAlerts(page);
+  const { lat, lng } = NEAR_PALO_SECO_CREEK;
+  await page.goto(`/#map=11/${lat}/${lng}&type=water`);
+  await downloadOaklandPack(page);
+  // Waterways are only a couple of pixels wide, too thin to put the crosshairs right on
+  await expect(page.locator('.MapBottomSheetHeader h3')).toHaveText('Palo Seco Creek');
+  await expect(page.getByRole('button', { name: 'Trace downstream' })).toBeVisible();
   expect(alerts).toEqual([]);
 });

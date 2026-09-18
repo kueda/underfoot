@@ -28,6 +28,7 @@ import {
   downstreamFilter,
   flowPre,
 } from './flowTrace';
+import { nearestLineFeature } from './nearestLineFeature';
 import { Citations, UnderfootFeatures } from './types';
 import { NO_STYLE } from './mapStyles';
 import { loadMapFromPackData } from './util';
@@ -74,6 +75,10 @@ window.fetch = async (...args) => {
     throw error;
   }
 };
+
+// How many pixels from the crosshairs a waterway can be and still count as
+// under them. The Android app used the same radius.
+const CROSSHAIRS_WATERWAY_RADIUS = 10;
 
 // MapLibre 6 can't find its worker script from inside a bundle, so point it at
 // the worker chunk Vite builds from the ?worker&url import above.
@@ -145,17 +150,37 @@ export default function UnderfootMap() {
   // center. Called while panning and again once the map settles, since a shared
   // URL can position the map without any user move to trigger the lookup.
   const refreshCenterFeature = useCallback((type: string | null) => {
-    if (!map.current) return;
-    const { lat, lng } = map.current.getCenter();
-    const features = map.current.queryRenderedFeatures(map.current.project([lng, lat]));
+    const mapInstance = map.current;
+    if (!mapInstance) return;
+    const center = mapInstance.project(mapInstance.getCenter());
+    // Waterways are too thin to put the crosshairs right on, so pick the
+    // nearest one within a few pixels. The layer isn't there while the style
+    // is switching.
+    if (type !== 'rocks' && mapInstance.getLayer('waterways')) {
+      const radius = CROSSHAIRS_WATERWAY_RADIUS;
+      const nearbyWaterways = mapInstance.queryRenderedFeatures(
+        [[center.x - radius, center.y - radius], [center.x + radius, center.y + radius]],
+        { layers: ['waterways'] },
+      );
+      const waterway = nearestLineFeature(
+        nearbyWaterways,
+        center,
+        ([lng, lat]) => mapInstance.project([lng, lat]),
+        radius,
+      );
+      if (waterway) {
+        setMapFeature(waterway);
+        return;
+      }
+    }
+    const features = mapInstance.queryRenderedFeatures(center);
     if (features.length === 0) {
       setMapFeature(undefined);
       return;
     }
     const feature = type === 'rocks'
       ? features.find(f => f.sourceLayer === 'rock_units')
-      : features.find(f => f.sourceLayer === 'waterways')
-        || features.find(f => f.sourceLayer === 'waterbodies')
+      : features.find(f => f.sourceLayer === 'waterbodies')
         || features.find(f => f.sourceLayer === 'watersheds');
     setMapFeature(feature);
   }, []);
