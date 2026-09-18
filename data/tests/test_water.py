@@ -66,3 +66,55 @@ def test_process_source_nhdplus_fallback_uses_matching_work_dir(monkeypatch):
     # The GDB naming convention on S3 is still uppercase.
     assert captured["url"].endswith("NHDPLUS_H_1307_HU4_GDB.zip")
     assert captured["gdb_name"] == "NHDPLUS_H_1307_HU4_GDB.gdb"
+
+
+def _stub_make_water_steps(monkeypatch):
+    """Stub everything make_water does except the wiring between its own
+    arguments and process_sources. Returns the kwargs process_sources got."""
+    captured = {}
+
+    def fake_process_sources(sources, **kwargs):
+        captured.update(kwargs)
+
+    monkeypatch.setattr(water, "make_database", lambda: None)
+    monkeypatch.setattr(water, "clean_sources", lambda sources, debug=False: None)
+    monkeypatch.setattr(water, "process_sources", fake_process_sources)
+    for step in (
+        "load_waterways",
+        "load_waterbodies",
+        "update_imaginary_waterways",
+        "load_watersheds",
+        "load_networks",
+        "make_pmtiles",
+    ):
+        monkeypatch.setattr(water, step, lambda *args, **kwargs: None)
+    return captured
+
+
+def test_make_water_clean_also_cleans_the_database(monkeypatch):
+    """Regression test for #22: --clean deleted each source's work dir but
+    left the per-source tables in Postgres, so process_source skipped
+    reloading any table that still had rows and the pack was built from stale
+    data. Cleaning must imply dropping the per-source tables too.
+    """
+    captured = _stub_make_water_steps(monkeypatch)
+
+    water.make_water(["fake_source"], clean=True)
+
+    assert captured["cleandb"] is True
+
+
+def test_make_water_without_clean_leaves_the_database_alone(monkeypatch):
+    captured = _stub_make_water_steps(monkeypatch)
+
+    water.make_water(["fake_source"])
+
+    assert not captured["cleandb"]
+
+
+def test_make_water_cleandb_alone_still_cleans_the_database(monkeypatch):
+    captured = _stub_make_water_steps(monkeypatch)
+
+    water.make_water(["fake_source"], cleandb=True)
+
+    assert captured["cleandb"] is True
