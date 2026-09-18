@@ -28,5 +28,5 @@ root. After changes:
 Git hooks are installed by `npm install` at the repo root (Husky, configured in `.husky/`). The
 pre-commit hook only runs the web checks when `web/` has staged changes.
 
-CI lives in `.github/workflows/`: `deploy-web.yml` deploys `web/`, and the rest test `data/` and
-build packs. The skills in `.claude/skills/` are for work in `data/`.
+CI lives in `.github/workflows/`: `test-web.yml` tests `web/`, `deploy-web.yml` deploys it, and
+the rest test `data/` and build packs. The skills in `.claude/skills/` are for work in `data/`.

@@ -89,6 +89,10 @@ with `npx playwright install chromium`. `npm run test:e2e` builds the app, serve
 pack from `e2e/fixtures/`. `e2e/fixtures/make-oakland-pack.sh` rebuilds it from the real pack,
 which is worth doing when the pack format changes.
 
+Pushing changes under `web/` runs `.github/workflows/test-web.yml` at the repo root, which runs
+the linter, both test suites, and the build. When end-to-end tests fail there, their traces are
+uploaded as the `playwright-test-results` artifact; open one with `npx playwright show-trace`.
+
 ## Git hooks
 
 [Husky](https://typicode.github.io/husky/) is installed from the root `package.json` and runs
@@ -108,8 +112,9 @@ in the tracked `.husky/<hook>` file at the repo root, then sources an optional p
 
 ## Linting and type-checking
 
-Run `npm run lint` and `npm run build` after any TypeScript change; both must pass before a
-change is considered done. `npm run build` runs `tsc` first, so it also surfaces type errors.
+Run `npm run lint`, `npm test`, `npm run test:e2e`, and `npm run build` after any TypeScript
+change; all must pass before a change is considered done. `npm run build` runs `tsc` first, so
+it also surfaces type errors.
 
 ## Deployment
 

@@ -1,0 +1,52 @@
+name: Test web
+
+on:
+  push:
+    paths:
+      - web/**
+      - .github/workflows/test-web.yml
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: web
+
+jobs:
+  check:
+    name: Lint, unit test, and build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  e2e:
+    name: End-to-end tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      # Headless runs only need the headless shell, not the full browser
+      - run: npx playwright install --with-deps --only-shell chromium
+      - run: npm run test:e2e
+      # Traces and screenshots from failed tests, for npx playwright show-trace
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-test-results
+          path: web/test-results/
+          retention-days: 14
