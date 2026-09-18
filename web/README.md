@@ -16,8 +16,8 @@ without a network connection.
 
 ## Requirements
 
-- Node.js 20 or newer (Vite 5 also runs on 18, but 20+ is recommended)
-- npm 10 or newer, which ships with Node 20
+- Node.js 22.13 or newer, which Vitest and jsdom need to run the tests
+- npm 10 or newer, which ships with Node 22
 
 ## Setup
 
@@ -65,8 +65,33 @@ The data behind those packs is produced by [`data/`](../data/) in this repo.
 | `npm run build` | Type-check with `tsc`, then build the production bundle to `dist/` |
 | `npm run preview` | Serve the built `dist/` locally |
 | `npm run lint` | Run ESLint over `src` (`.ts`/`.tsx`); zero warnings allowed |
+| `npm test` | Run the unit tests once |
+| `npm run test:watch` | Run the unit tests and rerun them on changes |
+| `npm run test:e2e` | Build the app and run the end-to-end tests in a browser |
 
-There is no automated test suite yet.
+## Tests
+
+Unit tests use [Vitest](https://vitest.dev/) with
+[React Testing Library](https://testing-library.com/docs/react-testing-library/intro/) in a
+[jsdom](https://github.com/jsdom/jsdom) environment. Vitest reads its settings from the `test`
+block in `vite.config.ts`. Test files sit next to the code they test as `*.test.ts`.
+
+`src/test/setup.ts` runs before each test file. It replaces the browser's IndexedDB with
+[fake-indexeddb](https://github.com/dumbmatter/fakeIndexedDB), so tests exercise the real
+localForage storage, and it swaps jsdom's `Blob` for Node's so that blobs survive being stored.
+`src/test/packFixtures.ts` has helpers for building pack zips and faking
+`static.underfoot.rocks`.
+
+End-to-end tests in `e2e/` use [Playwright](https://playwright.dev/). Install its browser once
+with `npx playwright install chromium`. `npm run test:e2e` builds the app, serves it with
+`vite preview` on port 4174, and runs the tests in headless Chromium. The tests stand in for
+`static.underfoot.rocks` with `page.route`, serving a cut-down copy of the `us-ca-oakland`
+pack from `e2e/fixtures/`. `e2e/fixtures/make-oakland-pack.sh` rebuilds it from the real pack,
+which is worth doing when the pack format changes.
+
+Pushing changes under `web/` runs `.github/workflows/test-web.yml` at the repo root, which runs
+the linter, both test suites, and the build. When end-to-end tests fail there, their traces are
+uploaded as the `playwright-test-results` artifact; open one with `npx playwright show-trace`.
 
 ## Git hooks
 
@@ -87,8 +112,9 @@ in the tracked `.husky/<hook>` file at the repo root, then sources an optional p
 
 ## Linting and type-checking
 
-Run `npm run lint` and `npm run build` after any TypeScript change; both must pass before a
-change is considered done. `npm run build` runs `tsc` first, so it also surfaces type errors.
+Run `npm run lint`, `npm test`, `npm run test:e2e`, and `npm run build` after any TypeScript
+change; all must pass before a change is considered done. `npm run build` runs `tsc` first, so
+it also surfaces type errors.
 
 ## Deployment
 

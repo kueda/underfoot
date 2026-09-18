@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@emotion/react": "^11.11.4",
@@ -31,9 +34,14 @@
     "zustand": "^4.5.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@stylistic/eslint-plugin": "^2.8.0",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
     "@types/lodash": "^4.17.7",
+    "@types/node": "^22.20.3",
     "@types/papaparse": "^5.3.14",
+    "@types/pngjs": "^6.0.5",
     "@types/react": "^18.2.66",
     "@types/react-dom": "^18.2.22",
     "@typescript-eslint/eslint-plugin": "^7.2.0",
@@ -44,9 +52,13 @@
     "eslint-plugin-import": "^2.30.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.6",
+    "fake-indexeddb": "^6.2.5",
+    "jsdom": "^29.1.1",
     "lint-staged": "^15.2.10",
+    "pngjs": "^7.0.0",
     "typescript": "^5.2.2",
     "vite": "^6.4.3",
-    "vite-plugin-pwa": "^0.21.2"
+    "vite-plugin-pwa": "^0.21.2",
+    "vitest": "^5.0.1"
   }
 }
