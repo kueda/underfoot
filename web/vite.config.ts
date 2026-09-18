@@ -60,6 +60,8 @@ export default defineConfig({
   ],
   test: {
     environment: 'jsdom',
+    // Playwright runs the e2e/ tests
+    include: ['src/**/*.test.{ts,tsx}'],
     restoreMocks: true,
     setupFiles: ['./src/test/setup.ts'],
     unstubGlobals: true,

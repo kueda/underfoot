@@ -67,6 +67,7 @@ The data behind those packs is produced by [`data/`](../data/) in this repo.
 | `npm run lint` | Run ESLint over `src` (`.ts`/`.tsx`); zero warnings allowed |
 | `npm test` | Run the unit tests once |
 | `npm run test:watch` | Run the unit tests and rerun them on changes |
+| `npm run test:e2e` | Build the app and run the end-to-end tests in a browser |
 
 ## Tests
 
@@ -80,6 +81,13 @@ block in `vite.config.ts`. Test files sit next to the code they test as `*.test.
 localForage storage, and it swaps jsdom's `Blob` for Node's so that blobs survive being stored.
 `src/test/packFixtures.ts` has helpers for building pack zips and faking
 `static.underfoot.rocks`.
+
+End-to-end tests in `e2e/` use [Playwright](https://playwright.dev/). Install its browser once
+with `npx playwright install chromium`. `npm run test:e2e` builds the app, serves it with
+`vite preview` on port 4174, and runs the tests in headless Chromium. The tests stand in for
+`static.underfoot.rocks` with `page.route`, serving a cut-down copy of the `us-ca-oakland`
+pack from `e2e/fixtures/`. `e2e/fixtures/make-oakland-pack.sh` rebuilds it from the real pack,
+which is worth doing when the pack format changes.
 
 ## Git hooks
 
