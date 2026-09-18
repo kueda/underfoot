@@ -72,10 +72,10 @@ Each source is an executable Python script that creates a directory at `sources/
     1. TODO
 1. A [GeoPackage](https://www.geopackage.org/) named `watersheds.gpkg` containing a single `watersheds` layer with the following properties:
     1. TODO
-1. A CSV named `water-waterways-network.csv` describing the connectivity and direction of flow in the `waterways`, using the `source_id` attribute.
-    1. `source_id`
-    1. `to_source_id`
-    1. `from_source_id`
+1. Optionally, a CSV named `waterways-flow.csv` describing the direction of flow in the `waterways`. Each segment flows into the one whose `hydroseq` matches its `dnhydroseq`, following the main path where a waterway splits. `water.py` uses it to label `waterways` with `flow_pre` and `flow_upstream` so the app can trace flow up and downstream.
+    1. `source_id`: the waterway's `source_id`
+    1. `hydroseq`: a number identifying the segment, unique across all sources, e.g. NHDPlus's `HydroSeq`
+    1. `dnhydroseq`: the `hydroseq` of the segment downstream, or 0 if there isn't one
 1. A JSON file named `citation.json` containing a single-item array of [CSL Data](https://github.com/citation-style-language/schema/blob/master/csl-data.json) items of the kind exported from Zotero.
 
 Sources can be single scripts or modules. Preferrably they will contain as little data as possible and instead download and transorm open data from the Internet, e.g. USGS publications, though some data will probably be necessary since few sources are fully machine-readable. There are numerous helper methods for writing source scripts in the `sources/util` module.

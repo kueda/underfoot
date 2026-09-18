@@ -1,11 +1,13 @@
 """Methods for generating hydrologic data for Underfoot"""
 
 import argparse
+import io
 import json
 import os
 import re
 import shutil
 import tempfile
+from collections import defaultdict
 from glob import glob
 from multiprocessing import Pool
 
@@ -14,7 +16,7 @@ import psycopg2
 from database import DBNAME, SRID, make_database
 from sources import util
 from sources.util.citations import load_citation_for_source, CITATIONS_TABLE_NAME
-from sources.util.water import process_nhdplus_hr_source
+from sources.util.water import process_nhdplus_hr_source, WATERWAYS_FLOW_FNAME
 from sources.util.tiger_water import process_tiger_water_for_fips
 
 
@@ -25,7 +27,21 @@ WATERBODIES_TABLE_NAME = "waterbodies"
 WATERBODIES_MASK_TABLE_NAME = "waterbodies_mask"
 WATERSHEDS_TABLE_NAME = "watersheds"
 WATERSHEDS_MASK_TABLE_NAME = "watersheds_mask"
-WATERWAYS_NETWORK_TABLE_NAME = "waterways_network"
+WATERWAYS_FLOW_TABLE_NAME = "waterways_flow"
+# Waterway attributes to include in tiles. source_id and source_id_attr stay
+# in the database but not the tiles, since the app doesn't use them and a
+# unique ID on every waterway makes the tiles much bigger.
+WATERWAYS_TILE_FIELDS = [
+    "name",
+    "source",
+    "type",
+    "is_natural",
+    "is_imaginary",
+    "permanence",
+    "surface",
+    "flow_pre",
+    "flow_upstream",
+]
 
 
 def clean_sources(sources, debug=False):
@@ -106,23 +122,23 @@ def process_source(source, clean=False, cleandb=False, cleanfiles=False, debug=F
                 SET geom = ST_MakeValid(geom)
                 WHERE NOT ST_IsValid(geom)
                 """)
-    network_path = os.path.join(work_path, "waterways-network.csv")
-    if os.path.isfile(network_path):
-        network_table_name = f"{source}_waterways_network"
-        util.run_sql(f"DROP TABLE IF EXISTS {network_table_name}")
+    flow_path = os.path.join(work_path, WATERWAYS_FLOW_FNAME)
+    if os.path.isfile(flow_path):
+        flow_table_name = f"{source}_{WATERWAYS_FLOW_TABLE_NAME}"
+        util.run_sql(f"DROP TABLE IF EXISTS {flow_table_name}")
         util.run_sql(
             f"""
-                CREATE TABLE {network_table_name} (
+                CREATE TABLE {flow_table_name} (
                     source_id VARCHAR(32),
-                    to_source_id VARCHAR(32),
-                    from_source_id VARCHAR(32)
+                    hydroseq BIGINT,
+                    dnhydroseq BIGINT
                 )
             """,
             dbname=DBNAME
         )
-        util.run_sql(f"DELETE FROM {network_table_name}")
+        util.run_sql(f"DELETE FROM {flow_table_name}")
         util.call_cmd(f"""
-            psql {DBNAME} -c "\\copy {network_table_name} FROM '{network_path}' WITH CSV HEADER"
+            psql {DBNAME} -c "\\copy {flow_table_name} FROM '{flow_path}' WITH CSV HEADER"
         """, shell=True)
 
 
@@ -153,6 +169,8 @@ def load_waterways(sources, debug=False):
                 is_imaginary INTEGER DEFAULT 0,
                 permanence VARCHAR(64) DEFAULT 'permanent',
                 surface VARCHAR(64) DEFAULT 'surface',
+                flow_pre INTEGER,
+                flow_upstream INTEGER,
                 geom geometry(MultiLineString, {SRID})
             )
         """,
@@ -370,38 +388,121 @@ def load_watersheds(sources, debug=False):
                 continue
 
 
-def load_networks(sources, debug=False):
-    """Combine waterways networks from multiple sources into a single network
+def load_flow(sources, debug=False):
+    """Combine waterways flow from multiple sources into a single table
     """
     if debug:
-        util.log(f"water: loading waterway networks for sources: {sources}")
-    util.run_sql(f"DROP TABLE IF EXISTS {WATERWAYS_NETWORK_TABLE_NAME}", dbname=DBNAME)
+        util.log(f"water: loading waterway flow for sources: {sources}")
+    util.run_sql(f"DROP TABLE IF EXISTS {WATERWAYS_FLOW_TABLE_NAME}", dbname=DBNAME)
     util.run_sql(
         f"""
-            CREATE TABLE {WATERWAYS_NETWORK_TABLE_NAME} (
+            CREATE TABLE {WATERWAYS_FLOW_TABLE_NAME} (
                 source VARCHAR(32),
                 source_id VARCHAR(32),
-                to_source_id VARCHAR(32),
-                from_source_id VARCHAR(32)
+                hydroseq BIGINT,
+                dnhydroseq BIGINT
             )
         """,
         dbname=DBNAME
     )
     for source in sources:
-        source_table_name = f"{source}_waterways_network"
+        source_table_name = f"{source}_{WATERWAYS_FLOW_TABLE_NAME}"
         # just merge in the source table and use the original source_ids
         try:
             util.run_sql(f"""
-                INSERT INTO {WATERWAYS_NETWORK_TABLE_NAME}
+                INSERT INTO {WATERWAYS_FLOW_TABLE_NAME}
                 SELECT
                     '{source}' AS source,
                     source_id,
-                    to_source_id,
-                    from_source_id
+                    hydroseq,
+                    dnhydroseq
                 FROM {source_table_name}
                 """)
         except psycopg2.errors.UndefinedTable:
             util.log(f"{source_table_name} doesn't exist, skipping...")
+
+
+def label_flow_tree(segments):
+    """Label waterway segments so flow traces become simple range checks
+
+    Takes (source_id, hydroseq, dnhydroseq) tuples, where each segment flows
+    into the segment whose hydroseq matches its dnhydroseq. That's NHDPlus's
+    main flow path, so it doesn't follow minor divergences like a canal
+    leaving a river, and it makes every river a tree rooted at its outlet.
+    Numbering each tree depth-first from its outlet gives each segment a
+    pre-order number (pre), and the segments upstream of it get the next
+    (upstream) numbers, so
+
+    * segments downstream of X have pre <= X.pre <= pre + upstream
+    * segments upstream of X have X.pre <= pre <= X.pre + X.upstream
+
+    Storing the count of segments upstream instead of the last number
+    upstream makes tiles smaller, since the count is small for most segments
+    and vector tiles store each distinct value once per tile.
+
+    Returns a dict of source_id => (pre, upstream)
+    """
+    segments = list(segments)
+    source_ids_by_hydroseq = {hydroseq: source_id for source_id, hydroseq, _ in segments}
+    upstream_ids = defaultdict(list)
+    outlet_ids = []
+    for source_id, _, dnhydroseq in segments:
+        downstream_id = source_ids_by_hydroseq.get(dnhydroseq)
+        if downstream_id is None:
+            outlet_ids.append(source_id)
+        else:
+            upstream_ids[downstream_id].append(source_id)
+    labels = {}
+    pre = 0
+    for outlet_id in outlet_ids:
+        # Walk with a stack instead of recursion because big rivers can be
+        # thousands of segments long
+        stack = [(outlet_id, False)]
+        while stack:
+            source_id, visited_upstream = stack.pop()
+            if visited_upstream:
+                source_pre = labels[source_id][0]
+                labels[source_id] = (source_pre, pre - 1 - source_pre)
+                continue
+            labels[source_id] = (pre, None)
+            pre += 1
+            stack.append((source_id, True))
+            stack.extend((upstream_id, False) for upstream_id in upstream_ids[source_id])
+    return labels
+
+
+def label_waterways(debug=False):
+    """Set flow_pre and flow_upstream on waterways (see label_flow_tree)"""
+    if debug:
+        util.log("water: labeling waterways flow")
+    segments = util.run_sql(
+        f"SELECT source_id, hydroseq, dnhydroseq FROM {WATERWAYS_FLOW_TABLE_NAME}",
+        dbname=DBNAME
+    )
+    labels = label_flow_tree(segments)
+    rows = io.StringIO("".join(
+        f"{source_id}\t{pre}\t{upstream}\n" for source_id, (pre, upstream) in labels.items()
+    ))
+    con = psycopg2.connect(f"dbname={DBNAME}")
+    with con, con.cursor() as cur:
+        cur.execute("""
+            CREATE TEMP TABLE flow_labels (
+                source_id VARCHAR(32),
+                flow_pre INTEGER,
+                flow_upstream INTEGER
+            )
+        """)
+        cur.copy_expert("COPY flow_labels FROM STDIN", rows)
+        # Match on source too so an ID from a source without flow data can't
+        # collide with an NHDPlusID
+        cur.execute(f"""
+            UPDATE {WATERWAYS_TABLE_NAME} w
+            SET flow_pre = l.flow_pre, flow_upstream = l.flow_upstream
+            FROM flow_labels l
+                JOIN {WATERWAYS_FLOW_TABLE_NAME} f ON f.source_id = l.source_id
+            WHERE w.source = f.source AND w.source_id = l.source_id
+        """)
+    con.close()
 
 
 def make_pmtiles(sources, path="./water.pmtiles", bbox=None, geojson_path=None, debug=False):
@@ -430,6 +531,8 @@ def make_pmtiles(sources, path="./water.pmtiles", bbox=None, geojson_path=None, 
                 table_name,
                 "-a_srs", f"EPSG:{SRID}",
             ]
+            if table_name == WATERWAYS_TABLE_NAME:
+                cmd += ["-select", ",".join(WATERWAYS_TILE_FIELDS)]
             # Don't clip the waterways, useful to see connectivity across the
             # entire watershed
             if table_name != WATERWAYS_TABLE_NAME:
@@ -453,7 +556,8 @@ def make_pmtiles(sources, path="./water.pmtiles", bbox=None, geojson_path=None, 
             gpkg_path,
             f"PG:dbname={DBNAME}",
             "-sql", f"""
-                SELECT * FROM {WATERWAYS_TABLE_NAME}
+                SELECT {", ".join(WATERWAYS_TILE_FIELDS)}, geom
+                FROM {WATERWAYS_TABLE_NAME}
                 WHERE
                     name IS NOT NULL
                     AND is_natural = 1 AND permanence = 'perennial'
@@ -532,11 +636,6 @@ def make_pmtiles(sources, path="./water.pmtiles", bbox=None, geojson_path=None, 
             -dsco CONF='{json.dumps(conf)}'
         """
         util.call_cmd(re.sub(r'\s+', " ", cmd).strip(), shell=True)
-    util.add_table_from_query_to_pmtiles(
-        table_name=WATERWAYS_NETWORK_TABLE_NAME,
-        dbname=DBNAME,
-        query=f"SELECT * FROM {WATERWAYS_NETWORK_TABLE_NAME}",
-        pmtiles_path=path)
     sources_sql = ",".join([f"'{s}'" for s in sources])
     util.add_table_from_query_to_pmtiles(
         table_name=CITATIONS_TABLE_NAME,
@@ -581,7 +680,8 @@ def make_water(
     load_waterbodies(sources, debug=debug)
     update_imaginary_waterways()
     load_watersheds(sources, debug=debug)
-    load_networks(sources, debug=debug)
+    load_flow(sources, debug=debug)
+    label_waterways(debug=debug)
     return make_pmtiles(sources, path=path, bbox=bbox, geojson_path=geojson_path, debug=debug)
 
 
