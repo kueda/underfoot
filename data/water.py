@@ -573,7 +573,10 @@ def make_water(
     make_database()
     if clean:
         clean_sources(sources, debug=debug)
-    process_sources(sources, cleandb=cleandb, cleanfiles=cleanfiles, procs=procs, debug=debug)
+    # Cleaning the work dirs without dropping the per-source tables would leave
+    # process_source skipping the reload because the old rows are still there
+    process_sources(
+        sources, cleandb=(clean or cleandb), cleanfiles=cleanfiles, procs=procs, debug=debug)
     load_waterways(sources, debug=debug)
     load_waterbodies(sources, debug=debug)
     update_imaginary_waterways()
