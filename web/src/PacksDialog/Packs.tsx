@@ -8,7 +8,7 @@ import Tab from '@mui/material/Tab';
 import TabContext from '@mui/lab/TabContext';
 import TabList from '@mui/lab/TabList';
 import Toolbar from '@mui/material/Toolbar';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Pack } from '../packs/Pack';
 import {
   useCurrentPackId,
@@ -63,6 +63,19 @@ export default function Packs() {
         .finally(() => setLoadingLocal(false));
     }
   }, [listLocal, downloadedPacksLoaded]);
+
+  // Re-reads both lists without emptying them first. Emptying them unmounts the rows, and a
+  // row that's still downloading a pack would lose its progress and its stop button.
+  const refreshPacks = useCallback(async () => {
+    try {
+      const [listedPacks, localPacks] = await Promise.all([listPacks(), listLocal()]);
+      setPacks(listedPacks);
+      setDownloadedPacks(localPacks);
+    }
+    catch (e) {
+      console.error('Failed to refresh packs', e);
+    }
+  }, [listLocal, listPacks]);
 
   const isOffline = !!error?.message?.match(/NetworkError/);
 
@@ -128,14 +141,8 @@ export default function Packs() {
                 : null
             }
             onChoose={onChoose}
-            onDelete={() => {
-              setPacks(null);
-              setDownloadedPacks(null);
-            }}
-            onDownload={() => {
-              setPacks(null);
-              setDownloadedPacks(null);
-            }}
+            onDelete={refreshPacks}
+            onDownload={refreshPacks}
           />
           <PackTab
             value="downloaded"
@@ -161,14 +168,8 @@ export default function Packs() {
                 : null
             }
             onChoose={onChoose}
-            onDelete={() => {
-              setPacks(null);
-              setDownloadedPacks(null);
-            }}
-            onDownload={() => {
-              setPacks(null);
-              setDownloadedPacks(null);
-            }}
+            onDelete={refreshPacks}
+            onDownload={refreshPacks}
           />
         </TabContext>
       </DialogContent>

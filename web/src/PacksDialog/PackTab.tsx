@@ -15,8 +15,8 @@ interface PackTabProps {
   isOffline: boolean;
   loading: boolean;
   onChoose: (packId: string | null) => void;
-  onDelete: () => void;
-  onDownload: () => void;
+  onDelete: () => void | Promise<void>;
+  onDownload: () => void | Promise<void>;
   packs: Pack[] | null;
   packStore: PackStore;
   requestedPackId?: string | null;
