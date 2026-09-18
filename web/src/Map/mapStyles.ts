@@ -6,6 +6,8 @@ import type {
   StyleSpecification,
 } from 'maplibre-gl';
 
+import { DOWNSTREAM_COLOR, DOWNSTREAM_LAYER_ID, NO_TRACE_FILTER } from './flowTrace';
+
 const COLORS = {
   water: '#1F78B4',
 };
@@ -690,6 +692,22 @@ const WATER_STYLE: StyleSpecification = {
         // 'line-color': '#1F78B4',
         'line-width': 2,
         'line-color': WATERWAYS_COLOR_EXP,
+      },
+    },
+    {
+      // Map.tsx sets the filter to show a downstream trace
+      'id': DOWNSTREAM_LAYER_ID,
+      'source': 'water',
+      'source-layer': 'waterways',
+      'type': 'line',
+      'filter': NO_TRACE_FILTER,
+      'layout': {
+        'line-cap': 'round',
+        'line-join': 'round',
+      },
+      'paint': {
+        'line-width': 5,
+        'line-color': DOWNSTREAM_COLOR,
       },
     },
     ...contourLayers,

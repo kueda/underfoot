@@ -1,7 +1,7 @@
-import { UnderfootFeature } from '../packs/types';
+import { RockUnit } from '../packs/types';
 
 export interface UnderfootFeatures {
-  [id: number]: UnderfootFeature;
+  [id: number]: RockUnit;
 }
 
 export interface Citation {

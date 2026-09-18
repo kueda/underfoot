@@ -124,9 +124,6 @@ export class Pack {
         case 'water-citations.csv':
           unzipped.water_citations_csv = data;
           break;
-        case 'water-waterways_network.csv':
-          unzipped.water_waterways_network_csv = data;
-          break;
       }
     }));
     return unzipped;

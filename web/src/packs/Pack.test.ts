@@ -22,7 +22,7 @@ describe('Pack', () => {
         'us-ca-oakland/rocks-rock_units_attrs.csv': 'rock units',
         'us-ca-oakland/rocks.pmtiles': 'rocks',
         'us-ca-oakland/water-citations.csv': 'water citations',
-        // Named after its waterways_network table in data/water.py, hence the underscore
+        // Packs built before waterways got flow labels in their tiles have this
         'us-ca-oakland/water-waterways_network.csv': 'waterways network',
         'us-ca-oakland/water.pmtiles': 'water',
         'us-ca-oakland/ways.pmtiles': 'ways',
@@ -36,7 +36,6 @@ describe('Pack', () => {
         rocks_units_csv: 'rock units',
         water_citations_csv: 'water citations',
         water_pmtiles: 'water',
-        water_waterways_network_csv: 'waterways network',
         ways_pmtiles: 'ways',
       });
     });

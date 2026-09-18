@@ -3,15 +3,27 @@
 # e2e tests. It keeps only the tiles the app needs to show the spot where it first opens the
 # pack, so it's small enough to commit. Needs the pmtiles CLI:
 # https://github.com/protomaps/go-pmtiles
+#
+# Usage: make-oakland-pack.sh [pack.zip]
+#
+# Cuts down the published pack, or a local one like data/build/us-ca-oakland.pmtiles.zip, e.g.
+# to test pack changes that haven't been published yet.
 set -euo pipefail
 
+local_pack=${1:+$(realpath "$1")}
 cd "$(dirname "$0")"
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
-curl -sSf -o "$work/full.zip" https://static.underfoot.rocks/us-ca-oakland.pmtiles.zip
+if [ -n "$local_pack" ]; then
+  cp "$local_pack" "$work/full.zip"
+else
+  curl -sSf -o "$work/full.zip" https://static.underfoot.rocks/us-ca-oakland.pmtiles.zip
+fi
 unzip -q "$work/full.zip" -d "$work/full"
-full="$work/full/us-ca-oakland"
+# The published pack keeps its files in us-ca-oakland/, and local builds in
+# us-ca-oakland.pmtiles/
+full=$(dirname "$work"/full/*/ways.pmtiles)
 cut="$work/us-ca-oakland"
 mkdir "$cut"
 
@@ -25,7 +37,6 @@ done
 # The app opens a pack at its ways archive's max zoom minus 2, so this keeps it opening at 11
 pmtiles extract -q --bbox=$bbox --minzoom=13 --maxzoom=13 "$full/ways.pmtiles" \
   "$cut/ways.pmtiles"
-# Leaves out water-waterways_network.csv, which is large and which the app doesn't read
 cp "$full/rocks-citations.csv" "$full/rocks-rock_units_attrs.csv" "$full/water-citations.csv" \
   "$cut/"
 
