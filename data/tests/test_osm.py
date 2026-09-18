@@ -86,3 +86,18 @@ def test_load_osm_from_pbf_cachedir_from_env(monkeypatch):
     osm.load_osm_from_pbf("norcal-latest.osm.pbf")
     cmd = captured["cmd"]
     assert cmd[cmd.index("-cachedir") + 1] == "/app/imposm-cache"
+
+
+def test_load_natural_nodes_data_includes_volcanoes_as_peaks(monkeypatch):
+    # natural=volcano nodes should be loaded and treated as peaks (issue #20),
+    # alongside the existing natural=peak, saddle, and spring nodes.
+    monkeypatch.setattr(osm, "is_osm_loaded", lambda: True)
+    queries = []
+    monkeypatch.setattr(
+        osm.util, "run_sql", lambda sql, **kwargs: queries.append(sql)
+    )
+    osm.load_natural_nodes_data("norcal-latest.osm.pbf")
+    create_table_sql = next(sql for sql in queries if "CREATE TABLE" in sql)
+    assert "'volcano'" in create_table_sql
+    assert "'peak'" in create_table_sql
+    assert "WHEN tags -> 'natural' = 'volcano' THEN 'peak'" in create_table_sql

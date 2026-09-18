@@ -196,13 +196,16 @@ def load_natural_nodes_data(data_path, pack=None):
               COALESCE(
                   tags -> 'ref', tags -> 'tiger:name_base', tags -> 'name'
               ) AS name,
-              tags -> 'natural' AS natural,
+              CASE
+                  WHEN tags -> 'natural' = 'volcano' THEN 'peak'
+                  ELSE tags -> 'natural'
+              END AS natural,
               tags -> 'ele' AS elevation_m,
               tags -> 'intermittent' AS intermittent,
               geom
             FROM osm_natural_nodes
             WHERE
-              tags -> 'natural' IN ('peak', 'saddle', 'spring')
+              tags -> 'natural' IN ('peak', 'saddle', 'spring', 'volcano')
         """,
         dbname=DBNAME
     )
