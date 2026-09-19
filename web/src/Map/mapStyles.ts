@@ -18,6 +18,11 @@ const COLORS = {
   // Light so that lines on the water map, like waterways and flow traces,
   // contrast with it, including for people with red-green color blindness
   land: '#F4F1EA',
+  // Place and mountain range names are translucent dark text with a white
+  // halo, so they stay in the background but read on light land and rock
+  // units as well as dark ones
+  placeLabel: 'rgba(0,0,0,0.55)',
+  rangeLabel: 'rgba(0,0,0,0.35)',
   road: '#505050',
   roadLabel: '#000000',
   // Dark enough to see on the land, but not so dark that it looks like the
@@ -30,17 +35,26 @@ const COLORS = {
 // stand out whatever colors someone can see
 const FADED_OPACITY = 0.4;
 
-// What a color looks like at FADED_OPACITY over the land. Fading lines with
-// this color instead of with opacity avoids darker spots where the ends of
+// What a color looks like at an opacity over the land. Fading lines with this
+// color instead of with opacity avoids darker spots where the ends of
 // translucent lines overlap.
-function fadedOverLand(color: string) {
+function fadedOverLand(color: string, opacity = FADED_OPACITY) {
   const channels = (hex: string) => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
   const land = channels(COLORS.land);
   const faded = channels(color).map(
-    (channel, i) => Math.round(FADED_OPACITY * channel + (1 - FADED_OPACITY) * land[i]),
+    (channel, i) => Math.round(opacity * channel + (1 - opacity) * land[i]),
   );
   return `rgb(${faded.join(',')})`;
 }
+
+// Roads on the water map are lighter than on the rocks map so they compete
+// less with the water, but not so light that they look like contours
+const WATER_MAP_ROAD_OPACITY = 0.65;
+
+const WATER_MAP_COLORS = {
+  road: fadedOverLand(COLORS.road, WATER_MAP_ROAD_OPACITY),
+  roadLabel: fadedOverLand(COLORS.roadLabel, WATER_MAP_ROAD_OPACITY),
+};
 
 const NO_STYLE: StyleSpecification = {
   version: 8,
@@ -113,6 +127,16 @@ const waysLayers: LayerSpecification[] = [
   },
 ];
 
+const waterMapWaysLayers: LayerSpecification[] = waysLayers.map(layer => {
+  if (layer.type === 'line') {
+    return { ...layer, paint: { ...layer.paint, 'line-color': WATER_MAP_COLORS.road } };
+  }
+  if (layer.type === 'symbol') {
+    return { ...layer, paint: { ...layer.paint, 'text-color': WATER_MAP_COLORS.roadLabel } };
+  }
+  return layer;
+});
+
 const contours100Filter: ExpressionFilterSpecification = [
   '==',
   ['%', ['get', 'elevation'], 100],
@@ -178,9 +202,9 @@ const contextLayers: LayerSpecification[] = [
     'source-layer': 'underfoot_place_nodes',
     'type': 'symbol',
     'paint': {
-      'text-color': 'rgb(255,255,255)',
-      'text-halo-color': 'rgba(0,0,0,0.2)',
-      'text-halo-width': 1,
+      'text-color': COLORS.placeLabel,
+      'text-halo-color': 'white',
+      'text-halo-width': 1.5,
     },
     'layout': {
       'text-size': 12,
@@ -198,9 +222,9 @@ const contextLayers: LayerSpecification[] = [
     'source-layer': 'underfoot_place_nodes',
     'type': 'symbol',
     'paint': {
-      'text-color': 'rgb(255,255,255)',
-      'text-halo-color': 'rgba(0,0,0,0.2)',
-      'text-halo-width': 1,
+      'text-color': COLORS.placeLabel,
+      'text-halo-color': 'white',
+      'text-halo-width': 1.5,
     },
     'layout': {
       'text-size': 13,
@@ -218,9 +242,9 @@ const contextLayers: LayerSpecification[] = [
     'source-layer': 'underfoot_place_nodes',
     'type': 'symbol',
     'paint': {
-      'text-color': 'rgb(255,255,255)',
-      'text-halo-color': 'rgba(0,0,0,0.2)',
-      'text-halo-width': 1,
+      'text-color': COLORS.placeLabel,
+      'text-halo-color': 'white',
+      'text-halo-width': 1.5,
     },
     'layout': {
       'text-size': 14,
@@ -359,7 +383,9 @@ const contextLayers: LayerSpecification[] = [
       'text-allow-overlap': true,
     },
     'paint': {
-      'text-color': 'rgb(255,255,255)',
+      'text-color': COLORS.rangeLabel,
+      'text-halo-color': 'white',
+      'text-halo-width': 1,
     },
   },
 ];
@@ -701,16 +727,16 @@ const TRACE_FADING_PAINT: FadingPaint[] = [
     color: WATERWAYS_COLOR_EXP,
     faded: waterwaysColorExp(fadedOverLand(COLORS.water), fadedOverLand(COLORS.artificialWater)),
   },
-  ...waysLayers.filter(l => l.type === 'line').map(l => ({
+  ...waterMapWaysLayers.filter(l => l.type === 'line').map(l => ({
     layer: l.id,
     property: 'line-color' as const,
-    color: COLORS.road,
+    color: WATER_MAP_COLORS.road,
     faded: fadedOverLand(COLORS.road),
   })),
   {
     layer: 'ways-labels',
     property: 'text-color',
-    color: COLORS.roadLabel,
+    color: WATER_MAP_COLORS.roadLabel,
     faded: fadedOverLand(COLORS.roadLabel),
   },
 ];
@@ -800,7 +826,7 @@ const WATER_STYLE: StyleSpecification = {
     traceLayer('upstream'),
     traceLayer('downstream'),
     ...contourLayers,
-    ...waysLayers,
+    ...waterMapWaysLayers,
     ...contextLayers,
     {
       'id': 'waterways-labels',
