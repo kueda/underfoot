@@ -281,6 +281,19 @@ def make_context_for_pack(pack_id, clean=False):
         path=context_pmtiles_path)
 
 
+def write_pack_metadata(pack_id, pack_dir):
+    """
+    Write pack.json, the same descriptive metadata the manifest has for the
+    pack, into pack_dir so the pack zip is self-describing
+    """
+    metadata = add_metadata_to_pack({
+        "id": pack_id,
+        "updated_at": datetime.now().isoformat()
+    })
+    with open(os.path.join(pack_dir, "pack.json"), "w", encoding="utf-8") as metadata_f:
+        json.dump(metadata, metadata_f)
+
+
 def make_pack(pack_id, clean=False, clean_rocks=False, clean_water=False,
               clean_ways=False, clean_context=False, clean_contours=False,
               procs=2):
@@ -291,6 +304,7 @@ def make_pack(pack_id, clean=False, clean_rocks=False, clean_water=False,
     make_ways_for_pack(pack_id, clean=(clean or clean_ways))
     make_context_for_pack(pack_id, clean=(clean or clean_context))
     make_contours_for_pack(pack_id, clean=(clean or clean_contours), procs=procs)
+    write_pack_metadata(pack_id, pack_dir)
     return shutil.make_archive(
         pack_dir,
         format="zip",
