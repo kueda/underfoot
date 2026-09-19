@@ -241,5 +241,24 @@ describe('usePackStore', () => {
       expect(packId).toBe('local:oakland-hills');
       expect(await rocksText(await result.current.get(packId))).toBe('local rocks');
     });
+
+    it('titles the stored pack from the pack.json in the zip', async () => {
+      const zip = await packZip({
+        'us-ca-oakland.pmtiles/pack.json': JSON.stringify(packMetadata({
+          description: 'Oakland, CA, USA. Mostly for testing some place small.',
+          name: 'Oakland, CA, USA',
+        })),
+        'us-ca-oakland.pmtiles/rocks.pmtiles': 'local rocks',
+      });
+      const file = new File([zip], 'us-ca-oakland.pmtiles.zip');
+      const { result } = await renderPackStore();
+      const packId = await act(() => result.current.addFromFile(file));
+      expect(packId).toBe('local:us-ca-oakland');
+      expect(await result.current.get(packId)).toMatchObject({
+        description: 'Oakland, CA, USA. Mostly for testing some place small.',
+        name: 'Oakland, CA, USA',
+        sourceFileName: 'us-ca-oakland.pmtiles.zip',
+      });
+    });
   });
 });

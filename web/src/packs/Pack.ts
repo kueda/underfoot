@@ -17,6 +17,9 @@ export class Pack {
   name: string;
   path?: string;
   pmtilesPath?: string;
+  // Name of the file a pack was loaded from, for packs loaded from a local
+  // file. Browsers don't reveal the rest of the path.
+  sourceFileName?: string;
   updatedAt: string;
 
   constructor(metadata: PackMetadata, data?: UnzippedPackData) {
@@ -47,12 +50,14 @@ export class Pack {
       pack.data,
     );
     newPack.downloadedAt = pack.downloadedAt;
+    newPack.sourceFileName = pack.sourceFileName;
     return newPack;
   }
 
   // Derives placeholder metadata for a pack loaded from a local file, since
-  // there's no manifest entry to supply a name/id. bbox and admin1/2 aren't
-  // read anywhere in the app today, so they're just zeroed/blanked out.
+  // there's no manifest entry to supply a name/id. description, bbox, and
+  // admin1/2 aren't read anywhere in the app today, so they're just
+  // zeroed/blanked out.
   static metadataFromFileName(fileName: string): PackMetadata {
     const base = fileName.replace(/\.pmtiles\.zip$/i, '').replace(/\.zip$/i, '');
     const slug = base
@@ -65,7 +70,7 @@ export class Pack {
       bbox: {
         bottom: 0, left: 0, right: 0, top: 0,
       },
-      description: `Loaded from ${fileName}`,
+      description: '',
       id: `${LOCAL_ID_PREFIX}${slug}`,
       name: slug,
       updated_at: new Date().toISOString(),
@@ -76,13 +81,36 @@ export class Pack {
   // (including on subsequent page loads) are plain blob lookups instead of
   // repeating the CPU-bound jszip decompression of the whole archive.
   static async fromZip(metadata: PackMetadata, zipBlob: Blob): Promise<Pack> {
-    const data = await Pack.unzip(zipBlob);
+    const { data } = await Pack.unzip(zipBlob);
     return new Pack(metadata, data);
   }
 
-  private static async unzip(zipBlob: Blob): Promise<UnzippedPackData> {
+  // Like fromZip for a pack loaded from a local file, where there's no
+  // manifest entry to supply metadata. The zip's own pack.json (written by
+  // `packs.py`) supplies the title and description; any that's missing, like
+  // in zips built before pack.json existed, falls back to the placeholders
+  // derived from the file name. The id stays the namespaced local one
+  // whatever pack.json says. The file name is kept so the packs list can show
+  // where the pack came from.
+  static async fromLocalZip(fileName: string, zipBlob: Blob): Promise<Pack> {
+    const { data, packJson } = await Pack.unzip(zipBlob);
+    const metadata = Pack.metadataFromFileName(fileName);
+    const pack = new Pack({
+      ...metadata,
+      description: packJson?.description || metadata.description,
+      name: packJson?.name || metadata.name,
+    }, data);
+    pack.sourceFileName = fileName;
+    return pack;
+  }
+
+  private static async unzip(zipBlob: Blob): Promise<{
+    data: UnzippedPackData;
+    packJson?: Partial<Pick<PackMetadata, 'description' | 'name'>>;
+  }> {
     const zip = await jszip.loadAsync(zipBlob);
     const unzipped: UnzippedPackData = {};
+    let packJson;
     const zipPaths: string[] = [];
     // Some zip writers (e.g. Python's shutil.make_archive) emit an explicit
     // entry for the top-level directory itself; skip it rather than treat it
@@ -124,9 +152,32 @@ export class Pack {
         case 'water-citations.csv':
           unzipped.water_citations_csv = data;
           break;
+        case 'pack.json':
+          packJson = Pack.parsePackJson(await data.text());
+          break;
       }
     }));
-    return unzipped;
+    return { data: unzipped, packJson };
+  }
+
+  // Reads just the fields a local pack can use out of a pack.json, ignoring
+  // anything that isn't a non-empty string so a malformed file can't blank out
+  // the title.
+  private static parsePackJson(text: string) {
+    let parsed: Record<string, unknown> | null;
+    try {
+      parsed = JSON.parse(text) as Record<string, unknown> | null;
+    }
+    catch {
+      return undefined;
+    }
+    const stringOrUndefined = (value: unknown) => (
+      typeof value === 'string' && value ? value : undefined
+    );
+    return {
+      description: stringOrUndefined(parsed?.description),
+      name: stringOrUndefined(parsed?.name),
+    };
   }
 
   unzippedData(): Promise<UnzippedPackData> {

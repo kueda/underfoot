@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import localforage from 'localforage';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
-  packMetadata, publishPack, StaticServer, stubStaticServer,
+  packMetadata, packZip, publishPack, StaticServer, stubStaticServer,
 } from '../test/packFixtures';
 import Packs from './Packs';
 
@@ -59,6 +59,45 @@ describe('Packs', () => {
       name: 'Berkeley',
       pmtiles_path: BERKELEY_PATH,
     }));
+  });
+
+  describe('when a pack is loaded from a local file', () => {
+    it('shows the pack\'s own title and description and the file it came from', async () => {
+      const zip = await packZip({
+        'us-ca-oakland.pmtiles/pack.json': JSON.stringify(packMetadata({
+          description: 'Oakland, CA, USA. Mostly for testing some place small.',
+          name: 'Oakland, CA, USA',
+        })),
+        'us-ca-oakland.pmtiles/rocks.pmtiles': 'rocks',
+      });
+      const { container } = render(<Packs />);
+      fireEvent.click(await screen.findByRole('tab', { name: 'Downloaded' }));
+      const input = container.querySelector('input[type="file"]');
+      if (!input) throw new Error('No file input');
+      fireEvent.change(input, {
+        target: { files: [new File([zip], 'us-ca-oakland.pmtiles.zip')] },
+      });
+
+      const item = await screen.findByText('Oakland, CA, USA');
+      const localRow = within(item.closest('li') as HTMLElement);
+      expect(localRow.getByText(/Mostly for testing some place small/)).toBeTruthy();
+      expect(localRow.getByText('Loaded from us-ca-oakland.pmtiles.zip')).toBeTruthy();
+    });
+
+    it('shows just the file it came from when the zip has no pack.json', async () => {
+      const zip = await packZip({ 'us-ca-oakland.pmtiles/rocks.pmtiles': 'rocks' });
+      const { container } = render(<Packs />);
+      fireEvent.click(await screen.findByRole('tab', { name: 'Downloaded' }));
+      const input = container.querySelector('input[type="file"]');
+      if (!input) throw new Error('No file input');
+      fireEvent.change(input, {
+        target: { files: [new File([zip], 'us-ca-oakland.pmtiles.zip')] },
+      });
+
+      const item = await screen.findByText('us-ca-oakland');
+      const localRow = within(item.closest('li') as HTMLElement);
+      expect(localRow.getByText('Loaded from us-ca-oakland.pmtiles.zip')).toBeTruthy();
+    });
   });
 
   describe('when a pack download finishes while another is still downloading', () => {
