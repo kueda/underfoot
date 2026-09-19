@@ -73,6 +73,38 @@ def test_make_pmtiles_leaves_waterway_source_id_out_of_tiles(monkeypatch, tmp_pa
         assert "flow_upstream" in fields
 
 
+def test_make_pmtiles_leaves_waterbody_and_watershed_source_id_out_of_tiles(monkeypatch, tmp_path):
+    """The app doesn't use a waterbody's or watershed's source_id or
+    source_id_attr, and they stay in the database, so they're just dead weight
+    in the tiles"""
+    cmds = []
+
+    def fake_call_cmd(cmd, **kwargs):
+        if isinstance(cmd, list):
+            cmds.append(cmd)
+
+    monkeypatch.setattr(water.util, "call_cmd", fake_call_cmd)
+    monkeypatch.setattr(water.util, "add_table_from_query_to_pmtiles", lambda **kwargs: None)
+
+    water.make_pmtiles(["fake_source"], path=str(tmp_path / "water.pmtiles"))
+
+    layers = [
+        water.WATERBODIES_TABLE_NAME,
+        f"{water.WATERBODIES_TABLE_NAME}_overview",
+        water.WATERSHEDS_TABLE_NAME,
+    ]
+    for layer in layers:
+        layer_cmds = [cmd for cmd in cmds if layer in cmd]
+        assert len(layer_cmds) == 1, f"expected one ogr2ogr command for {layer}"
+        fields = exported_fields(layer_cmds[0])
+        assert fields is not None, f"expected {layer_cmds[0]} to select fields"
+        assert "*" not in fields
+        assert "source_id" not in fields
+        assert "source_id_attr" not in fields
+        assert "name" in fields
+        assert "source" in fields
+
+
 def test_process_source_nhdplus_fallback_uses_matching_work_dir(monkeypatch):
     """The nhdplus_* fallback branch (for sources with no dedicated
     sources/<source>.py file, added in d979678b) must hand

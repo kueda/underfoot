@@ -28,9 +28,9 @@ WATERBODIES_MASK_TABLE_NAME = "waterbodies_mask"
 WATERSHEDS_TABLE_NAME = "watersheds"
 WATERSHEDS_MASK_TABLE_NAME = "watersheds_mask"
 WATERWAYS_FLOW_TABLE_NAME = "waterways_flow"
-# Waterway attributes to include in tiles. source_id and source_id_attr stay
-# in the database but not the tiles, since the app doesn't use them and a
-# unique ID on every waterway makes the tiles much bigger.
+# Attributes to include in tiles. source_id and source_id_attr stay in the
+# database but not the tiles, since the app doesn't use them and, for
+# waterways, a unique ID on every feature makes the tiles much bigger.
 WATERWAYS_TILE_FIELDS = [
     "name",
     "source",
@@ -42,6 +42,22 @@ WATERWAYS_TILE_FIELDS = [
     "flow_pre",
     "flow_upstream",
 ]
+WATERBODIES_TILE_FIELDS = [
+    "name",
+    "source",
+    "type",
+    "is_natural",
+    "permanence",
+]
+WATERSHEDS_TILE_FIELDS = [
+    "name",
+    "source",
+]
+TILE_FIELDS = {
+    WATERWAYS_TABLE_NAME: WATERWAYS_TILE_FIELDS,
+    WATERBODIES_TABLE_NAME: WATERBODIES_TILE_FIELDS,
+    WATERSHEDS_TABLE_NAME: WATERSHEDS_TILE_FIELDS,
+}
 
 
 def clean_sources(sources, debug=False):
@@ -530,9 +546,8 @@ def make_pmtiles(sources, path="./water.pmtiles", bbox=None, geojson_path=None, 
                 f"PG:dbname={DBNAME}",
                 table_name,
                 "-a_srs", f"EPSG:{SRID}",
+                "-select", ",".join(TILE_FIELDS[table_name]),
             ]
-            if table_name == WATERWAYS_TABLE_NAME:
-                cmd += ["-select", ",".join(WATERWAYS_TILE_FIELDS)]
             # Don't clip the waterways, useful to see connectivity across the
             # entire watershed
             if table_name != WATERWAYS_TABLE_NAME:
@@ -582,7 +597,8 @@ def make_pmtiles(sources, path="./water.pmtiles", bbox=None, geojson_path=None, 
             gpkg_path,
             f"PG:dbname={DBNAME}",
             "-sql", f"""
-                SELECT * FROM {WATERBODIES_TABLE_NAME}
+                SELECT {", ".join(WATERBODIES_TILE_FIELDS)}, geom
+                FROM {WATERBODIES_TABLE_NAME}
                 WHERE name IS NOT NULL AND ST_Area(geom) > 0.00001
             """,
             "-nln", waterbodies_overview_table_name,
