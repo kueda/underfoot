@@ -10,9 +10,10 @@ export type TraceDirection = 'downstream' | 'upstream';
 
 export const TRACE_DIRECTIONS: TraceDirection[] = ['downstream', 'upstream'];
 
-export const TRACE_LAYER_IDS: Record<TraceDirection, string> = {
-  downstream: 'waterways-downstream',
-  upstream: 'waterways-upstream',
+// Layers that draw each trace, which all get the trace's filter
+export const TRACE_LAYER_IDS: Record<TraceDirection, { line: string; arrows: string }> = {
+  downstream: { line: 'waterways-downstream', arrows: 'waterways-downstream-arrows' },
+  upstream: { line: 'waterways-upstream', arrows: 'waterways-upstream-arrows' },
 };
 
 // Magenta and green stay distinct with red-green color blindness, which turns

@@ -1,7 +1,14 @@
-import type { StyleSpecification } from 'maplibre-gl';
+import { expression, featureFilter } from '@maplibre/maplibre-gl-style-spec';
+import type { FilterSpecification, StyleSpecification } from 'maplibre-gl';
 import { describe, expect, it } from 'vitest';
 
-import { ROCK_STYLE, TRACE_FADING_PAINT, WATER_STYLE } from './mapStyles';
+import { TRACE_DIRECTIONS, TRACE_LAYER_IDS } from './flowTrace';
+import {
+  ROCK_STYLE,
+  TRACE_FADING_PAINT,
+  WATER_STYLE,
+  WATERWAY_ARROWS_LAYER_ID,
+} from './mapStyles';
 
 function layer(id: string, style: StyleSpecification = WATER_STYLE) {
   const found = style.layers.find(l => l.id === id);
@@ -61,7 +68,60 @@ describe('TRACE_FADING_PAINT', () => {
 
   it('fades waterways and waterbodies', () => {
     expect(TRACE_FADING_PAINT.map(p => p.layer)).toEqual(
-      expect.arrayContaining(['waterways', 'waterbodies']),
+      expect.arrayContaining(['waterways', 'waterbodies', WATERWAY_ARROWS_LAYER_ID]),
     );
+  });
+});
+
+describe('flow direction arrows', () => {
+  const arrowLayerIds = [
+    WATERWAY_ARROWS_LAYER_ID,
+    ...TRACE_DIRECTIONS.map(direction => TRACE_LAYER_IDS[direction].arrows),
+  ];
+
+  it('stay pointed downstream instead of flipping to stay upright', () => {
+    // Waterways are drawn from upstream to downstream, and MapLibre would
+    // otherwise turn arrows on westward waterways around so they read upright
+    for (const id of arrowLayerIds) {
+      const { layout } = layer(id) as { layout?: Record<string, unknown> };
+      expect(layout?.['symbol-placement'], id).toBe('line');
+      expect(layout?.['text-keep-upright'], id).toBe(false);
+    }
+  });
+
+  it('only point along waterways with flow labels', () => {
+    // Waterways from other sources, like TIGER, aren't drawn in the direction of flow
+    const { filter } = layer(WATERWAY_ARROWS_LAYER_ID) as { filter?: FilterSpecification };
+    const { filter: evaluate } = featureFilter(filter, 'filter');
+    const draws = (properties: Record<string, unknown>) => evaluate(
+      { zoom: 14 },
+      { type: 'LineString', properties },
+    );
+    expect(draws({ flow_pre: 3, flow_upstream: 1 })).toBe(true);
+    expect(draws({ name: 'Temescal Creek' })).toBe(false);
+  });
+
+  it('differ between natural and artificial waterways so they keep their own colors', () => {
+    // MapLibre joins connected lines with the same text into one line that
+    // keeps only one of their colors, so a culvert's orange could spread to
+    // the natural creek it's part of
+    const { layout } = layer(WATERWAY_ARROWS_LAYER_ID) as { layout?: Record<string, unknown> };
+    const parsed = expression.createExpression(layout?.['text-field'], 'text-field');
+    if (parsed.result !== 'success') throw new Error('text-field should be an expression');
+    const arrow = (isNatural: number): unknown => parsed.value.evaluate(
+      { zoom: 14 },
+      { type: 'LineString', properties: { is_natural: isNatural, flow_pre: 3, flow_upstream: 1 } },
+    );
+    expect(arrow(1)).toBeTruthy();
+    expect(arrow(0)).toBeTruthy();
+    expect(arrow(0)).not.toEqual(arrow(1));
+  });
+
+  it('show along traces, which set the same filter on their lines and arrows', () => {
+    for (const direction of TRACE_DIRECTIONS) {
+      const { line, arrows } = TRACE_LAYER_IDS[direction];
+      expect(layer(line).type, line).toBe('line');
+      expect(layer(arrows).type, arrows).toBe('symbol');
+    }
   });
 });

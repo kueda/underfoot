@@ -509,10 +509,10 @@ export default function UnderfootMap() {
     const mapInstance = map.current;
     if (!mapInstance) return;
     const labels = traces[direction] === null ? crosshairFlowLabels ?? null : null;
-    mapInstance.setFilter(
-      TRACE_LAYER_IDS[direction],
-      labels === null ? NO_TRACE_FILTER : TRACE_FILTERS[direction](labels),
-    );
+    const filter = labels === null ? NO_TRACE_FILTER : TRACE_FILTERS[direction](labels);
+    for (const layerId of Object.values(TRACE_LAYER_IDS[direction])) {
+      mapInstance.setFilter(layerId, filter);
+    }
     const newTraces = { ...traces, [direction]: labels };
     // Fade the rest of the water and the roads while any trace is showing
     const tracing = TRACE_DIRECTIONS.some(d => newTraces[d] !== null);
