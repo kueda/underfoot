@@ -345,12 +345,17 @@ def process_nhdplus_hr_source_waterways_flow(work_path):
         FROM NHDPlusFlowlineVAA
     """
     sql = re.sub(r'\s+', " ", sql)
+    # The shell creates the redirect target before sqlite3 runs, so write to
+    # a temp file and only move it into place if sqlite3 succeeds. Otherwise
+    # a failed run would leave a partial CSV that later runs skip rebuilding.
+    tmp_csv_path = f"{csv_path}.tmp"
     call_cmd(
         f"""
-            sqlite3 {sqlite_path} -csv -header "{sql}" > {csv_path}
+            sqlite3 {sqlite_path} -csv -header "{sql}" > {tmp_csv_path}
         """,
         shell=True
     )
+    os.replace(tmp_csv_path, csv_path)
 
 
 def process_nhdplus_hr_source_citation(url):
