@@ -21,16 +21,19 @@ import {
 } from '../useAppStore';
 import MapBottomSheet from './MapBottomSheet/MapBottomSheet';
 import CurrentLocationButton from './CurrentLocationButton';
-import DownstreamButton from './DownstreamButton';
+import TraceButton from './TraceButton';
 import {
-  DOWNSTREAM_LAYER_ID,
+  FlowLabels,
   NO_TRACE_FILTER,
-  downstreamFilter,
-  flowPre,
+  TRACE_DIRECTIONS,
+  TRACE_FILTERS,
+  TRACE_LAYER_IDS,
+  TraceDirection,
+  flowLabels,
 } from './flowTrace';
 import { nearestLineFeature } from './nearestLineFeature';
 import { Citations, UnderfootFeatures } from './types';
-import { NO_STYLE } from './mapStyles';
+import { NO_STYLE, TRACE_FADING_PAINT } from './mapStyles';
 import { loadMapFromPackData } from './util';
 
 // Wrap native fetch to monitor all network requests and log failures
@@ -75,6 +78,10 @@ window.fetch = async (...args) => {
     throw error;
   }
 };
+
+type Traces = Record<TraceDirection, FlowLabels | null>;
+
+const NO_TRACES: Traces = { downstream: null, upstream: null };
 
 // How many pixels from the crosshairs a waterway can be and still count as
 // under them. The Android app used the same radius.
@@ -139,8 +146,8 @@ export default function UnderfootMap() {
   const [underfootFeature, setUnderfootFeature] = useState<UnderfootFeature>();
   const [underfootFeatures, setUnderfootFeatures] = useState<UnderfootFeatures>({});
   const [citations, setCitations] = useState<Citations>({});
-  // flow_pre of the waterway a downstream trace starts from, if one is showing
-  const [downstreamTracePre, setDownstreamTracePre] = useState<number | null>(null);
+  // Flow labels of the waterway each trace starts from, if it's showing
+  const [traces, setTraces] = useState<Traces>(NO_TRACES);
   const { add: log } = useLogging();
   // A location from the URL hash (shared link) that should override the default
   // "recenter on the pack" behavior the first time a pack loads. Consumed once.
@@ -334,9 +341,9 @@ export default function UnderfootMap() {
       if (packLoadingRef.current) return;
       packLoadingRef.current = true;
       setPackLoading(true);
-      // A new style replaces the trace layer's filter, and a trace from another
-      // pack's labels wouldn't mean anything anyway
-      setDownstreamTracePre(null);
+      // A new style resets the trace layers' filters and the faded colors, and
+      // a trace from another pack's labels wouldn't mean anything anyway
+      setTraces(NO_TRACES);
       // If there's no pack, ensure style gets reset so map is blank
       if (!currentPackId) {
         setLoadedPackId(null);
@@ -494,17 +501,25 @@ export default function UnderfootMap() {
     setCurrentPackId,
   ]);
 
-  const crosshairFlowPre = mapFeature ? flowPre(mapFeature) : undefined;
+  const crosshairFlowLabels = mapFeature ? flowLabels(mapFeature) : undefined;
 
-  // Traces downstream from the waterway under the crosshairs, or clears the
-  // trace if one is showing
-  function toggleDownstreamTrace() {
-    const pre = downstreamTracePre === null ? crosshairFlowPre ?? null : null;
-    map.current?.setFilter(
-      DOWNSTREAM_LAYER_ID,
-      pre === null ? NO_TRACE_FILTER : downstreamFilter(pre),
+  // Traces from the waterway under the crosshairs in a direction, or clears
+  // the trace in that direction if one is showing
+  function toggleTrace(direction: TraceDirection) {
+    const mapInstance = map.current;
+    if (!mapInstance) return;
+    const labels = traces[direction] === null ? crosshairFlowLabels ?? null : null;
+    mapInstance.setFilter(
+      TRACE_LAYER_IDS[direction],
+      labels === null ? NO_TRACE_FILTER : TRACE_FILTERS[direction](labels),
     );
-    setDownstreamTracePre(pre);
+    const newTraces = { ...traces, [direction]: labels };
+    // Fade the rest of the water and the roads while any trace is showing
+    const tracing = TRACE_DIRECTIONS.some(d => newTraces[d] !== null);
+    for (const { layer, property, color, faded } of TRACE_FADING_PAINT) {
+      mapInstance.setPaintProperty(layer, property, tracing ? faded : color);
+    }
+    setTraces(newTraces);
   }
 
   return (
@@ -514,13 +529,15 @@ export default function UnderfootMap() {
       { loadedPackId && (
         <>
           <AddIcon fontSize="large" className="add-icon" style={{ pointerEvents: 'none' }} />
-          { loadedMapType === 'water' && (
-            <DownstreamButton
-              traceable={crosshairFlowPre !== undefined}
-              active={downstreamTracePre !== null}
-              onClick={toggleDownstreamTrace}
+          { loadedMapType === 'water' && TRACE_DIRECTIONS.map(direction => (
+            <TraceButton
+              key={direction}
+              direction={direction}
+              traceable={crosshairFlowLabels !== undefined}
+              active={traces[direction] !== null}
+              onClick={() => toggleTrace(direction)}
             />
-          )}
+          ))}
           <MapBottomSheet feature={underfootFeature} mapType={mapType} />
         </>
       ) }

@@ -6,11 +6,41 @@ import type {
   StyleSpecification,
 } from 'maplibre-gl';
 
-import { DOWNSTREAM_COLOR, DOWNSTREAM_LAYER_ID, NO_TRACE_FILTER } from './flowTrace';
+import {
+  NO_TRACE_FILTER,
+  TRACE_COLORS,
+  TRACE_LAYER_IDS,
+  TraceDirection,
+} from './flowTrace';
 
 const COLORS = {
+  artificialWater: '#FF7F00',
+  // Light so that lines on the water map, like waterways and flow traces,
+  // contrast with it, including for people with red-green color blindness
+  land: '#F4F1EA',
+  road: '#505050',
+  roadLabel: '#000000',
+  // Dark enough to see on the land, but not so dark that it looks like the
+  // upstream trace with red-green color blindness
+  watershedBoundary: '#B8A88A',
   water: '#1F78B4',
 };
+
+// How faded the water and roads look while a trace is showing, so traces
+// stand out whatever colors someone can see
+const FADED_OPACITY = 0.4;
+
+// What a color looks like at FADED_OPACITY over the land. Fading lines with
+// this color instead of with opacity avoids darker spots where the ends of
+// translucent lines overlap.
+function fadedOverLand(color: string) {
+  const channels = (hex: string) => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+  const land = channels(COLORS.land);
+  const faded = channels(color).map(
+    (channel, i) => Math.round(FADED_OPACITY * channel + (1 - FADED_OPACITY) * land[i]),
+  );
+  return `rgb(${faded.join(',')})`;
+}
 
 const NO_STYLE: StyleSpecification = {
   version: 8,
@@ -26,7 +56,7 @@ const waysLayers: LayerSpecification[] = [
     'type': 'line',
     'filter': ['match', ['get', 'highway'], ['motorway', 'primary', 'trunk', 'secondary', 'tertiary', 'path', 'track'], false, true],
     'paint': {
-      'line-color': 'rgb(80,80,80)',
+      'line-color': COLORS.road,
       'line-width': 1.6,
     },
   },
@@ -37,7 +67,7 @@ const waysLayers: LayerSpecification[] = [
     'type': 'line',
     'filter': ['match', ['get', 'highway'], ['motorway', 'primary', 'trunk'], true, false],
     'paint': {
-      'line-color': 'rgb(80,80,80)',
+      'line-color': COLORS.road,
       'line-width': 3,
     },
   },
@@ -48,7 +78,7 @@ const waysLayers: LayerSpecification[] = [
     'type': 'line',
     'filter': ['match', ['get', 'highway'], ['secondary', 'tertiary'], true, false],
     'paint': {
-      'line-color': 'rgb(80,80,80)',
+      'line-color': COLORS.road,
       'line-width': 1.6,
     },
   },
@@ -59,7 +89,7 @@ const waysLayers: LayerSpecification[] = [
     'type': 'line',
     'filter': ['match', ['get', 'highway'], ['path', 'track'], true, false],
     'paint': {
-      'line-color': 'rgb(80,80,80)',
+      'line-color': COLORS.road,
       'line-width': 1.6,
       'line-dasharray': [2, 1],
     },
@@ -70,6 +100,7 @@ const waysLayers: LayerSpecification[] = [
     'source-layer': 'underfoot_ways',
     'type': 'symbol',
     'paint': {
+      'text-color': COLORS.roadLabel,
       'text-halo-color': 'white',
       'text-halo-width': 1,
     },
@@ -627,18 +658,87 @@ const ROCK_STYLE: StyleSpecification = {
   ],
 };
 
-const WATERWAYS_COLOR_EXP: DataDrivenPropertyValueSpecification<string> = [
-  // https://maplibre.org/maplibre-style-spec/expressions/#match
-  'match',
+function waterwaysColorExp(
+  natural: string,
+  artificial: string,
+): DataDrivenPropertyValueSpecification<string> {
+  return [
+    // https://maplibre.org/maplibre-style-spec/expressions/#match
+    'match',
 
-  // input
-  ['get', 'is_natural'],
+    // input
+    ['get', 'is_natural'],
 
-  // mappings
-  [0], '#FF7F00',
+    // mappings
+    [0], artificial,
 
-  COLORS.water,
+    natural,
+  ];
+}
+
+const WATERWAYS_COLOR_EXP = waterwaysColorExp(COLORS.water, COLORS.artificialWater);
+
+interface FadingPaint {
+  layer: string;
+  property: 'fill-color' | 'line-color' | 'text-color';
+  color: DataDrivenPropertyValueSpecification<string>;
+  faded: DataDrivenPropertyValueSpecification<string>;
+}
+
+// Colors that fade while a trace is showing, so traces stand out whatever
+// colors someone can see. Map.tsx swaps in the faded colors while tracing and
+// swaps the colors back after.
+const TRACE_FADING_PAINT: FadingPaint[] = [
+  {
+    layer: 'waterbodies',
+    property: 'fill-color',
+    color: COLORS.water,
+    faded: fadedOverLand(COLORS.water),
+  },
+  {
+    layer: 'waterways',
+    property: 'line-color',
+    color: WATERWAYS_COLOR_EXP,
+    faded: waterwaysColorExp(fadedOverLand(COLORS.water), fadedOverLand(COLORS.artificialWater)),
+  },
+  ...waysLayers.filter(l => l.type === 'line').map(l => ({
+    layer: l.id,
+    property: 'line-color' as const,
+    color: COLORS.road,
+    faded: fadedOverLand(COLORS.road),
+  })),
+  {
+    layer: 'ways-labels',
+    property: 'text-color',
+    color: COLORS.roadLabel,
+    faded: fadedOverLand(COLORS.roadLabel),
+  },
 ];
+
+// Upstream traces can cover whole basins, where thick lines would run together
+const TRACE_WIDTHS: Record<TraceDirection, number> = {
+  downstream: 5,
+  upstream: 3,
+};
+
+// Map.tsx sets the filter to show a trace
+function traceLayer(direction: TraceDirection): LayerSpecification {
+  return {
+    'id': TRACE_LAYER_IDS[direction],
+    'source': 'water',
+    'source-layer': 'waterways',
+    'type': 'line',
+    'filter': NO_TRACE_FILTER,
+    'layout': {
+      'line-cap': 'round',
+      'line-join': 'round',
+    },
+    'paint': {
+      'line-width': TRACE_WIDTHS[direction],
+      'line-color': TRACE_COLORS[direction],
+    },
+  };
+}
 
 const WATER_STYLE: StyleSpecification = {
   ...COMMON_STYLE,
@@ -660,7 +760,7 @@ const WATER_STYLE: StyleSpecification = {
       'source-layer': 'watersheds',
       'type': 'fill',
       'paint': {
-        'fill-color': '#CFC4AF',
+        'fill-color': COLORS.land,
       },
     },
     {
@@ -670,8 +770,9 @@ const WATER_STYLE: StyleSpecification = {
       'source-layer': 'watersheds',
       'type': 'line',
       'paint': {
-        'line-color': 'rgba(255,255,255,0.9)',
-        'line-width': 1.5,
+        'line-color': COLORS.watershedBoundary,
+        // Thick enough to tell apart from contours, which are about as light
+        'line-width': 3,
       },
     },
     {
@@ -694,22 +795,10 @@ const WATER_STYLE: StyleSpecification = {
         'line-color': WATERWAYS_COLOR_EXP,
       },
     },
-    {
-      // Map.tsx sets the filter to show a downstream trace
-      'id': DOWNSTREAM_LAYER_ID,
-      'source': 'water',
-      'source-layer': 'waterways',
-      'type': 'line',
-      'filter': NO_TRACE_FILTER,
-      'layout': {
-        'line-cap': 'round',
-        'line-join': 'round',
-      },
-      'paint': {
-        'line-width': 5,
-        'line-color': DOWNSTREAM_COLOR,
-      },
-    },
+    // Downstream traces draw on top of upstream ones, which can cover whole
+    // basins
+    traceLayer('upstream'),
+    traceLayer('downstream'),
     ...contourLayers,
     ...waysLayers,
     ...contextLayers,
@@ -736,5 +825,6 @@ const WATER_STYLE: StyleSpecification = {
 export {
   NO_STYLE,
   ROCK_STYLE,
+  TRACE_FADING_PAINT,
   WATER_STYLE,
 };

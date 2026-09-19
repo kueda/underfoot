@@ -20,8 +20,13 @@ const PALO_SECO_CREEK = { lat: 37.810733294812074, lng: -122.18337535858156 };
 // About 5px from that vertex at zoom 11, off to the side of the creek, and more than 10px from
 // any other waterway
 const NEAR_PALO_SECO_CREEK = { lat: 37.81161588879832, lng: -122.18207200824331 };
-// The color mapStyles.ts gives downstream traces. Nothing else on the water map is red.
-const TRACE_RGB = [227, 26, 28];
+// A vertex of lower Sausal Creek, which Palo Seco Creek and several other creeks flow into
+const SAUSAL_CREEK = { lat: 37.78774223089044, lng: -122.22367286682129 };
+// The colors flowTrace.ts gives traces. Nothing else on the water map is magenta or green.
+const DOWNSTREAM_RGB = [230, 0, 230];
+const UPSTREAM_RGB = [0, 158, 58];
+// The color mapStyles.ts gives natural waterways and waterbodies
+const WATER_RGB = [31, 120, 180];
 
 const MANIFEST = {
   packs: [
@@ -86,16 +91,16 @@ function colorMatches(drawn: number[], rgb: number[]) {
   return drawn.every((value, i) => Math.abs(value - rgb[i]) <= COLOR_TOLERANCE);
 }
 
-// How many pixels of the page are drawn in the downstream trace's color, leaving out the button
-// that toggles the trace, which uses that color for its icon while a trace is showing
-async function tracePixelCount(page: Page) {
+// How many pixels of the page are drawn in a color, leaving out the buttons that toggle traces,
+// which use their trace's color for their icon while it's showing
+async function pixelCount(page: Page, rgb: number[]) {
   const screenshot = PNG.sync.read(await page.screenshot({
-    mask: [page.getByRole('button', { name: 'Trace downstream' })],
+    mask: [page.getByRole('button', { name: /^Trace (down|up)stream$/ })],
     maskColor: 'white',
   }));
   let count = 0;
   for (let offset = 0; offset < screenshot.data.length; offset += 4) {
-    if (colorMatches([...screenshot.data.subarray(offset, offset + 3)], TRACE_RGB)) count += 1;
+    if (colorMatches([...screenshot.data.subarray(offset, offset + 3)], rgb)) count += 1;
   }
   return count;
 }
@@ -136,6 +141,12 @@ test('traces where water flows downstream from a waterway', async ({ page }) => 
   await page.goto(`/#map=11/${lat}/${lng}&type=water`);
   await downloadOaklandPack(page);
   await expect(page.locator('.MapBottomSheetHeader h3')).toHaveText('Palo Seco Creek');
+  // The creeks and the bay, about 50,000 pixels once the map has drawn them
+  let waterBefore = 0;
+  await expect(async () => {
+    waterBefore = await pixelCount(page, WATER_RGB);
+    expect(waterBefore).toBeGreaterThan(10000);
+  }).toPass({ timeout: 10_000 });
 
   const traceButton = page.getByRole('button', { name: 'Trace downstream' });
   await expect(traceButton).toHaveAttribute('aria-pressed', 'false');
@@ -144,13 +155,42 @@ test('traces where water flows downstream from a waterway', async ({ page }) => 
   // The trace runs from Palo Seco Creek down Sausal Creek, about 950 pixels at zoom 11. Far
   // fewer would mean it stopped short.
   await expect(async () => {
-    expect(await tracePixelCount(page)).toBeGreaterThan(500);
+    expect(await pixelCount(page, DOWNSTREAM_RGB)).toBeGreaterThan(500);
   }).toPass({ timeout: 10_000 });
+  // The rest of the water fades so the trace stands out, whatever colors someone can see
+  expect(await pixelCount(page, WATER_RGB)).toBeLessThan(waterBefore / 10);
 
   await traceButton.click();
   await expect(traceButton).toHaveAttribute('aria-pressed', 'false');
   await expect(async () => {
-    expect(await tracePixelCount(page)).toBe(0);
+    expect(await pixelCount(page, DOWNSTREAM_RGB)).toBe(0);
+    expect(await pixelCount(page, WATER_RGB)).toBeGreaterThan(waterBefore * 0.9);
+  }).toPass({ timeout: 10_000 });
+  expect(alerts).toEqual([]);
+});
+
+test('traces where water comes from upstream of a waterway', async ({ page }) => {
+  const alerts = collectAlerts(page);
+  const { lat, lng } = SAUSAL_CREEK;
+  await page.goto(`/#map=11/${lat}/${lng}&type=water`);
+  await downloadOaklandPack(page);
+  await expect(page.locator('.MapBottomSheetHeader h3')).toHaveText('Sausal Creek');
+
+  const traceButton = page.getByRole('button', { name: 'Trace upstream' });
+  await expect(traceButton).toHaveAttribute('aria-pressed', 'false');
+  await traceButton.click();
+  await expect(traceButton).toHaveAttribute('aria-pressed', 'true');
+  // Sausal Creek and the creeks that flow into it, like Palo Seco and Shephard Creeks, about 650
+  // pixels at zoom 11. Far fewer would mean it left some out.
+  await expect(async () => {
+    expect(await pixelCount(page, UPSTREAM_RGB)).toBeGreaterThan(350);
+  }).toPass({ timeout: 10_000 });
+  expect(await pixelCount(page, DOWNSTREAM_RGB)).toBe(0);
+
+  await traceButton.click();
+  await expect(traceButton).toHaveAttribute('aria-pressed', 'false');
+  await expect(async () => {
+    expect(await pixelCount(page, UPSTREAM_RGB)).toBe(0);
   }).toPass({ timeout: 10_000 });
   expect(alerts).toEqual([]);
 });
