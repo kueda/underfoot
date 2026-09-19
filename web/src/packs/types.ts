@@ -27,13 +27,14 @@ export interface PackBoundingBox {
 
 export interface UnderfootFeature {
   citation?: string;
-  id: number;
   source: string;
   title?: string;
 }
 
 export interface RockUnit extends UnderfootFeature {
   code: string;
+  // Matches the id property of the unit's features in the rocks tiles
+  id: number;
   controlled_span?: string;
   description?: string;
   est_age?: number;
@@ -58,7 +59,6 @@ export type UnzippedPackData = {
   rocks_units_csv?: Blob;
   rocks_pmtiles?: Blob;
   water_citations_csv?: Blob;
-  water_waterways_network_csv?: Blob;
   water_pmtiles?: Blob;
   ways_pmtiles?: Blob;
 };

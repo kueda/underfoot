@@ -15,6 +15,7 @@ WATERWAYS_FNAME = "waterways.gpkg"
 WATERBODIES_FNAME = "waterbodies.gpkg"
 WATERSHEDS_FNAME = "watersheds.gpkg"
 WATERWAYS_NETWORK_FNAME = "waterways-network.sqlite"
+WATERWAYS_FLOW_FNAME = "waterways-flow.csv"
 CITATION_FNAME = "citation.json"
 
 ARTIFACT_NAMES = [
@@ -312,49 +313,49 @@ def process_nhdplus_hr_source_watersheds(gdb_path, srs):
 
 
 def process_nhdplus_hr_source_waterways_network(gdb_path):
-    """Adds waterways-network.csv to the work dir given Underfoot water GDB"""
+    """Adds waterways-network.sqlite to the work dir given Underfoot water GDB"""
     sqlite_path = WATERWAYS_NETWORK_FNAME
     if not os.path.isfile(sqlite_path):
-        # Extract network data from the GDB to a sqlite database that we can
-        # index for efficient queries
+        # Extract the network's value-added attributes from the GDB to a
+        # sqlite database so they outlive the GDB, which cleanup() removes
         call_cmd(
             f"ogr2ogr {sqlite_path} {gdb_path} NHDPlusFlowlineVAA",
             shell=True
         )
-        # Make those indexes
-        call_cmd(
-            f"sqlite3 {sqlite_path} 'CREATE INDEX vaa_tonode ON "
-            "NHDPlusFlowlineVAA (ToNode)'",
-            shell=True
-        )
-        call_cmd(
-            f"sqlite3 {sqlite_path} 'CREATE INDEX vaa_fromnode ON "
-            "NHDPlusFlowlineVAA (FromNode)'",
-            shell=True
-        )
-    csv_path = "waterways-network.csv"
-    if not os.path.isfile(csv_path):
-        # Dump the network from sqlite to CSV. Each segment has an NHDPlusID,
-        # and we're storing the NHDPlusID of the segment upstream
-        # (from_source_id) and downstream (to_source_id). You don't technically
-        # need both to construct the graph, but they save a lot of calculation
-        sql = """
-            SELECT
-                CAST(a.NHDPlusID AS INTEGER) AS source_id,
-                CAST(t.NHDPlusID AS INTEGER) AS to_source_id,
-                CAST(f.NHDPlusID AS INTEGER) AS from_source_id
-            FROM
-                NHDPlusFlowlineVAA a
-                    LEFT JOIN NHDPlusFlowlineVAA t ON t.FromNode = a.ToNode
-                    LEFT JOIN NHDPlusFlowlineVAA f ON f.ToNode = a.FromNode
-        """
-        sql = re.sub(r'\s+', " ", sql)
-        call_cmd(
-            f"""
-                sqlite3 {sqlite_path} -csv -header "{sql}" > {csv_path}
-            """,
-            shell=True
-        )
+
+
+def process_nhdplus_hr_source_waterways_flow(work_path):
+    """Adds waterways-flow.csv to the work dir from waterways-network.sqlite
+
+    Only needs the sqlite, so it can run on a cached work dir whose GDB is
+    gone.
+    """
+    sqlite_path = os.path.join(work_path, WATERWAYS_NETWORK_FNAME)
+    csv_path = os.path.join(work_path, WATERWAYS_FLOW_FNAME)
+    if os.path.isfile(csv_path):
+        return
+    # Each segment has an NHDPlusID and a hydroseq, and flows into the
+    # segment whose hydroseq is its dnhydroseq. Hydroseqs are unique across
+    # HU4s, so they also link rivers that flow from one source into another.
+    sql = """
+        SELECT
+            CAST(NHDPlusID AS INTEGER) AS source_id,
+            CAST(HydroSeq AS INTEGER) AS hydroseq,
+            CAST(DnHydroSeq AS INTEGER) AS dnhydroseq
+        FROM NHDPlusFlowlineVAA
+    """
+    sql = re.sub(r'\s+', " ", sql)
+    # The shell creates the redirect target before sqlite3 runs, so write to
+    # a temp file and only move it into place if sqlite3 succeeds. Otherwise
+    # a failed run would leave a partial CSV that later runs skip rebuilding.
+    tmp_csv_path = f"{csv_path}.tmp"
+    call_cmd(
+        f"""
+            sqlite3 {sqlite_path} -csv -header "{sql}" > {tmp_csv_path}
+        """,
+        shell=True
+    )
+    os.replace(tmp_csv_path, csv_path)
 
 
 def process_nhdplus_hr_source_citation(url):
@@ -427,6 +428,7 @@ def process_nhdplus_hr_source(
     work_path = make_work_dir(os.path.realpath(base_path))
     if artifacts_generated(work_path):
         log(f"Artifacts generated for {gdb_name}, skipping...")
+        process_nhdplus_hr_source_waterways_flow(work_path)
         cleanup(work_path)
         return
     os.chdir(work_path)
@@ -451,4 +453,5 @@ def process_nhdplus_hr_source(
     process_nhdplus_hr_source_citation(url)
     if not artifacts_generated(work_path):
         raise FileNotFoundError(f"Failed to build artifacts for {gdb_name}")
+    process_nhdplus_hr_source_waterways_flow(work_path)
     cleanup(work_path)

@@ -2,7 +2,7 @@ import type { Map, StyleSpecification } from 'maplibre-gl';
 import Papa from 'papaparse';
 import * as pmtiles from 'pmtiles';
 
-import { UnderfootFeature, UnzippedPackData } from '../packs/types';
+import { RockUnit, UnzippedPackData } from '../packs/types';
 import { Citation, Citations, UnderfootFeatures } from './types';
 import { ROCK_STYLE, WATER_STYLE } from './mapStyles';
 
@@ -44,7 +44,7 @@ export function loadMapFromPackData(
       complete: results => {
         const emptyFeatures: UnderfootFeatures = {};
         const newFeatures = results.data.reduce((memo, curr) => {
-          const feature = curr as UnderfootFeature;
+          const feature = curr as RockUnit;
           const featuresMemo: UnderfootFeatures = memo as UnderfootFeatures;
           featuresMemo[feature.id] = feature;
           return featuresMemo;

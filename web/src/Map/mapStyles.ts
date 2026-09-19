@@ -4,10 +4,57 @@ import type {
   LayerSpecification,
   SourceSpecification,
   StyleSpecification,
+  SymbolLayerSpecification,
 } from 'maplibre-gl';
 
+import {
+  NO_TRACE_FILTER,
+  TRACE_COLORS,
+  TRACE_LAYER_IDS,
+  TraceDirection,
+} from './flowTrace';
+
 const COLORS = {
+  artificialWater: '#FF7F00',
+  // Light so that lines on the water map, like waterways and flow traces,
+  // contrast with it, including for people with red-green color blindness
+  land: '#F4F1EA',
+  // Place and mountain range names are translucent dark text with a white
+  // halo, so they stay in the background but read on light land and rock
+  // units as well as dark ones
+  placeLabel: 'rgba(0,0,0,0.55)',
+  rangeLabel: 'rgba(0,0,0,0.35)',
+  road: '#505050',
+  roadLabel: '#000000',
+  // Dark enough to see on the land, but not so dark that it looks like the
+  // upstream trace with red-green color blindness
+  watershedBoundary: '#B8A88A',
   water: '#1F78B4',
+};
+
+// How faded the water and roads look while a trace is showing, so traces
+// stand out whatever colors someone can see
+const FADED_OPACITY = 0.4;
+
+// What a color looks like at an opacity over the land. Fading lines with this
+// color instead of with opacity avoids darker spots where the ends of
+// translucent lines overlap.
+function fadedOverLand(color: string, opacity = FADED_OPACITY) {
+  const channels = (hex: string) => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+  const land = channels(COLORS.land);
+  const faded = channels(color).map(
+    (channel, i) => Math.round(opacity * channel + (1 - opacity) * land[i]),
+  );
+  return `rgb(${faded.join(',')})`;
+}
+
+// Roads on the water map are lighter than on the rocks map so they compete
+// less with the water, but not so light that they look like contours
+const WATER_MAP_ROAD_OPACITY = 0.65;
+
+const WATER_MAP_COLORS = {
+  road: fadedOverLand(COLORS.road, WATER_MAP_ROAD_OPACITY),
+  roadLabel: fadedOverLand(COLORS.roadLabel, WATER_MAP_ROAD_OPACITY),
 };
 
 const NO_STYLE: StyleSpecification = {
@@ -24,7 +71,7 @@ const waysLayers: LayerSpecification[] = [
     'type': 'line',
     'filter': ['match', ['get', 'highway'], ['motorway', 'primary', 'trunk', 'secondary', 'tertiary', 'path', 'track'], false, true],
     'paint': {
-      'line-color': 'rgb(80,80,80)',
+      'line-color': COLORS.road,
       'line-width': 1.6,
     },
   },
@@ -35,7 +82,7 @@ const waysLayers: LayerSpecification[] = [
     'type': 'line',
     'filter': ['match', ['get', 'highway'], ['motorway', 'primary', 'trunk'], true, false],
     'paint': {
-      'line-color': 'rgb(80,80,80)',
+      'line-color': COLORS.road,
       'line-width': 3,
     },
   },
@@ -46,7 +93,7 @@ const waysLayers: LayerSpecification[] = [
     'type': 'line',
     'filter': ['match', ['get', 'highway'], ['secondary', 'tertiary'], true, false],
     'paint': {
-      'line-color': 'rgb(80,80,80)',
+      'line-color': COLORS.road,
       'line-width': 1.6,
     },
   },
@@ -57,7 +104,7 @@ const waysLayers: LayerSpecification[] = [
     'type': 'line',
     'filter': ['match', ['get', 'highway'], ['path', 'track'], true, false],
     'paint': {
-      'line-color': 'rgb(80,80,80)',
+      'line-color': COLORS.road,
       'line-width': 1.6,
       'line-dasharray': [2, 1],
     },
@@ -68,6 +115,7 @@ const waysLayers: LayerSpecification[] = [
     'source-layer': 'underfoot_ways',
     'type': 'symbol',
     'paint': {
+      'text-color': COLORS.roadLabel,
       'text-halo-color': 'white',
       'text-halo-width': 1,
     },
@@ -79,6 +127,16 @@ const waysLayers: LayerSpecification[] = [
     },
   },
 ];
+
+const waterMapWaysLayers: LayerSpecification[] = waysLayers.map(layer => {
+  if (layer.type === 'line') {
+    return { ...layer, paint: { ...layer.paint, 'line-color': WATER_MAP_COLORS.road } };
+  }
+  if (layer.type === 'symbol') {
+    return { ...layer, paint: { ...layer.paint, 'text-color': WATER_MAP_COLORS.roadLabel } };
+  }
+  return layer;
+});
 
 const contours100Filter: ExpressionFilterSpecification = [
   '==',
@@ -145,9 +203,9 @@ const contextLayers: LayerSpecification[] = [
     'source-layer': 'underfoot_place_nodes',
     'type': 'symbol',
     'paint': {
-      'text-color': 'rgb(255,255,255)',
-      'text-halo-color': 'rgba(0,0,0,0.2)',
-      'text-halo-width': 1,
+      'text-color': COLORS.placeLabel,
+      'text-halo-color': 'white',
+      'text-halo-width': 1.5,
     },
     'layout': {
       'text-size': 12,
@@ -165,9 +223,9 @@ const contextLayers: LayerSpecification[] = [
     'source-layer': 'underfoot_place_nodes',
     'type': 'symbol',
     'paint': {
-      'text-color': 'rgb(255,255,255)',
-      'text-halo-color': 'rgba(0,0,0,0.2)',
-      'text-halo-width': 1,
+      'text-color': COLORS.placeLabel,
+      'text-halo-color': 'white',
+      'text-halo-width': 1.5,
     },
     'layout': {
       'text-size': 13,
@@ -185,9 +243,9 @@ const contextLayers: LayerSpecification[] = [
     'source-layer': 'underfoot_place_nodes',
     'type': 'symbol',
     'paint': {
-      'text-color': 'rgb(255,255,255)',
-      'text-halo-color': 'rgba(0,0,0,0.2)',
-      'text-halo-width': 1,
+      'text-color': COLORS.placeLabel,
+      'text-halo-color': 'white',
+      'text-halo-width': 1.5,
     },
     'layout': {
       'text-size': 14,
@@ -326,7 +384,9 @@ const contextLayers: LayerSpecification[] = [
       'text-allow-overlap': true,
     },
     'paint': {
-      'text-color': 'rgb(255,255,255)',
+      'text-color': COLORS.rangeLabel,
+      'text-halo-color': 'white',
+      'text-halo-width': 1,
     },
   },
 ];
@@ -625,18 +685,156 @@ const ROCK_STYLE: StyleSpecification = {
   ],
 };
 
-const WATERWAYS_COLOR_EXP: DataDrivenPropertyValueSpecification<string> = [
-  // https://maplibre.org/maplibre-style-spec/expressions/#match
-  'match',
+// One value for natural waterways and another for artificial ones
+function byWaterwayNaturalness(
+  natural: string,
+  artificial: string,
+): DataDrivenPropertyValueSpecification<string> {
+  return [
+    // https://maplibre.org/maplibre-style-spec/expressions/#match
+    'match',
 
-  // input
-  ['get', 'is_natural'],
+    // input
+    ['get', 'is_natural'],
 
-  // mappings
-  [0], '#FF7F00',
+    // mappings
+    [0], artificial,
 
-  COLORS.water,
+    natural,
+  ];
+}
+
+const WATERWAYS_COLOR_EXP = byWaterwayNaturalness(COLORS.water, COLORS.artificialWater);
+
+const FADED_WATERWAYS_COLOR_EXP = byWaterwayNaturalness(
+  fadedOverLand(COLORS.water),
+  fadedOverLand(COLORS.artificialWater),
+);
+
+const WATERWAY_ARROWS_LAYER_ID = 'waterways-arrows';
+
+// The map font has these triangles but not the Unicode arrows
+const FLOW_ARROW = '▶';
+const ARTIFICIAL_FLOW_ARROW = '►';
+
+// Layout for arrows along waterways that point in the direction of flow,
+// since waterways with flow labels are drawn from upstream to downstream.
+// padding is how much room each arrow needs around it.
+function flowArrowLayout(
+  size: number,
+  padding: number,
+  text: DataDrivenPropertyValueSpecification<string> = FLOW_ARROW,
+): SymbolLayerSpecification['layout'] {
+  return {
+    'symbol-placement': 'line',
+    'symbol-spacing': 100,
+    'text-field': text,
+    'text-font': ['Noto Sans Bold'],
+    'text-size': size,
+    // MapLibre would otherwise turn arrows on westward waterways around so
+    // they read upright
+    'text-keep-upright': false,
+    // A single character can't distort around a bend, so place arrows on
+    // wiggly waterways too
+    'text-max-angle': 180,
+    'text-padding': padding,
+    // Arrows never hide labels
+    'text-ignore-placement': true,
+  };
+}
+
+interface FadingPaint {
+  layer: string;
+  property: 'fill-color' | 'line-color' | 'text-color';
+  color: DataDrivenPropertyValueSpecification<string>;
+  faded: DataDrivenPropertyValueSpecification<string>;
+}
+
+// Colors that fade while a trace is showing, so traces stand out whatever
+// colors someone can see. Map.tsx swaps in the faded colors while tracing and
+// swaps the colors back after.
+const TRACE_FADING_PAINT: FadingPaint[] = [
+  {
+    layer: 'waterbodies',
+    property: 'fill-color',
+    color: COLORS.water,
+    faded: fadedOverLand(COLORS.water),
+  },
+  {
+    layer: 'waterways',
+    property: 'line-color',
+    color: WATERWAYS_COLOR_EXP,
+    faded: FADED_WATERWAYS_COLOR_EXP,
+  },
+  {
+    layer: WATERWAY_ARROWS_LAYER_ID,
+    property: 'text-color',
+    color: WATERWAYS_COLOR_EXP,
+    faded: FADED_WATERWAYS_COLOR_EXP,
+  },
+  ...waterMapWaysLayers.filter(l => l.type === 'line').map(l => ({
+    layer: l.id,
+    property: 'line-color' as const,
+    color: WATER_MAP_COLORS.road,
+    faded: fadedOverLand(COLORS.road),
+  })),
+  {
+    layer: 'ways-labels',
+    property: 'text-color',
+    color: WATER_MAP_COLORS.roadLabel,
+    faded: fadedOverLand(COLORS.roadLabel),
+  },
 ];
+
+// Upstream traces can cover whole basins, where thick lines would run together
+const TRACE_WIDTHS: Record<TraceDirection, number> = {
+  downstream: 5,
+  upstream: 3,
+};
+
+// Arrows bigger than each trace's line, so they read as arrowheads on it
+// instead of gaps in it
+const TRACE_ARROW_SIZES: Record<TraceDirection, number> = {
+  downstream: 14,
+  upstream: 11,
+};
+
+// Map.tsx sets the filter on a trace's line and arrows to show the trace
+function traceLineLayer(direction: TraceDirection): LayerSpecification {
+  return {
+    'id': TRACE_LAYER_IDS[direction].line,
+    'source': 'water',
+    'source-layer': 'waterways',
+    'type': 'line',
+    'filter': NO_TRACE_FILTER,
+    'layout': {
+      'line-cap': 'round',
+      'line-join': 'round',
+    },
+    'paint': {
+      'line-width': TRACE_WIDTHS[direction],
+      'line-color': TRACE_COLORS[direction],
+    },
+  };
+}
+
+function traceArrowsLayer(direction: TraceDirection): LayerSpecification {
+  return {
+    'id': TRACE_LAYER_IDS[direction].arrows,
+    'source': 'water',
+    'source-layer': 'waterways',
+    'type': 'symbol',
+    'filter': NO_TRACE_FILTER,
+    // Enough room around each arrow that ones on short waterways don't crowd
+    // each other
+    'layout': flowArrowLayout(TRACE_ARROW_SIZES[direction], 20),
+    'paint': {
+      'text-color': TRACE_COLORS[direction],
+      'text-halo-color': 'white',
+      'text-halo-width': 1,
+    },
+  };
+}
 
 const WATER_STYLE: StyleSpecification = {
   ...COMMON_STYLE,
@@ -658,7 +856,7 @@ const WATER_STYLE: StyleSpecification = {
       'source-layer': 'watersheds',
       'type': 'fill',
       'paint': {
-        'fill-color': '#CFC4AF',
+        'fill-color': COLORS.land,
       },
     },
     {
@@ -668,8 +866,9 @@ const WATER_STYLE: StyleSpecification = {
       'source-layer': 'watersheds',
       'type': 'line',
       'paint': {
-        'line-color': 'rgba(255,255,255,0.9)',
-        'line-width': 1.5,
+        'line-color': COLORS.watershedBoundary,
+        // Thick enough to tell apart from contours, which are about as light
+        'line-width': 3,
       },
     },
     {
@@ -692,8 +891,36 @@ const WATER_STYLE: StyleSpecification = {
         'line-color': WATERWAYS_COLOR_EXP,
       },
     },
+    {
+      'id': WATERWAY_ARROWS_LAYER_ID,
+      'source': 'water',
+      'source-layer': 'waterways',
+      'type': 'symbol',
+      // Zoomed out there are too many waterways for arrows to help
+      'minzoom': 13,
+      // Waterways from sources without flow data aren't drawn in the direction
+      // of flow
+      'filter': ['has', 'flow_pre'],
+      // MapLibre's default padding, so arrows fit between street names.
+      // MapLibre joins connected lines with the same text into one line that
+      // keeps only one of their colors, so artificial waterways get a
+      // different arrow to keep a culvert's color from spreading to the
+      // natural creek it's part of.
+      'layout': flowArrowLayout(
+        10,
+        2,
+        byWaterwayNaturalness(FLOW_ARROW, ARTIFICIAL_FLOW_ARROW),
+      ),
+      'paint': {
+        'text-color': WATERWAYS_COLOR_EXP,
+      },
+    },
+    // Downstream traces draw on top of upstream ones, which can cover whole
+    // basins
+    traceLineLayer('upstream'),
+    traceLineLayer('downstream'),
     ...contourLayers,
-    ...waysLayers,
+    ...waterMapWaysLayers,
     ...contextLayers,
     {
       'id': 'waterways-labels',
@@ -712,11 +939,17 @@ const WATER_STYLE: StyleSpecification = {
         'text-font': ['Noto Sans Bold'],
       },
     },
+    // On top so MapLibre places them before labels, which would otherwise
+    // crowd them out. They don't hide labels, so labels still show.
+    traceArrowsLayer('upstream'),
+    traceArrowsLayer('downstream'),
   ],
 };
 
 export {
   NO_STYLE,
   ROCK_STYLE,
+  TRACE_FADING_PAINT,
   WATER_STYLE,
+  WATERWAY_ARROWS_LAYER_ID,
 };
