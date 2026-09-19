@@ -18,6 +18,14 @@ import { useEffect, useRef, useState } from 'react';
 import { Pack } from '../packs/Pack';
 import { PackStore } from '../packs/types';
 
+// Each line of a two-line secondary text truncates on its own, since the
+// list item's noWrap only ellipsizes a single line of text
+const secondaryLineSx = {
+  display: 'block',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+} as const;
+
 interface Props {
   currentPackId: string | null;
   onChoose?: (packId: string | null) => void;
@@ -81,6 +89,15 @@ const PackListItem = ({
   const downloadPercent = downloadProgress
     ? Math.round(downloadProgress.loadedBytes / downloadProgress.totalBytes * 100)
     : null;
+  const description = hasUpdate
+    ? (
+        <>
+          <strong>Update Available</strong>
+          {' '}
+          {pack.description}
+        </>
+      )
+    : pack.description;
   let secondaryAction;
   if (downloadProgress) {
     secondaryAction = (
@@ -224,15 +241,16 @@ const PackListItem = ({
           secondary={
             downloadPercent !== null
               ? `${downloadPercent}% downloaded...`
-              : hasUpdate
+              : pack.sourceFileName
                 ? (
                     <>
-                      <strong>Update Available</strong>
-                      {' '}
-                      {pack.description}
+                      {description && <Box component="span" sx={secondaryLineSx}>{description}</Box>}
+                      <Box component="span" sx={secondaryLineSx}>
+                        {`Loaded from ${pack.sourceFileName}`}
+                      </Box>
                     </>
                   )
-                : pack.description
+                : description
           }
           secondaryTypographyProps={{
             noWrap: true,
