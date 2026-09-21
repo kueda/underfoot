@@ -20,6 +20,18 @@ function paint(id: string, property: string, style: StyleSpecification = WATER_S
   return ((layer(id, style) as { paint?: Record<string, unknown> }).paint ?? {})[property];
 }
 
+// Evaluate a data-driven style value for a waterway with the given properties
+function evaluateForWaterway(value: unknown, properties: Record<string, unknown>): unknown {
+  const parsed = expression.createExpression(value, 'style-property');
+  if (parsed.result !== 'success') throw new Error('value should be an expression');
+  return parsed.value.evaluate({ zoom: 14 }, { type: 'LineString', properties });
+}
+
+const STREAM = { is_natural: 1, type: 'stream' };
+const CANAL = { is_natural: 0, type: 'canal/ditch' };
+// NHD draws these through lakes and wide rivers to carry flow across them
+const ARTIFICIAL_PATH = { is_natural: 0, type: 'artificial' };
+
 // Relative lightness of a #rrggbb or rgb(r,g,b) color, from 0 to 765
 function lightness(color: unknown) {
   const text = String(color);
@@ -40,6 +52,43 @@ describe('WATER_STYLE', () => {
     }
     expect(lightness(paint('ways-labels', 'text-color')))
       .toBeGreaterThan(lightness(paint('ways-labels', 'text-color', ROCK_STYLE)));
+  });
+});
+
+describe('waterway colors', () => {
+  const colorProperties = [
+    ['waterways', 'line-color'],
+    [WATERWAY_ARROWS_LAYER_ID, 'text-color'],
+    ['waterways-labels', 'text-color'],
+  ];
+
+  it('draw artificial paths through waterbodies like natural water', () => {
+    for (const [id, property] of colorProperties) {
+      const color = paint(id, property);
+      expect(evaluateForWaterway(color, ARTIFICIAL_PATH), `${id} ${property}`)
+        .toEqual(evaluateForWaterway(color, STREAM));
+    }
+  });
+
+  it('draw other man-made waterways in their own color', () => {
+    for (const [id, property] of colorProperties) {
+      const color = paint(id, property);
+      expect(evaluateForWaterway(color, CANAL), `${id} ${property}`)
+        .not.toEqual(evaluateForWaterway(color, STREAM));
+    }
+  });
+
+  it('fade artificial paths like natural water while tracing', () => {
+    const fading = TRACE_FADING_PAINT.filter(
+      p => p.layer === 'waterways' || p.layer === WATERWAY_ARROWS_LAYER_ID,
+    );
+    expect(fading).toHaveLength(2);
+    for (const { layer: id, faded } of fading) {
+      expect(evaluateForWaterway(faded, ARTIFICIAL_PATH), id)
+        .toEqual(evaluateForWaterway(faded, STREAM));
+      expect(evaluateForWaterway(faded, CANAL), id)
+        .not.toEqual(evaluateForWaterway(faded, STREAM));
+    }
   });
 });
 
@@ -101,20 +150,25 @@ describe('flow direction arrows', () => {
     expect(draws({ name: 'Temescal Creek' })).toBe(false);
   });
 
-  it('differ between natural and artificial waterways so they keep their own colors', () => {
-    // MapLibre joins connected lines with the same text into one line that
-    // keeps only one of their colors, so a culvert's orange could spread to
-    // the natural creek it's part of
+  describe('glyphs', () => {
     const { layout } = layer(WATERWAY_ARROWS_LAYER_ID) as { layout?: Record<string, unknown> };
-    const parsed = expression.createExpression(layout?.['text-field'], 'text-field');
-    if (parsed.result !== 'success') throw new Error('text-field should be an expression');
-    const arrow = (isNatural: number): unknown => parsed.value.evaluate(
-      { zoom: 14 },
-      { type: 'LineString', properties: { is_natural: isNatural, flow_pre: 3, flow_upstream: 1 } },
+    const arrow = (properties: Record<string, unknown>): unknown => evaluateForWaterway(
+      layout?.['text-field'],
+      { ...properties, flow_pre: 3, flow_upstream: 1 },
     );
-    expect(arrow(1)).toBeTruthy();
-    expect(arrow(0)).toBeTruthy();
-    expect(arrow(0)).not.toEqual(arrow(1));
+
+    it('differ between natural and man-made waterways so they keep their own colors', () => {
+      // MapLibre joins connected lines with the same text into one line that
+      // keeps only one of their colors, so a culvert's orange could spread to
+      // the natural creek it's part of
+      expect(arrow(STREAM)).toBeTruthy();
+      expect(arrow(CANAL)).toBeTruthy();
+      expect(arrow(CANAL)).not.toEqual(arrow(STREAM));
+    });
+
+    it('are the same for artificial paths, which are drawn like natural water', () => {
+      expect(arrow(ARTIFICIAL_PATH)).toEqual(arrow(STREAM));
+    });
   });
 
   it('show along traces, which set the same filter on their lines and arrows', () => {

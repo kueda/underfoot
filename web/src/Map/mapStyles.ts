@@ -685,21 +685,29 @@ const ROCK_STYLE: StyleSpecification = {
   ],
 };
 
-// One value for natural waterways and another for artificial ones
+// One value for natural waterways and another for man-made ones, like canals
+// and culverts. NHD's "artificial" waterways aren't man-made in that sense:
+// they're paths the map makers drew to carry flow through a lake or wide
+// river, so they get the natural value and don't show up as orange lines
+// across the water.
 function byWaterwayNaturalness(
   natural: string,
   artificial: string,
 ): DataDrivenPropertyValueSpecification<string> {
   return [
-    // https://maplibre.org/maplibre-style-spec/expressions/#match
-    'match',
+    // https://maplibre.org/maplibre-style-spec/expressions/#case
+    'case',
 
-    // input
-    ['get', 'is_natural'],
+    // condition
+    ['all',
+      ['==', ['get', 'is_natural'], 0],
+      ['!=', ['get', 'type'], 'artificial'],
+    ],
 
-    // mappings
-    [0], artificial,
+    // output when the condition is true
+    artificial,
 
+    // fallback
     natural,
   ];
 }
@@ -903,7 +911,7 @@ const WATER_STYLE: StyleSpecification = {
       'filter': ['has', 'flow_pre'],
       // MapLibre's default padding, so arrows fit between street names.
       // MapLibre joins connected lines with the same text into one line that
-      // keeps only one of their colors, so artificial waterways get a
+      // keeps only one of their colors, so man-made waterways get a
       // different arrow to keep a culvert's color from spreading to the
       // natural creek it's part of.
       'layout': flowArrowLayout(

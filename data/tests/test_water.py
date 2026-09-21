@@ -142,8 +142,9 @@ def test_process_source_nhdplus_fallback_uses_matching_work_dir(monkeypatch):
 
 def _stub_make_water_steps(monkeypatch):
     """Stub everything make_water does except the wiring between its own
-    arguments and process_sources. Returns the kwargs process_sources got."""
-    captured = {}
+    arguments and process_sources. Returns the kwargs process_sources got,
+    plus any SQL make_water ran directly, under "sql"."""
+    captured = {"sql": []}
 
     def fake_process_sources(sources, **kwargs):
         captured.update(kwargs)
@@ -151,10 +152,12 @@ def _stub_make_water_steps(monkeypatch):
     monkeypatch.setattr(water, "make_database", lambda: None)
     monkeypatch.setattr(water, "clean_sources", lambda sources, debug=False: None)
     monkeypatch.setattr(water, "process_sources", fake_process_sources)
+    monkeypatch.setattr(
+        water.util, "run_sql", lambda sql, **kwargs: captured["sql"].append(sql)
+    )
     for step in (
         "load_waterways",
         "load_waterbodies",
-        "update_imaginary_waterways",
         "load_watersheds",
         "load_flow",
         "label_waterways",
@@ -191,6 +194,40 @@ def test_make_water_cleandb_alone_still_cleans_the_database(monkeypatch):
     water.make_water(["fake_source"], cleandb=True)
 
     assert captured["cleandb"] is True
+
+
+def test_make_water_does_not_mark_waterways_imaginary(monkeypatch):
+    """The web app draws NHD's artificial waterways, which run through lakes
+    and wide rivers, like natural water based on their type, so make_water
+    doesn't need a spatial join to find the ones inside waterbodies. That join
+    took an hour on big packs.
+    """
+    captured = _stub_make_water_steps(monkeypatch)
+
+    water.make_water(["fake_source"])
+
+    assert not [sql for sql in captured["sql"] if "is_imaginary" in sql]
+
+
+def test_load_waterways_has_no_is_imaginary_column(monkeypatch):
+    statements = []
+    monkeypatch.setattr(water.util, "run_sql", lambda sql, **kwargs: statements.append(sql))
+
+    water.load_waterways(["fake_source"])
+
+    assert statements
+    assert not [sql for sql in statements if "is_imaginary" in sql]
+
+
+def test_make_pmtiles_leaves_is_imaginary_out_of_the_tiles(monkeypatch, tmp_path):
+    commands = []
+    monkeypatch.setattr(water.util, "call_cmd", lambda cmd, **kwargs: commands.append(cmd))
+    monkeypatch.setattr(water.util, "add_table_from_query_to_pmtiles", lambda **kwargs: None)
+
+    water.make_pmtiles(["fake_source"], path=str(tmp_path / "water.pmtiles"))
+
+    assert commands
+    assert not [cmd for cmd in commands if "is_imaginary" in str(cmd)]
 
 
 def downstream_of(labels, source_id):

@@ -36,7 +36,6 @@ WATERWAYS_TILE_FIELDS = [
     "source",
     "type",
     "is_natural",
-    "is_imaginary",
     "permanence",
     "surface",
     "flow_pre",
@@ -182,7 +181,6 @@ def load_waterways(sources, debug=False):
                 source_id_attr VARCHAR(32),
                 type VARCHAR(128),
                 is_natural INTEGER DEFAULT 1,
-                is_imaginary INTEGER DEFAULT 0,
                 permanence VARCHAR(64) DEFAULT 'permanent',
                 surface VARCHAR(64) DEFAULT 'surface',
                 flow_pre INTEGER,
@@ -663,22 +661,6 @@ def make_pmtiles(sources, path="./water.pmtiles", bbox=None, geojson_path=None, 
         pmtiles_path=path)
     return path
 
-def update_imaginary_waterways():
-    """
-    Set the imaginary column in the waterways table for all ways that are
-    effectively imaginary, i.e. they depict the path water might take through
-    a waterbody. NHD lumps these in the "artificial" type, even though the
-    artificer in these cases are mapmapkers, not people making physical
-    changes on the ground.
-    """
-    util.run_sql(f"""
-        UPDATE {WATERWAYS_TABLE_NAME} SET is_imaginary = 1
-        FROM {WATERBODIES_TABLE_NAME}
-        WHERE
-            ST_CONTAINS({WATERBODIES_TABLE_NAME}.geom, {WATERWAYS_TABLE_NAME}.geom)
-            AND {WATERWAYS_TABLE_NAME}.type = 'artificial'
-    """)
-
 def make_water(
         sources, clean=False, cleandb=False, cleanfiles=False, bbox=None,
         path="./water.pmtiles", procs=NUM_PROCESSES, debug=False, geojson_path=None):
@@ -694,7 +676,6 @@ def make_water(
         sources, cleandb=(clean or cleandb), cleanfiles=cleanfiles, procs=procs, debug=debug)
     load_waterways(sources, debug=debug)
     load_waterbodies(sources, debug=debug)
-    update_imaginary_waterways()
     load_watersheds(sources, debug=debug)
     load_flow(sources, debug=debug)
     label_waterways(debug=debug)
