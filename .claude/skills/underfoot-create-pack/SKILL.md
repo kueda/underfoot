@@ -26,6 +26,9 @@ Before running the script, collect these five things. Do NOT assume or guess the
 | Country | `--admin1` | `"United States"` | Full name, not abbreviation |
 | State/province | `--admin2` | `"California"` | Full name, not abbreviation |
 
+If the user names an area but no rock sources, find and add one first by following "Finding a
+Source" in the `underfoot-add-source` skill.
+
 Do NOT ask the user for `bbox`, `osm`, `water`, or `geojson` — those are computed automatically.
 The one exception is `osm` when the script refuses its pick (see below).
 

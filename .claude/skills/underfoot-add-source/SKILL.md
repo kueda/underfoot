@@ -1,8 +1,9 @@
 ---
 name: underfoot-add-source
-description: Use when adding a new geologic data source to the underfoot project — creating
-  the required three-file structure, writing citation.json, and calling process_usgs_source
-  with the correct parameters for GAM or USGS shapefile sources.
+description: Use when finding or adding a new geologic data source for the underfoot project:
+  checking existing sources and searching NGMDB for a map covering an area, creating the
+  required three-file structure, writing citation.json, and calling process_usgs_source with
+  the correct parameters for GAM or USGS shapefile sources.
 ---
 
 # Adding an Underfoot Geologic Source
@@ -13,6 +14,77 @@ Paths in this skill are relative to `data/`, and commands run from `data/`.
 
 Every geologic source requires **three files** (sometimes four). Missing any one means the
 source cannot be discovered or run.
+
+## Finding a Source
+
+Skip this when the user has already named the source.
+
+### Check existing sources first
+
+A source already in the repo may cover the area, sometimes under a name that doesn't mention
+it. Multistate sources like `of2006_1272` (CT, ME, MA, NH, NJ, RI, VT) run one state at a time
+through thin entry points such as `sources/of2006_1272_nh.py`, so covering another state they
+include takes only a new entry point. Search `sources/*/citation.json` and the source
+docstrings for the state or region name, and check which packs in `packs/` already use each
+match. Include any match among the candidates you show the user.
+
+### Search NGMDB
+
+The [National Geologic Map Database](https://ngmdb.usgs.gov/) (NGMDB) catalog is the best
+place to look for new sources. It lists USGS and state survey maps. Its search page loads
+results from a JSON endpoint that takes the same query parameters, so query that directly:
+
+```
+curl -sS 'https://ngmdb.usgs.gov/ngm-bin/ngm_search_json.pl?useextents=true&bc_ul=<N>%2C<W>&bc_lr=<S>%2C<E>&format=gis&scale=<MIN>&scale2=<MAX>'
+```
+
+- `bc_ul` / `bc_lr`: upper-left and lower-right corners of the area as `lat,lon`. This matches
+  maps that *intersect* the area, not only ones that contain it.
+- `format`: `gis` for maps with vector GIS data, `gems` for maps with GeMS
+  downloads (see "Sources that follow GeMS" below). Try `gems` first, then fall back to `gis`.
+  Maps without vector data can't be used.
+- `scale` / `scale2`: the range of scale denominators, most detailed first (e.g. `100000` and
+  `1000000`).
+- `Title`: a substring matched against titles, e.g. `Title=geolog`.
+- `State`: a two-letter code, e.g. `State=ME` (full names match nothing). It drops national
+  compilations but keeps multistate maps, so use it alongside a bbox search, not instead of
+  one.
+- `sort`: `scale` (the default, most detailed first), `year` (newest first), `author`,
+  `title`, `publisher`, or `series`.
+
+Results are under `ngmdb_catalog_search.results`, with `id`, `title`, `authors`, `year`,
+`scale`, `published_by`, `series`, and `formats`. They include non-geologic maps (lidar, flood
+inundation), so filter by title. The `publisher_list` parameter is ignored; filter on
+`published_by` instead. Each result's page is `https://ngmdb.usgs.gov/Prodesc/proddesc_<id>.htm`,
+with the citation and bounding box in a schema.org JSON-LD block and links to the publisher,
+where the download usually lives.
+
+**Results come 100 at a time.** With the default sort, the first page of a large area can be
+all detailed quadrangle maps, and the statewide maps that would cover it never show up.
+`ngmdb_catalog_search.filter.total_count` is the total number of matches. When it is over 100,
+do one or more of these:
+
+- Page through with `start`, which is 1-based: `&start=101`, `&start=201`, and so on.
+- Search statewide scales separately, roughly `scale=250000&scale2=1000000`, and national
+  compilations at `scale=1000000&scale2=5000000`.
+- Narrow with `Title=geolog` or `State=<code>`.
+
+**PDF-only originals.** Many older statewide maps are listed without GIS data, so `format=gis`
+hides them, but a later USGS or state database may have digitized them. If a promising map is
+PDF only, search for a digital version of it (NGMDB without `format`, the publisher's site,
+or ScienceBase). A digital copy's product page often names the map it was digitized from.
+
+### Choose
+
+Unless the user says otherwise, prefer:
+
+- **One source covering the whole area** over a patchwork of smaller maps, even if it is less
+  detailed. Check coverage against the bounding box on the product page.
+- **Recent sources** over older ones, other things being equal.
+
+Show the user the top few candidates with scale, year, publisher, and coverage, and ask which
+to use before writing any files. The endpoint is undocumented, so if it stops working, ask the
+user to search the NGMDB site instead.
 
 ## Required Files
 
