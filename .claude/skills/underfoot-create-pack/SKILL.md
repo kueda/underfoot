@@ -27,6 +27,7 @@ Before running the script, collect these five things. Do NOT assume or guess the
 | State/province | `--admin2` | `"California"` | Full name, not abbreviation |
 
 Do NOT ask the user for `bbox`, `osm`, `water`, or `geojson` — those are computed automatically.
+The one exception is `osm` when the script refuses its pick (see below).
 
 ## Running the Script
 
@@ -42,6 +43,17 @@ python create_pack.py sim3040 sim3151 \
 The script will run any sources that haven't been processed yet, compute a convex-hull boundary
 from the source geometries, find the Geofabrik OSM extract and NHD/TIGER water sources that
 cover the boundary, and write `packs/<id>.json` plus `packs/<id>.geojson`.
+
+Water sources are written as bare identifiers: `nhdplus_h_<huc4>_hu4` for NHDPlus HR and
+`tiger_water_<GEOID>` for TIGER county water. `water.py` downloads and processes these itself,
+so do NOT create `sources/nhdplus_*.py` or `sources/tiger_water_*.py` scripts for them. The
+script writes only those two files in `packs/`; anything else new in `sources/` is a mistake.
+
+**Oversized OSM extracts:** If the smallest Geofabrik extract containing the boundary is over
+1.5 GB, or none contains it, the script exits with an error listing the extracts that cover
+most of the boundary, with their coverage and size. Show that list to the user and ask which one
+to use (usually the smallest one covering nearly all of the pack), then rerun with
+`--osm <url>`. Don't edit the `osm` field in the generated JSON instead.
 
 **Interactive mode:** If the user hasn't provided all the info yet, you can run
 `python create_pack.py -i` to be prompted for each field interactively.
@@ -62,6 +74,8 @@ cover the boundary, and write `packs/<id>.json` plus `packs/<id>.geojson`.
 | Writing `packs/<id>.json` by hand | Always use `create_pack.py` |
 | Using `rocks` as the field name | The field is `rock` (singular) |
 | Using `title` as the field name | The field is `name` |
-| Asking the user for bbox/osm/water | These are auto-generated — never ask |
+| Asking the user for bbox/osm/water | These are auto-generated — only ask about `osm` when the script refuses its pick |
+| Hand-editing `osm` in the pack JSON | Rerun `create_pack.py` with `--osm <url>` |
+| Adding `sources/<id>.py` scripts for NHD or TIGER water sources | Not needed; `water.py` resolves the identifiers |
 | Using full country/state names for `--id` | Use two-letter codes in the ID |
 | Using abbreviated names for `--admin1`/`--admin2` | Use full names for those fields |

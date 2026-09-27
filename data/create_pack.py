@@ -1,7 +1,7 @@
 """Create a pack metadata file
 
-# Create a pack metadata json file given three sources. This will 
-python create-pack.py rgm_004 of2005_1305_ca of2005_1305_nv \
+# Create a pack metadata json file given one or more rock sources
+python create_pack.py rgm_004 of2005_1305_ca of2005_1305_nv \
     --admin1="United States" \
     --admin2="California" \
     --id us-ca-tahoe \
@@ -14,6 +14,7 @@ import json
 import os
 import shutil
 import tempfile
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -129,18 +130,34 @@ def shapely_geometry_collection_from_geojson(geojson_path):
         return shapely.geometrycollections([shape(feature.geometry) for feature in geojson])
 
 
+GEOFABRIK_INDEX_GEOJSON_PATH = "geofabrik_index.geojson"
+
+# Extracts bigger than this get confirmed before they go into a pack. The
+# California extract is about 1.3 GB, while a multi-state extract like
+# us-northeast is 1.8 GB and all of the US is over 12 GB.
+MAX_OSM_EXTRACT_BYTES = 1_500_000_000
+
+# Extracts covering less of the pack than this aren't worth suggesting
+MIN_OSM_CANDIDATE_COVERAGE = 0.9
+
+
+def ensure_geofabrik_index():
+    """Download the Geofabrik extract index if not present"""
+    geofabrik_index_geojson_url = "https://download.geofabrik.de/index-v1.json"
+    if not os.path.isfile(GEOFABRIK_INDEX_GEOJSON_PATH):
+        log(f"DOWNLOADING {geofabrik_index_geojson_url}")
+        call_cmd(["curl", "-L", "-o", GEOFABRIK_INDEX_GEOJSON_PATH, geofabrik_index_geojson_url])
+
+
 def find_geofabrik_url(geojson_path):
     """Finds the URL of the smallest Geofabrik extract containing the GeoJSON shape"""
-    geofabrik_index_geojson_path = "geofabrik_index.geojson"
-    geofabrik_index_geojson_url = "https://download.geofabrik.de/index-v1.json"
-    if not os.path.isfile(geofabrik_index_geojson_path):
-        log(f"DOWNLOADING {geofabrik_index_geojson_url}")
-        call_cmd(["curl", "-L", "-o", geofabrik_index_geojson_path, geofabrik_index_geojson_url])
-    # Shrink the pack by about 100 m so slivers along its edges don't rule out
+    ensure_geofabrik_index()
+    # Shrink the pack by about 500 m so slivers along its edges don't rule out
     # an extract, e.g. where a state boundary in the source data differs
-    # slightly from the one Geofabrik used
-    pack_geom = shapely_geometry_collection_from_geojson(geojson_path).buffer(-0.001)
-    with fiona.open('geofabrik_index.geojson') as geofabrik_index:
+    # slightly from the one Geofabrik used. The OSM outline of New York
+    # overhangs Geofabrik's New York polygon by about 200 m.
+    pack_geom = shapely_geometry_collection_from_geojson(geojson_path).buffer(-0.005)
+    with fiona.open(GEOFABRIK_INDEX_GEOJSON_PATH) as geofabrik_index:
         containing_features = [
             feature for feature in geofabrik_index
             if shape(feature.geometry).contains(pack_geom)
@@ -150,6 +167,85 @@ def find_geofabrik_url(geojson_path):
     smallest_feature = min(containing_features,
         key=lambda feature: shapely.area(shape(feature.geometry)))
     return smallest_feature.properties['urls']['pbf']
+
+
+def find_geofabrik_candidates(geojson_path):
+    """List Geofabrik extracts intersecting the GeoJSON shape, smallest first,
+    with the fraction of the shape each one covers"""
+    ensure_geofabrik_index()
+    pack_geom = shapely.union_all(
+        shapely_geometry_collection_from_geojson(geojson_path).geoms
+    )
+    candidates = []
+    with fiona.open(GEOFABRIK_INDEX_GEOJSON_PATH) as geofabrik_index:
+        for feature in geofabrik_index:
+            # Some index polygons are invalid, and buffer(0) repairs them
+            extract_geom = shape(feature.geometry).buffer(0)
+            if not extract_geom.intersects(pack_geom):
+                continue
+            candidates.append({
+                "id": feature.properties["id"],
+                "url": feature.properties["urls"]["pbf"],
+                "area": extract_geom.area,
+                "coverage": extract_geom.intersection(pack_geom).area / pack_geom.area
+            })
+    return sorted(candidates, key=lambda candidate: candidate["area"])
+
+
+def get_content_length(url):
+    """Size of the file at a URL in bytes, or None if the server doesn't say"""
+    req = urllib.request.Request(
+        url, method="HEAD", headers={"User-Agent": "underfoot/create_pack.py"}
+    )
+    try:
+        with urllib.request.urlopen(req) as response:
+            length = response.headers.get("Content-Length")
+    except urllib.error.URLError as err:
+        log(f"Couldn't get size of {url}: {err}")
+        return None
+    return int(length) if length else None
+
+
+def format_bytes(num_bytes):
+    """Human-readable size"""
+    if num_bytes is None:
+        return "unknown size"
+    return f"{num_bytes / 1_000_000_000:.1f} GB"
+
+
+def choose_osm_url(geojson_path, interactive=False):
+    """Choose a Geofabrik extract for the pack, asking for confirmation or an
+    alternative if the smallest one containing it is missing or huge"""
+    url = find_geofabrik_url(geojson_path)
+    size = get_content_length(url) if url else None
+    if url and (size is None or size <= MAX_OSM_EXTRACT_BYTES):
+        return url
+    candidates = [
+        candidate for candidate in find_geofabrik_candidates(geojson_path)
+        if candidate["coverage"] >= MIN_OSM_CANDIDATE_COVERAGE
+    ]
+    lines = [
+        f"  {i}. {candidate['id']}: {candidate['coverage']:.2%} of pack, "
+        f"{format_bytes(get_content_length(candidate['url']))}, {candidate['url']}"
+        for i, candidate in enumerate(candidates, start=1)
+    ]
+    if url:
+        problem = f"The smallest Geofabrik extract containing the pack is {format_bytes(size)}"
+    else:
+        problem = "No Geofabrik extract contains the pack"
+    message = "\n".join([f"{problem}. Extracts covering most of it:", *lines])
+    if not interactive:
+        raise ValueError(f"{message}\nChoose one and pass it with --osm URL")
+    print(message)
+    default_hint = f", or blank for {url}" if url else ""
+    while True:
+        choice = input(f"Choose a number, paste a URL{default_hint}: ").strip()
+        if not choice and url:
+            return url
+        if choice.isdigit() and 1 <= int(choice) <= len(candidates):
+            return candidates[int(choice) - 1]["url"]
+        if choice.startswith(("http://", "https://")):
+            return choice
 
 
 def find_nhd_hu4_sources(geojson_path):
@@ -304,6 +400,11 @@ if __name__ == "__main__":
         metavar="PATH",
         help="Path to a pre-existing GeoJSON boundary file, skipping auto-generation")
     parser.add_argument(
+        "--osm",
+        type=str,
+        metavar="URL",
+        help="URL of the OSM PBF extract to use, skipping the Geofabrik lookup")
+    parser.add_argument(
         "-i",
         "--interactive",
         action="store_true",
@@ -330,7 +431,7 @@ if __name__ == "__main__":
         "$ref": f"file://./{os.path.basename(geojson_path)}"
     }
     data["bbox"] = generate_bbox(geojson_path)
-    data["osm"] = find_geofabrik_url(geojson_path)
+    data["osm"] = args.osm or choose_osm_url(geojson_path, interactive=args.interactive)
     data["water"] = find_water_sources(geojson_path)
     outfile_path = os.path.join("packs", f"{data['id']}.json",)
     with open(outfile_path, "w", encoding="utf-8") as outfile:

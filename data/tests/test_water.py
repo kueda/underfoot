@@ -140,6 +140,28 @@ def test_process_source_nhdplus_fallback_uses_matching_work_dir(monkeypatch):
     assert captured["gdb_name"] == "NHDPLUS_H_1307_HU4_GDB.gdb"
 
 
+def test_process_source_tiger_water_fallback_uses_fips_and_matching_work_dir(monkeypatch):
+    """create_pack.py writes tiger_water_<GEOID> identifiers with no
+    sources/<source>.py file, so process_source has to handle them itself."""
+    source = "tiger_water_06001"
+    expected_work_path = util.make_work_dir(os.path.join("sources", f"{source}.py"))
+
+    captured = {}
+
+    def fake_process_tiger_water_for_fips(fips_codes, source):
+        captured["fips_codes"] = fips_codes
+        captured["work_path"] = util.make_work_dir(source)
+
+    monkeypatch.setattr(water, "process_tiger_water_for_fips", fake_process_tiger_water_for_fips)
+    monkeypatch.setattr(water, "load_citation_for_source", lambda source: None)
+    monkeypatch.setattr(water.os.path, "isfile", lambda path: False)
+
+    water.process_source(source)
+
+    assert captured["fips_codes"] == ["06001"]
+    assert captured["work_path"] == expected_work_path
+
+
 def test_process_source_finds_source_file_from_another_cwd(monkeypatch, tmp_path):
     """Regression test: process_source looked for sources/<source>.py relative
     to the cwd, but process_nhdplus_hr_source chdirs into its work dir and
