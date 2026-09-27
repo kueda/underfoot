@@ -6,6 +6,8 @@ import sys
 import water
 from sources import util
 
+SOURCES_PATH = os.path.join(os.path.dirname(os.path.realpath(water.__file__)), "sources")
+
 
 def test_make_pmtiles_cleans_up_intermediate_gpkg(monkeypatch, tmp_path):
     """Regression test: make_pmtiles used to write its intermediate
@@ -125,6 +127,7 @@ def test_process_source_nhdplus_fallback_uses_matching_work_dir(monkeypatch):
 
     def fake_process_nhdplus_hr_source(base_path, url, gdb_name):
         captured["work_path"] = util.make_work_dir(os.path.realpath(base_path))
+        captured["base_path"] = base_path
         captured["url"] = url
         captured["gdb_name"] = gdb_name
 
@@ -138,6 +141,8 @@ def test_process_source_nhdplus_fallback_uses_matching_work_dir(monkeypatch):
     # The GDB naming convention on S3 is still uppercase.
     assert captured["url"].endswith("NHDPLUS_H_1307_HU4_GDB.zip")
     assert captured["gdb_name"] == "NHDPLUS_H_1307_HU4_GDB.gdb"
+    # The path a sources/<source>.py script would pass as __file__
+    assert captured["base_path"] == os.path.join(SOURCES_PATH, f"{source}.py")
 
 
 def test_process_source_tiger_water_fallback_uses_fips_and_matching_work_dir(monkeypatch):
@@ -151,6 +156,7 @@ def test_process_source_tiger_water_fallback_uses_fips_and_matching_work_dir(mon
     def fake_process_tiger_water_for_fips(fips_codes, source):
         captured["fips_codes"] = fips_codes
         captured["work_path"] = util.make_work_dir(source)
+        captured["source_path"] = source
 
     monkeypatch.setattr(water, "process_tiger_water_for_fips", fake_process_tiger_water_for_fips)
     monkeypatch.setattr(water, "load_citation_for_source", lambda source: None)
@@ -160,6 +166,7 @@ def test_process_source_tiger_water_fallback_uses_fips_and_matching_work_dir(mon
 
     assert captured["fips_codes"] == ["06001"]
     assert captured["work_path"] == expected_work_path
+    assert captured["source_path"] == os.path.join(SOURCES_PATH, f"{source}.py")
 
 
 def test_process_source_finds_source_file_from_another_cwd(monkeypatch, tmp_path):

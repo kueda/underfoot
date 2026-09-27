@@ -86,7 +86,7 @@ def process_source(source, clean=False, cleandb=False, cleanfiles=False, debug=F
         util.call_cmd(["python", path], check=True)
     elif source.startswith("nhdplus_"):
         process_nhdplus_hr_source(
-          os.path.join(os.path.realpath(__file__), "sources", source),
+          path,
           url="https://prd-tnm.s3.amazonaws.com/StagedProducts/Hydrography/NHDPlusHR/Beta/GDB/"
               f"{source.upper()}_GDB.zip",
           gdb_name=f"{source.upper()}_GDB.gdb"
@@ -95,7 +95,7 @@ def process_source(source, clean=False, cleandb=False, cleanfiles=False, debug=F
         fips_code = source.replace("tiger_water_", "")
         process_tiger_water_for_fips(
             [fips_code],
-            source=os.path.join(os.path.realpath(__file__), "sources", source)
+            source=path
         )
     else:
         raise ValueError(f"{source} has no file and no way to process it")
