@@ -1,0 +1,37 @@
+{
+    "id": "us-ny",
+    "name": "New York (state)",
+    "description": "US state of New York",
+    "admin1": "United States",
+    "admin2": "New York",
+    "rock": [
+        "of2005_1325_ny"
+    ],
+    "geojson": {
+        "$ref": "file://./us-ny.geojson"
+    },
+    "bbox": {
+        "bottom": 40.476578,
+        "left": -79.7619758,
+        "right": -71.790972,
+        "top": 45.0158611
+    },
+    "osm": "https://download.geofabrik.de/north-america/us/new-york-latest.osm.pbf",
+    "water": [
+        "nhdplus_h_0110_hu4",
+        "nhdplus_h_0202_hu4",
+        "nhdplus_h_0203_hu4",
+        "nhdplus_h_0204_hu4",
+        "nhdplus_h_0205_hu4",
+        "nhdplus_h_0412_hu4",
+        "nhdplus_h_0413_hu4",
+        "nhdplus_h_0414_hu4",
+        "nhdplus_h_0426_hu4",
+        "nhdplus_h_0427_hu4",
+        "nhdplus_h_0428_hu4",
+        "nhdplus_h_0429_hu4",
+        "nhdplus_h_0430_hu4",
+        "nhdplus_h_0501_hu4",
+        "tiger_ny_water"
+    ]
+}

@@ -1,0 +1,55 @@
+[
+  {
+    "type": "webpage",
+    "container-title": "USGS Publications Warehouse",
+    "title": "Preliminary Integrated Geologic Map Databases of the United States: Delaware, Maryland, New York, Pennsylvania, and Virginia (OFR 2005-1325)",
+    "URL": "https://pubs.usgs.gov/of/2005/1325/",
+    "author": [
+      {
+        "family": "Dicken",
+        "given": "Connie L."
+      },
+      {
+        "family": "Nicholson",
+        "given": "Suzanne W."
+      },
+      {
+        "family": "Horton",
+        "given": "John D."
+      },
+      {
+        "family": "Kinney",
+        "given": "Scott A."
+      },
+      {
+        "family": "Gunther",
+        "given": "Gregory"
+      },
+      {
+        "family": "Foose",
+        "given": "Michael P."
+      },
+      {
+        "family": "Mueller",
+        "given": "Julia A.L."
+      }
+    ],
+    "accessed": {
+      "date-parts": [
+        [
+          "2026",
+          9,
+          20
+        ]
+      ]
+    },
+    "issued": {
+      "date-parts": [
+        [
+          "2008",
+          8
+        ]
+      ]
+    }
+  }
+]
