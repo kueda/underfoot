@@ -140,6 +140,26 @@ def test_process_source_nhdplus_fallback_uses_matching_work_dir(monkeypatch):
     assert captured["gdb_name"] == "NHDPLUS_H_1307_HU4_GDB.gdb"
 
 
+def test_process_source_finds_source_file_from_another_cwd(monkeypatch, tmp_path):
+    """Regression test: process_source looked for sources/<source>.py relative
+    to the cwd, but process_nhdplus_hr_source chdirs into its work dir and
+    doesn't change back. A pool worker that processed an uncached NHDPlus
+    source then failed on the next scripted source, e.g. "tiger_ny_water has
+    no file and no way to process it" when building us-ny.
+    """
+    commands = []
+    monkeypatch.setattr(
+        water.util, "call_cmd", lambda cmd, **kwargs: commands.append(cmd))
+    monkeypatch.setattr(water, "load_citation_for_source", lambda source: None)
+    monkeypatch.chdir(tmp_path)
+
+    water.process_source("tiger_ny_water")
+
+    source_path = os.path.join(
+        os.path.dirname(os.path.realpath(water.__file__)), "sources", "tiger_ny_water.py")
+    assert commands[0] == ["python", source_path]
+
+
 def _stub_make_water_steps(monkeypatch):
     """Stub everything make_water does except the wiring between its own
     arguments and process_sources. Returns the kwargs process_sources got,

@@ -73,9 +73,10 @@ def process_source(source, clean=False, cleandb=False, cleanfiles=False, debug=F
     """Process water source"""
     if debug:
         util.log(f"water: processing source: {source}")
-    path = os.path.join("sources", f"{source}.py")
-    source_script_path = os.path.join("sources", f"{source}.py")
-    work_path = util.make_work_dir(source_script_path)
+    # Absolute because process_nhdplus_hr_source chdirs, and pool workers
+    # keep that cwd for the next source they process
+    path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "sources", f"{source}.py")
+    work_path = util.make_work_dir(path)
     if cleanfiles:
         gpkgs_path = os.path.join(work_path, "*.gpkg")
         for file_to_delete in glob(gpkgs_path):
