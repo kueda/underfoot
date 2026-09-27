@@ -19,10 +19,32 @@ from .rocks import (
     join_polygons_and_metadata,
     METADATA_COLUMN_NAMES,
     rock_type_from_lithology,
-    span_from_lithology
+    span_from_lithology,
+    span_from_text
 )
 
 SRS = "+proj=longlat +datum=NAD27 +no_defs"
+
+# Columns of the <state>units.csv attribute files
+ATTRIBUTE_COLUMN_NAMES = [
+    "STATE",
+    "ORIG_LABEL",
+    "MAP_SYM1",
+    "MAP_SYM2",
+    "UNIT_LINK",
+    "PROV_NO",
+    "PROVINCE",
+    "UNIT_NAME",
+    "UNIT_AGE",
+    "UNITDESC",
+    "STRAT_UNIT",
+    "UNIT_COM",
+    "MAP_REF",
+    "ROCKTYPE1",
+    "ROCKTYPE2",
+    "ROCKTYPE3",
+    "UNIT_REF"
+]
 
 def download_shapes(state, base_url):
     """Download and extract shapefiles"""
@@ -88,11 +110,14 @@ def schemify_attributes(attributes_path):
                 )
                 row["span"] = row["UNIT_AGE"]
                 if not row["span"]:
+                    row["span"] = span_from_text(row["title"])
+                if not row["span"]:
                     row["span"] = span_from_lithology(row["lithology"])
                 row["controlled_span"] = controlled_span_from_span(
                     row["span"]
                 )
-                row["min_age"], row["max_age"], row["est_age"] = ages_from_span(row["span"])
+                if row["span"]:
+                    row["min_age"], row["max_age"], row["est_age"] = ages_from_span(row["span"])
                 writer.writerow(row)
     return os.path.realpath(outfile_path)
 
@@ -119,13 +144,20 @@ def merge_shapes(paths):
     return dissolved_path
 
 
+def read_attributes(path):
+    """Read a state's attributes CSV, which may not have a header row (e.g. ME)"""
+    with open(path, encoding="ISO-8859-1") as attr_f:
+        has_header = "UNIT_LINK" in next(csv.reader(attr_f))
+    if has_header:
+        return pd.read_csv(path, encoding="ISO-8859-1")
+    return pd.read_csv(path, encoding="ISO-8859-1", header=None, names=ATTRIBUTE_COLUMN_NAMES)
+
+
 def merge_attributes(paths):
     """Merge multiple CSV attributes paths into a single file"""
     log("MERGING SHAPEFILES...")
     merged_path = "merged_units.csv"
-    merged = pd.concat([
-        pd.read_csv(path, encoding="ISO-8859-1") for path in paths
-    ])
+    merged = pd.concat([read_attributes(path) for path in paths])
     merged.loc[:, [
       'ORIG_LABEL',
       'UNIT_LINK',

@@ -1,0 +1,51 @@
+{
+    "id": "us-me",
+    "name": "Maine (state)",
+    "description": "US state of Maine",
+    "admin1": "United States",
+    "admin2": "Maine",
+    "rock": [
+        "of2006_1272_me"
+    ],
+    "geojson": {
+        "$ref": "file://./us-me.geojson"
+    },
+    "bbox": {
+        "bottom": 42.89572439177782,
+        "left": -71.08437244641426,
+        "right": -66.7427928462482,
+        "top": 47.460045036812176
+    },
+    "osm": "https://download.geofabrik.de/north-america/us/maine-latest.osm.pbf",
+    "water": [
+        "nhdplus_h_0103_hu4",
+        "nhdplus_h_0104_hu4",
+        "nhdplus_h_0105_hu4",
+        "nhdplus_h_0101_hu4",
+        "nhdplus_h_0431_hu4",
+        "nhdplus_h_0106_hu4",
+        "nhdplus_h_0108_hu4",
+        "nhdplus_h_0102_hu4",
+        "nhdplus_h_0430_hu4",
+        "tiger_water_23023",
+        "tiger_water_23019",
+        "tiger_water_23027",
+        "tiger_water_23021",
+        "tiger_water_33017",
+        "tiger_water_23001",
+        "tiger_water_23005",
+        "tiger_water_23013",
+        "tiger_water_23009",
+        "tiger_water_23025",
+        "tiger_water_23011",
+        "tiger_water_23015",
+        "tiger_water_33003",
+        "tiger_water_33007",
+        "tiger_water_23007",
+        "tiger_water_23017",
+        "tiger_water_23031",
+        "tiger_water_33015",
+        "tiger_water_23003",
+        "tiger_water_23029"
+    ]
+}
