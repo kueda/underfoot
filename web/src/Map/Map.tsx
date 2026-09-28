@@ -329,6 +329,9 @@ export default function UnderfootMap() {
         layer: String(mapFeature.sourceLayer),
       };
       if (mapFeature.properties.name) newUnderfootFeature.title = mapFeature.properties.name as string;
+      if (mapFeature.properties.permanence) {
+        newUnderfootFeature.permanence = String(mapFeature.properties.permanence);
+      }
       if (citations && newUnderfootFeature.source) {
         newUnderfootFeature.citation = citations[newUnderfootFeature.source];
       }

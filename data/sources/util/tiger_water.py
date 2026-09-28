@@ -60,7 +60,7 @@ def make_gpkg(fips, dst_path, append=False):
             ELSE 'unknown'
             END AS type,
             1 AS is_natural,
-            'perennial' AS permanence,
+            CAST(NULL AS TEXT) AS permanence,
             Geometry AS geom
         FROM {basename}
         WHERE

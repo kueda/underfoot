@@ -13,6 +13,11 @@ export default function WaterHeader({ feature }: { feature?: WaterFeature }) {
       displayLayer = 'Watershed';
       break;
   }
+  const permanence = feature?.permanence;
+  if (permanence) {
+    const capitalized = `${permanence[0].toUpperCase()}${permanence.slice(1)}`;
+    displayLayer = `${capitalized} ${displayLayer.toLowerCase()}`;
+  }
   return (
     <>
       <h3>

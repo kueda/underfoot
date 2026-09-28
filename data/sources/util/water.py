@@ -170,12 +170,10 @@ def process_nhdplus_hr_source_waterways(gdb_path, srs):
               'surface'
             )
           ) AS surface,
-          LOWER(
-            COALESCE(
-              NULLIF(NHDFCode.HydrographicCategory, ' '),
-              'perennial'
-            )
-          ) AS permanence,
+          -- Blank for FCodes that don't say how often water flows, like
+          -- 46000 streams and artificial paths, so leave those unknown
+          -- instead of guessing perennial
+          LOWER(NULLIF(NHDFCode.HydrographicCategory, ' ')) AS permanence,
           Shape AS geom
         FROM
           NHDFlowline
@@ -229,12 +227,7 @@ def waterbodies_sql(lyr_name):
             OR {lyr_name}.FCode = 43613
             OR {lyr_name}.FCode = 43624
           ) AS is_natural,
-          LOWER(
-            COALESCE(
-              NULLIF(NHDFCode.HydrographicCategory, ' '),
-              'perennial'
-            )
-          ) AS permanence,
+          LOWER(NULLIF(NHDFCode.HydrographicCategory, ' ')) AS permanence,
           Shape AS geom
         FROM
           {lyr_name}
