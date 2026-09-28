@@ -23,7 +23,7 @@ import fiona
 from shapely.geometry import shape, mapping
 import shapely
 
-from sources.util import call_cmd, log
+from sources.util import call_cmd, download_file, log
 
 
 def get_attribute(attr, args):
@@ -146,7 +146,7 @@ def ensure_geofabrik_index():
     geofabrik_index_geojson_url = "https://download.geofabrik.de/index-v1.json"
     if not os.path.isfile(GEOFABRIK_INDEX_GEOJSON_PATH):
         log(f"DOWNLOADING {geofabrik_index_geojson_url}")
-        call_cmd(["curl", "-L", "-o", GEOFABRIK_INDEX_GEOJSON_PATH, geofabrik_index_geojson_url])
+        download_file(geofabrik_index_geojson_url, GEOFABRIK_INDEX_GEOJSON_PATH)
 
 
 def find_geofabrik_url(geojson_path):
@@ -264,7 +264,7 @@ def find_nhd_hu4_sources(geojson_path):
             wbd_gpkg_zip_path = os.path.join(tmpdir, os.path.basename(wbd_gpkg_url))
             if not os.path.isfile(wbd_gpkg_zip_path):
                 log(f"DOWNLOADING {wbd_gpkg_url}")
-                call_cmd(["curl", "-L", "-o", wbd_gpkg_zip_path, wbd_gpkg_url])
+                download_file(wbd_gpkg_url, wbd_gpkg_zip_path)
                 call_cmd(["unzip", "-u", "-o", wbd_gpkg_zip_path, "-d", tmpdir])
                 call_cmd([
                     "ogr2ogr",
@@ -296,7 +296,7 @@ def ensure_tiger_counties():
     with tempfile.TemporaryDirectory() as tmpdir:
         zip_path = os.path.join(tmpdir, os.path.basename(tiger_counties_shp_url))
         log(f"DOWNLOADING {tiger_counties_shp_url}")
-        call_cmd(["curl", "-L", "-o", zip_path, tiger_counties_shp_url])
+        download_file(tiger_counties_shp_url, zip_path)
         call_cmd(["unzip", "-u", "-o", zip_path, "-d", tmpdir])
         call_cmd([
             "ogr2ogr", TIGER_COUNTIES_GEOJSON_PATH,

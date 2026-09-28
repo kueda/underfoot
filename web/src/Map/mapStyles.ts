@@ -754,6 +754,57 @@ const FADED_WATERWAYS_COLOR_EXP = byWaterwayNaturalness(
   fadedOverLand(COLORS.artificialWater),
 );
 
+// NHD says how often water flows in a waterway or fills a waterbody:
+// perennial ones have water all year, intermittent ones for part of the year,
+// and ephemeral ones only right after rain or snowmelt. Features that don't
+// say, like TIGER's, are drawn like perennial ones.
+//
+// Zero-length dashes with round caps draw dots, so intermittent waterways get
+// a dash-dot pattern and ephemeral ones get dots, both of which look less like
+// the evenly dashed trails than plain dashes do. Round caps also add half the
+// line width to each end of a dash and take it from the gaps around it.
+//
+// A match expression needs all its arrays to be the same length, so the
+// shorter patterns repeat themselves.
+const INTERMITTENT_DASHES = [3, 2.5, 0, 2.5];
+const EPHEMERAL_DASHES = [0, 3, 0, 3];
+// A pattern with no gap, since a match expression needs a value for every case
+const SOLID_DASHES = [1, 0, 1, 0];
+
+const WATERWAYS_DASHARRAY_EXP: DataDrivenPropertyValueSpecification<number[]> = [
+  'match',
+  ['get', 'permanence'],
+  'intermittent', ['literal', INTERMITTENT_DASHES],
+  'ephemeral', ['literal', EPHEMERAL_DASHES],
+  ['literal', SOLID_DASHES],
+];
+
+// Ephemeral washes cover arid places so densely that they'd otherwise
+// overwhelm the few waterways that actually have water in them
+const WATERWAYS_WIDTH_EXP: DataDrivenPropertyValueSpecification<number> = [
+  'match',
+  ['get', 'permanence'],
+  'ephemeral', 1.5,
+  2,
+];
+
+// Round caps draw the dots in the intermittent and ephemeral patterns
+const WATERWAYS_CAP_EXP: DataDrivenPropertyValueSpecification<'butt' | 'round' | 'square'> = [
+  'match',
+  ['get', 'permanence'],
+  ['intermittent', 'ephemeral'], 'round',
+  'butt',
+];
+
+const WATERBODIES_OPACITY_EXP: DataDrivenPropertyValueSpecification<number> = [
+  'match',
+  ['get', 'permanence'],
+  'intermittent', 0.5,
+  1,
+];
+
+const WATERBODIES_INTERMITTENT_OUTLINE_LAYER_ID = 'waterbodies-intermittent-outline';
+
 const WATERWAY_ARROWS_LAYER_ID = 'waterways-arrows';
 
 // The map font has these triangles but not the Unicode arrows
@@ -808,6 +859,12 @@ const TRACE_FADING_PAINT: FadingPaint[] = [
     property: 'fill-pattern',
     color: 'marsh-tufts',
     faded: 'marsh-tufts-faded',
+  },
+  {
+    layer: WATERBODIES_INTERMITTENT_OUTLINE_LAYER_ID,
+    property: 'line-color',
+    color: COLORS.water,
+    faded: fadedOverLand(COLORS.water),
   },
   {
     layer: 'waterways',
@@ -927,6 +984,7 @@ const WATER_STYLE: StyleSpecification = {
       'type': 'fill',
       'paint': {
         'fill-color': WATERBODIES_COLOR_EXP,
+        'fill-opacity': WATERBODIES_OPACITY_EXP,
       },
     },
     {
@@ -942,14 +1000,34 @@ const WATER_STYLE: StyleSpecification = {
       },
     },
     {
+      // Lighter fill alone could look like a trace fading the map
+      'id': WATERBODIES_INTERMITTENT_OUTLINE_LAYER_ID,
+      'source': 'water',
+      'source-layer': 'waterbodies',
+      'type': 'line',
+      'filter': ['==', ['get', 'permanence'], 'intermittent'],
+      'layout': {
+        'line-cap': 'round',
+      },
+      'paint': {
+        'line-color': COLORS.water,
+        'line-width': 1,
+        'line-dasharray': INTERMITTENT_DASHES,
+      },
+    },
+    {
       'id': 'waterways',
       'source': 'water',
       'source-layer': 'waterways',
       'type': 'line',
+      'layout': {
+        'line-cap': WATERWAYS_CAP_EXP,
+      },
       'paint': {
         // 'line-color': '#1F78B4',
-        'line-width': 2,
+        'line-width': WATERWAYS_WIDTH_EXP,
         'line-color': WATERWAYS_COLOR_EXP,
+        'line-dasharray': WATERWAYS_DASHARRAY_EXP,
       },
     },
     {

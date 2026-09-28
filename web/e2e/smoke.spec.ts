@@ -205,3 +205,39 @@ test('picks a waterway that is a few pixels from the crosshairs', async ({ page 
   await expect(page.getByRole('button', { name: 'Trace downstream' })).toBeVisible();
   expect(alerts).toEqual([]);
 });
+
+// MapLibre adds `/<bearing>/<pitch>` to the `map=<zoom>/<lat>/<lng>` hash once either isn't 0
+function hashMapParts(page: Page) {
+  return new URL(page.url()).hash.match(/map=([^&]*)/)?.[1].split('/') ?? [];
+}
+
+test('does not rotate or tilt the map', async ({ page }) => {
+  const alerts = collectAlerts(page);
+  // A shared link with a bearing and pitch, like one copied from a rotated, tilted map
+  const { lat, lng } = PALO_SECO_CREEK;
+  await page.goto(`/#map=11/${lat}/${lng}/-96.8/45`);
+  await downloadOaklandPack(page);
+  await expect(page.locator('.MapBottomSheetHeader h3')).not.toBeEmpty();
+
+  const center = { x: 640, y: 360 };
+  async function drag(dx: number, dy: number, button: 'left' | 'right' = 'left') {
+    await page.mouse.move(center.x, center.y);
+    await page.mouse.down({ button });
+    await page.mouse.move(center.x + dx, center.y + dy, { steps: 10 });
+    await page.mouse.up({ button });
+  }
+  // Right-drag and Control-drag rotate the map when rotation is enabled
+  await drag(200, 0, 'right');
+  await page.keyboard.down('Control');
+  await drag(200, 0);
+  await page.keyboard.up('Control');
+  // So do Shift and the arrow keys
+  await page.locator('.maplibregl-canvas').focus();
+  await page.keyboard.press('Shift+ArrowLeft');
+  // Pan so the hash has definitely caught up with whatever the drags did
+  const latBefore = hashMapParts(page)[1];
+  await drag(0, 100);
+  await expect(() => expect(hashMapParts(page)[1]).not.toBe(latBefore)).toPass();
+  expect(hashMapParts(page)).toHaveLength(3);
+  expect(alerts).toEqual([]);
+});

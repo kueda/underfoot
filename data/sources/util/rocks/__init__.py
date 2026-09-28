@@ -10,6 +10,7 @@ import fiona
 
 from .. import (
     call_cmd,
+    download_file,
     extless_basename,
     extract_e00,
     log,
@@ -403,6 +404,30 @@ def metadata_from_csv(infile_path, mapping):
     return outfile_path
 
 
+def gems_description_with_subunits(dmu_row, dmu_rows):
+    """
+    Return the description of a row in a GeMS DescriptionOfMapUnits table,
+    completed with the names and codes of its subunits if it ends by
+    introducing them, e.g. "Unit is mapped separately as:". In the source the
+    subunits are the rows below it in the DMU hierarchy, but we display each
+    unit on its own.
+    """
+    description = (dmu_row.get("Descr") or "").rstrip()
+    hkey = dmu_row.get("HKey")
+    if not description.endswith(":") or not hkey:
+        return description
+    depth = hkey.count("-") + 1
+    subunits = [
+        f"{row['FullName']} ({row['MapUnit']})" if row.get("MapUnit") else row["FullName"]
+        for row in dmu_rows
+        if (row.get("HKey") or "").startswith(f"{hkey}-")
+        and row["HKey"].count("-") == depth
+    ]
+    if not subunits:
+        return description
+    return f"{description} {'; '.join(subunits)}."
+
+
 def override_metadata_from_csv(infile_path, overrides_path):
     """
     Return a CSV with metadata from an existing CSV, overridden by non-blank
@@ -678,7 +703,7 @@ def process_usgs_source(
     # download the file if necessary
     if not os.path.isfile(download_path):
         log(f"DOWNLOADING {url}")
-        call_cmd(["curl", "-OL", url])
+        download_file(url)
 
     # extract the archive if necessary
     if len(glob(extracted_file_path)) == 0:

@@ -207,6 +207,7 @@ def _stub_make_water_steps(monkeypatch):
     for step in (
         "load_waterways",
         "load_waterbodies",
+        "inherit_waterbody_permanence",
         "load_watersheds",
         "load_flow",
         "label_waterways",
@@ -256,6 +257,40 @@ def test_make_water_does_not_mark_waterways_imaginary(monkeypatch):
     water.make_water(["fake_source"])
 
     assert not [sql for sql in captured["sql"] if "is_imaginary" in sql]
+
+
+def test_make_water_gives_artificial_paths_permanence_after_loading_waterbodies(monkeypatch):
+    """Artificial paths inherit permanence from the waterbodies they run
+    through, so that has to happen after both are loaded and before the
+    tiles are written"""
+    _stub_make_water_steps(monkeypatch)
+    steps = []
+    for step in ("load_waterways", "load_waterbodies", "inherit_waterbody_permanence",
+                 "make_pmtiles"):
+        monkeypatch.setattr(
+            water, step, lambda *args, step=step, **kwargs: steps.append(step))
+
+    water.make_water(["fake_source"])
+
+    assert steps == [
+        "load_waterways",
+        "load_waterbodies",
+        "inherit_waterbody_permanence",
+        "make_pmtiles",
+    ]
+
+
+def test_inherit_waterbody_permanence_only_joins_artificial_paths(monkeypatch):
+    """A spatial join of every waterway to the waterbodies took an hour on big
+    packs, so only artificial paths, which NHD draws through waterbodies,
+    look for a waterbody"""
+    statements = []
+    monkeypatch.setattr(water.util, "run_sql", lambda sql, **kwargs: statements.append(sql))
+
+    water.inherit_waterbody_permanence()
+
+    assert len(statements) == 1
+    assert "type = 'artificial'" in statements[0]
 
 
 def test_load_waterways_has_no_is_imaginary_column(monkeypatch):

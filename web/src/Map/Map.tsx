@@ -203,10 +203,18 @@ export default function UnderfootMap() {
         zoom: 2,
         maxZoom: 22,
         attributionControl: false,
+        // No rotation: there's no control to put north back up. With this off,
+        // MapLibre also ignores the bearing in shared links.
+        dragRotate: false,
+        // No tilt either, including from the pitch in shared links
+        maxPitch: 0,
+        touchPitch: false,
         // Sync zoom/lat/lng to the URL as `#map=<zoom>/<lat>/<lng>`. The named
         // form leaves our other hash params (pack, type) untouched.
         hash: 'map',
       });
+      map.current.touchZoomRotate.disableRotation();
+      map.current.keyboard.disableRotation();
       map.current.on('load', () => {
         setMapLoaded(true);
         log('Map initial load complete');
@@ -331,6 +339,9 @@ export default function UnderfootMap() {
         layer: String(mapFeature.sourceLayer),
       };
       if (mapFeature.properties.name) newUnderfootFeature.title = mapFeature.properties.name as string;
+      if (mapFeature.properties.permanence) {
+        newUnderfootFeature.permanence = String(mapFeature.properties.permanence);
+      }
       if (citations && newUnderfootFeature.source) {
         newUnderfootFeature.citation = citations[newUnderfootFeature.source];
       }

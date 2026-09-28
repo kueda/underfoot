@@ -43,6 +43,19 @@ def call_cmd(*args, **kwargs):
     # pylint: enable=subprocess-run-check
 
 
+def download_file(url, path=None, curl_args=None):
+    """Downloads url to path, defaulting to the url's basename in the cwd.
+    Downloads to a temporary path first so a failed or interrupted download
+    never leaves a partial file at path for later runs to mistake for a
+    finished one."""
+    if path is None:
+        path = os.path.basename(url)
+    part_path = f"{path}.part"
+    call_cmd(["curl", "--fail", "-L", "-o", part_path, *(curl_args or []), url])
+    os.replace(part_path, path)
+    return path
+
+
 def run_sql(sql, dbname="underfoot", quiet=False, interpolations=None):
     """Run a SQL statement in the database"""
     con = psycopg2.connect(f"dbname={dbname}")

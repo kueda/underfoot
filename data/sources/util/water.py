@@ -8,7 +8,7 @@ from glob import glob
 
 import xml.etree.ElementTree as ET
 
-from . import call_cmd, extless_basename, log, make_work_dir, unzip
+from . import call_cmd, download_file, extless_basename, log, make_work_dir, unzip
 from .proj import GRS80_LONGLAT, SRS
 
 WATERWAYS_FNAME = "waterways.gpkg"
@@ -33,7 +33,7 @@ def process_omca_creeks_source(url, dir_name, waterways_shp_path,
     download_path = os.path.basename(url)
     if not os.path.isfile(download_path):
         print(f"DOWNLOADING {url}")
-        call_cmd(["curl", "-OL", url])
+        download_file(url)
 
     # Unpack
     dir_path = dir_name
@@ -170,12 +170,10 @@ def process_nhdplus_hr_source_waterways(gdb_path, srs):
               'surface'
             )
           ) AS surface,
-          LOWER(
-            COALESCE(
-              NULLIF(NHDFCode.HydrographicCategory, ' '),
-              'perennial'
-            )
-          ) AS permanence,
+          -- Blank for FCodes that don't say how often water flows, like
+          -- 46000 streams and artificial paths, so leave those unknown
+          -- instead of guessing perennial
+          LOWER(NULLIF(NHDFCode.HydrographicCategory, ' ')) AS permanence,
           Shape AS geom
         FROM
           NHDFlowline
@@ -229,12 +227,7 @@ def waterbodies_sql(lyr_name):
             OR {lyr_name}.FCode = 43613
             OR {lyr_name}.FCode = 43624
           ) AS is_natural,
-          LOWER(
-            COALESCE(
-              NULLIF(NHDFCode.HydrographicCategory, ' '),
-              'perennial'
-            )
-          ) AS permanence,
+          LOWER(NULLIF(NHDFCode.HydrographicCategory, ' ')) AS permanence,
           Shape AS geom
         FROM
           {lyr_name}
@@ -438,7 +431,7 @@ def process_nhdplus_hr_source(
         log(f"Download exists at {download_path}, skipping...")
     else:
         log(f"DOWNLOADING {url}")
-        call_cmd(["curl", "-OL", url])
+        download_file(url)
     # Unpack the waterways data
     gdb_path = gdb_name
     if os.path.isdir(gdb_path):

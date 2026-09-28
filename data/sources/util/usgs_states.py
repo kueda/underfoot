@@ -8,6 +8,7 @@ import re
 import pandas as pd
 from . import (
     call_cmd,
+    download_file,
     log,
     make_work_dir,
     unzip
@@ -53,7 +54,7 @@ def download_shapes(state, base_url):
     download_path = os.path.basename(url)
     if not os.path.isfile(download_path):
         log(f"DOWNLOADING {url}")
-        call_cmd(["curl", "-OL", url])
+        download_file(url)
     shp_path = f"{state.lower()}geol_poly_dd.shp"
     if not os.path.isfile(shp_path):
         log("EXTRACTING ARCHIVE...")
@@ -68,7 +69,7 @@ def download_attributes(state, base_url):
     download_path = os.path.basename(url)
     if not os.path.isfile(download_path):
         log(f"DOWNLOADING {url}")
-        call_cmd(["curl", "-OL", url])
+        download_file(url)
     csv_path = f"{state}units.csv"
     if not os.path.isfile(csv_path):
         log("EXTRACTING ARCHIVE...")

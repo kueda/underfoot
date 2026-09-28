@@ -182,7 +182,7 @@ def load_waterways(sources, debug=False):
                 source_id_attr VARCHAR(32),
                 type VARCHAR(128),
                 is_natural INTEGER DEFAULT 1,
-                permanence VARCHAR(64) DEFAULT 'permanent',
+                permanence VARCHAR(64),
                 surface VARCHAR(64) DEFAULT 'surface',
                 flow_pre INTEGER,
                 flow_upstream INTEGER,
@@ -243,7 +243,7 @@ def load_waterbodies(sources, debug=False):
                 source_id_attr VARCHAR(32),
                 type VARCHAR(128),
                 is_natural INTEGER DEFAULT 1,
-                permanence VARCHAR(64) DEFAULT 'permanent',
+                permanence VARCHAR(64),
                 geom geometry(MultiPolygon, {SRID})
             )
         """,
@@ -279,6 +279,34 @@ def load_waterbodies(sources, debug=False):
             """)
         except psycopg2.errors.UndefinedTable:
             util.log(f"{source_table_name} doesn't exist, skipping...")
+
+
+def inherit_waterbody_permanence(debug=False):
+    """Give NHD's artificial paths, which it draws to carry flow through
+    lakes and wide rivers without saying how often water flows along them,
+    the permanence of the waterbody they run through. A path in more than one
+    waterbody gets the one that has water most often."""
+    if debug:
+        util.log("water: giving artificial paths the permanence of their waterbodies")
+    util.run_sql(f"""
+        UPDATE {WATERWAYS_TABLE_NAME} w
+        SET permanence = (
+            SELECT b.permanence
+            FROM {WATERBODIES_TABLE_NAME} b
+            WHERE
+                b.source = w.source
+                AND b.permanence IS NOT NULL
+                AND ST_Intersects(b.geom, ST_PointOnSurface(w.geom))
+            ORDER BY
+                CASE b.permanence
+                WHEN 'perennial' THEN 0
+                WHEN 'intermittent' THEN 1
+                ELSE 2
+                END
+            LIMIT 1
+        )
+        WHERE w.type = 'artificial' AND w.permanence IS NULL
+    """)
 
 
 def load_watersheds(sources, debug=False):
@@ -574,7 +602,9 @@ def make_pmtiles(sources, path="./water.pmtiles", bbox=None, geojson_path=None, 
                 FROM {WATERWAYS_TABLE_NAME}
                 WHERE
                     name IS NOT NULL
-                    AND is_natural = 1 AND permanence = 'perennial'
+                    AND is_natural = 1
+                    -- Leave out waterways known to be dry some of the year
+                    AND COALESCE(permanence, 'perennial') = 'perennial'
             """,
             "-nln", waterways_overview_table_name,
             "-a_srs", f"EPSG:{SRID}"
@@ -677,6 +707,7 @@ def make_water(
         sources, cleandb=(clean or cleandb), cleanfiles=cleanfiles, procs=procs, debug=debug)
     load_waterways(sources, debug=debug)
     load_waterbodies(sources, debug=debug)
+    inherit_waterbody_permanence(debug=debug)
     load_watersheds(sources, debug=debug)
     load_flow(sources, debug=debug)
     label_waterways(debug=debug)

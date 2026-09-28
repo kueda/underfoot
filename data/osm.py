@@ -48,9 +48,7 @@ def fetch_data(url, clean=False):
         pass
     else:
         fifteen_mins = 15.0 * 60
-        util.call_cmd([
-            "curl", "-L", "-o", filename, "--max-time", str(fifteen_mins), url
-        ], check=True)
+        util.download_file(url, filename, curl_args=["--max-time", str(fifteen_mins)])
     return filename
 
 

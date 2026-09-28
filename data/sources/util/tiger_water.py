@@ -4,7 +4,7 @@ import json
 import os
 import re
 import time
-from . import log, call_cmd, make_work_dir, SRS as UNDERFOOT_SRS
+from . import log, call_cmd, download_file, make_work_dir, SRS as UNDERFOOT_SRS
 
 SRS = "EPSG:4269"
 
@@ -19,7 +19,7 @@ def download(fips):
         log(f"Download exists at {download_path}, skipping...")
     else:
         log(f"DOWNLOADING {url}")
-        call_cmd(["curl", "-f", "-L", url, "--output", download_path])
+        download_file(url, download_path)
     # Unpack the zip
     shp_path = os.path.join(work_path, f"tl_2020_{fips}_areawater.shp")
     if os.path.isfile(shp_path):
@@ -60,7 +60,7 @@ def make_gpkg(fips, dst_path, append=False):
             ELSE 'unknown'
             END AS type,
             1 AS is_natural,
-            'perennial' AS permanence,
+            CAST(NULL AS TEXT) AS permanence,
             Geometry AS geom
         FROM {basename}
         WHERE

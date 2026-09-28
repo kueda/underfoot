@@ -22,7 +22,7 @@ def get_archive(url):
     download_path = os.path.basename(url)
     if not os.path.isfile(download_path):
         print(f"DOWNLOADING {url}")
-        util.call_cmd(["curl", "-OL", url])
+        util.download_file(url)
     gdb_path = "JOTR_OFR_v10-2.gdb"
     if not os.path.isdir(gdb_path):
         print("EXTRACTING ARCHIVE...")
