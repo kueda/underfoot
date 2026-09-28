@@ -24,7 +24,7 @@ def fetch(url):
     download_path = "sim3143.zip"
     if not os.path.isfile(download_path):
         util.log(f"DOWNLOADING {url}")
-        util.call_cmd(["curl", "-L", url, "--output", download_path])
+        util.download_file(url, download_path)
     shp_dir_path = "HawaiiStateGeologicMap_GeMS-open"
     if not os.path.isdir(shp_dir_path):
         util.log("EXTRACTING ARCHIVE...")

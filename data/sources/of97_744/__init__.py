@@ -22,7 +22,7 @@ def run():
     download_path = os.path.basename(url)
     if not os.path.isfile(download_path):
         print(f"DOWNLOADING {url}")
-        util.call_cmd(["curl", "-OL", url])
+        util.download_file(url)
     dir_path = "of97-744-shapefiles"
     if not os.path.isdir(dir_path):
         print("EXTRACTING ARCHIVE...")

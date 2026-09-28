@@ -20,7 +20,7 @@ def get_archive(url, data_path):
     download_path = os.path.basename(url)
     if not os.path.isfile(download_path):
         print(f"DOWNLOADING {url}")
-        util.call_cmd(["curl", "-OL", url])
+        util.download_file(url)
     if data_path.endswith(".gdb"):
         is_extracted = os.path.isdir(data_path)
     else:
