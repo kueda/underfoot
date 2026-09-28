@@ -32,3 +32,17 @@ def test_process_nhdplus_hr_source_waterways_flow_rebuilds_after_failure(tmp_pat
         "source_id,hydroseq,dnhydroseq",
         "55000100000001,20,10",
     ]
+
+
+@pytest.mark.parametrize("fcode", [46600, 46601, 46602])
+def test_waterbodies_sql_classifies_all_swamp_marsh_fcodes_as_swamps(fcode):
+    """NHD splits swamps/marshes into intermittent (46601) and perennial
+    (46602) FCodes, and those used to fall through to lake/pond."""
+    con = sqlite3.connect(":memory:")
+    con.execute("CREATE TABLE NHDWaterbody (GNIS_ID, GNIS_Name, FCode, FType, Shape)")
+    con.execute("CREATE TABLE NHDFcode (FCode, Description, HydrographicCategory)")
+    con.execute("INSERT INTO NHDWaterbody VALUES ('1', 'Some Swamp', ?, 466, NULL)", (fcode,))
+    con.execute("INSERT INTO NHDFcode VALUES (?, 'Swamp/Marsh', ' ')", (fcode,))
+    cursor = con.execute(water.waterbodies_sql("NHDWaterbody"))
+    columns = [d[0] for d in cursor.description]
+    assert dict(zip(columns, cursor.fetchone()))["type"] == "swamp/marsh"

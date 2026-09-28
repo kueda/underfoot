@@ -712,6 +712,28 @@ function byWaterwayNaturalness(
   ];
 }
 
+// How strong the water color is in swamps and marshes, so they look wet but
+// not like open water. A lighter blue instead of a green, which could look
+// like the upstream trace.
+const SWAMP_OPACITY = 0.45;
+
+function byWaterbodyType(
+  openWater: string,
+  swamp: string,
+): DataDrivenPropertyValueSpecification<string> {
+  return ['match', ['get', 'type'], 'swamp/marsh', swamp, openWater];
+}
+
+const WATERBODIES_COLOR_EXP = byWaterbodyType(
+  COLORS.water,
+  fadedOverLand(COLORS.water, SWAMP_OPACITY),
+);
+
+const FADED_WATERBODIES_COLOR_EXP = byWaterbodyType(
+  fadedOverLand(COLORS.water),
+  fadedOverLand(COLORS.water, SWAMP_OPACITY * FADED_OPACITY),
+);
+
 const WATERWAYS_COLOR_EXP = byWaterwayNaturalness(COLORS.water, COLORS.artificialWater);
 
 const FADED_WATERWAYS_COLOR_EXP = byWaterwayNaturalness(
@@ -765,8 +787,8 @@ const TRACE_FADING_PAINT: FadingPaint[] = [
   {
     layer: 'waterbodies',
     property: 'fill-color',
-    color: COLORS.water,
-    faded: fadedOverLand(COLORS.water),
+    color: WATERBODIES_COLOR_EXP,
+    faded: FADED_WATERBODIES_COLOR_EXP,
   },
   {
     layer: 'waterways',
@@ -885,7 +907,7 @@ const WATER_STYLE: StyleSpecification = {
       'source-layer': 'waterbodies',
       'type': 'fill',
       'paint': {
-        'fill-color': COLORS.water,
+        'fill-color': WATERBODIES_COLOR_EXP,
       },
     },
     {

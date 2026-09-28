@@ -32,6 +32,16 @@ const CANAL = { is_natural: 0, type: 'canal/ditch' };
 // NHD draws these through lakes and wide rivers to carry flow across them
 const ARTIFICIAL_PATH = { is_natural: 0, type: 'artificial' };
 
+// Evaluate a data-driven style value for a waterbody with the given properties
+function evaluateForWaterbody(value: unknown, properties: Record<string, unknown>): unknown {
+  const parsed = expression.createExpression(value, 'style-property');
+  if (parsed.result !== 'success') throw new Error('value should be an expression');
+  return parsed.value.evaluate({ zoom: 14 }, { type: 'Polygon', properties });
+}
+
+const LAKE = { is_natural: 1, type: 'lake/pond' };
+const SWAMP = { is_natural: 1, type: 'swamp/marsh' };
+
 // Relative lightness of a #rrggbb or rgb(r,g,b) color, from 0 to 765
 function lightness(color: unknown) {
   const text = String(color);
@@ -89,6 +99,32 @@ describe('waterway colors', () => {
       expect(evaluateForWaterway(faded, CANAL), id)
         .not.toEqual(evaluateForWaterway(faded, STREAM));
     }
+  });
+});
+
+describe('waterbody colors', () => {
+  const waterbodyFading = () => {
+    const fading = TRACE_FADING_PAINT.find(p => p.layer === 'waterbodies');
+    if (!fading) throw new Error('waterbodies should fade while tracing');
+    return fading;
+  };
+
+  it('draw swamps and marshes lighter than open water', () => {
+    const color = paint('waterbodies', 'fill-color');
+    expect(lightness(evaluateForWaterbody(color, SWAMP)))
+      .toBeGreaterThan(lightness(evaluateForWaterbody(color, LAKE)));
+  });
+
+  it('keep swamps and marshes lighter than open water while tracing', () => {
+    const { faded } = waterbodyFading();
+    expect(lightness(evaluateForWaterbody(faded, SWAMP)))
+      .toBeGreaterThan(lightness(evaluateForWaterbody(faded, LAKE)));
+  });
+
+  it('fade swamps and marshes further while tracing', () => {
+    const { color, faded } = waterbodyFading();
+    expect(lightness(evaluateForWaterbody(faded, SWAMP)))
+      .toBeGreaterThan(lightness(evaluateForWaterbody(color, SWAMP)));
   });
 });
 
