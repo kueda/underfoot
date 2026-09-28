@@ -443,3 +443,51 @@ def test_override_metadata_from_csv_warns_about_overrides_matching_no_units(
     )
     rocks.override_metadata_from_csv(str(metadata_path), str(overrides_path))
     assert "IPx" in capsys.readouterr().out
+
+
+def gems_dmu_row(hkey, name, code="", descr=""):
+    return {"HKey": hkey, "FullName": name, "MapUnit": code, "Descr": descr}
+
+
+def test_gems_description_with_subunits_completes_description_ending_in_colon():
+    parent = gems_dmu_row(
+        "00-08-01-03-01",
+        "Lava flows of the Kula Volcanics",
+        "Qkul",
+        "Chiefly ‘a‘ā; pāhoehoe is minor. Unit is mapped separately as:"
+    )
+    rows = [
+        parent,
+        gems_dmu_row(
+            "00-08-01-03-01-01",
+            "Summit ankaramite lava flow of the Kula Volcanics",
+            "Qkuls",
+            "Highly porphyritic ‘a‘ā lava flows."
+        ),
+        gems_dmu_row("00-08-01-03-02", "Vent deposits of the Kula Volcanics", "Qkuv"),
+    ]
+    assert rocks.gems_description_with_subunits(parent, rows) == (
+        "Chiefly ‘a‘ā; pāhoehoe is minor. Unit is mapped separately as: "
+        "Summit ankaramite lava flow of the Kula Volcanics (Qkuls)."
+    )
+
+
+def test_gems_description_with_subunits_lists_only_direct_subunits():
+    parent = gems_dmu_row("01", "Foo Volcanics", "Qf", "Divided into:")
+    rows = [
+        parent,
+        gems_dmu_row("01-01", "Lava flows of the Foo Volcanics", "Qfl"),
+        gems_dmu_row("01-01-01", "Olivine-rich lava flows of the Foo Volcanics", "Qflo"),
+        gems_dmu_row("01-02", "Vent deposits of the Foo Volcanics", "Qfv"),
+        gems_dmu_row("010-01", "Bar Volcanics", "Qb"),
+    ]
+    assert rocks.gems_description_with_subunits(parent, rows) == (
+        "Divided into: Lava flows of the Foo Volcanics (Qfl); "
+        "Vent deposits of the Foo Volcanics (Qfv)."
+    )
+
+
+def test_gems_description_with_subunits_leaves_other_descriptions_alone():
+    parent = gems_dmu_row("01", "Foo Volcanics", "Qf", "Lava flows.")
+    rows = [parent, gems_dmu_row("01-01", "Lava flows of the Foo Volcanics", "Qfl")]
+    assert rocks.gems_description_with_subunits(parent, rows) == "Lava flows."

@@ -127,8 +127,8 @@ def schemify_attributes(attributes_path):
         writer.writeheader()
         codes_encoutered = {}
         with open(attributes_path, encoding="utf-8") as attributes_file:
-            reader = csv.DictReader(attributes_file)
-            for row in reader:
+            attribute_rows = list(csv.DictReader(attributes_file))
+            for row in attribute_rows:
                 row["code"] = row["MapUnit"]
                 if not row["code"] or len(row["code"]) == 0:
                     continue
@@ -136,7 +136,10 @@ def schemify_attributes(attributes_path):
                 codes_encoutered[row["code"]] = True
                 shp_unit = units_from_shp.get(row["code"], {})
                 row["title"] = overrides.get("title") or row["FullName"]
-                row["description"] = overrides.get("description") or row["Descr"]
+                row["description"] = (
+                    overrides.get("description")
+                    or rocks.gems_description_with_subunits(row, attribute_rows)
+                )
                 if not row["description"] or len(row["description"]) == 0:
                     row["description"] = shp_unit.get("description")
                 row["lithology"] = overrides.get("lithology") or shp_unit.get("lithology")
