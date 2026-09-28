@@ -6,7 +6,10 @@ run commands from this directory.
 Each pack is specified as a .json file in packs/, including basic metadata and
 lists of `rocks` sources for geology and `water` sources for hydrology. Each
 source identifier references a python module in sources that will download
-the source, process it, and insert it into a local PostGIS database. Most
+the source, process it, and insert it into a local PostGIS database. The
+exceptions are the NHDPlus HR water sources (`nhdplus_h_<huc4>_hu4`) and
+`tiger_water_<fips>`, which have no module; `water.py` builds them from the
+identifier alone. Most
 geologic source modules include a citation.json file in CSL-JSON, and may
 include a units.csv file that lists geologic unit descriptions that the
 source did not include in a machine-readable format and needed to be derived
@@ -77,6 +80,10 @@ This runs just that source module and writes standardized files to
 database. Use it to check a new or changed source before adding it to a pack.
 The expected output formats for rocks and water sources are documented in
 `README.md`; helper functions are in the `sources/util/` module.
+
+Water sources without a module can't be run this way. `python water.py
+<source>` processes them into the same work dir, but it also loads them into
+the database and writes `water.pmtiles`.
 
 For adding a new geologic source, use the `underfoot-add-source` skill. For
 creating a new pack, use the `underfoot-create-pack` skill; packs are always
