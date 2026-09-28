@@ -712,6 +712,41 @@ function byWaterwayNaturalness(
   ];
 }
 
+// How strong the water color is in swamps and marshes, so they look wet but
+// not like open water. A lighter blue instead of a green, which could look
+// like the upstream trace. Pale enough for the marsh tufts on top to read.
+const SWAMP_OPACITY = 0.2;
+
+function byWaterbodyType(
+  openWater: string,
+  swamp: string,
+): DataDrivenPropertyValueSpecification<string> {
+  return ['match', ['get', 'type'], 'swamp/marsh', swamp, openWater];
+}
+
+const WATERBODIES_COLOR_EXP = byWaterbodyType(
+  COLORS.water,
+  fadedOverLand(COLORS.water, SWAMP_OPACITY),
+);
+
+const FADED_WATERBODIES_COLOR_EXP = byWaterbodyType(
+  fadedOverLand(COLORS.water),
+  fadedOverLand(COLORS.water, SWAMP_OPACITY * FADED_OPACITY),
+);
+
+const MARSH_LAYER_ID = 'waterbodies-marsh';
+
+// How strong the water color is in marsh tufts, so they mark the marsh
+// without competing with the waterways drawn over it
+const MARSH_TUFT_OPACITY = 0.55;
+
+// Colors of the images Map.tsx draws for tufted marsh patterns when the map
+// asks for them, like the tufts on USGS topo maps
+const MARSH_PATTERNS: Record<string, string> = {
+  'marsh-tufts': fadedOverLand(COLORS.water, MARSH_TUFT_OPACITY),
+  'marsh-tufts-faded': fadedOverLand(COLORS.water, MARSH_TUFT_OPACITY * FADED_OPACITY),
+};
+
 const WATERWAYS_COLOR_EXP = byWaterwayNaturalness(COLORS.water, COLORS.artificialWater);
 
 const FADED_WATERWAYS_COLOR_EXP = byWaterwayNaturalness(
@@ -804,7 +839,7 @@ function flowArrowLayout(
 
 interface FadingPaint {
   layer: string;
-  property: 'fill-color' | 'line-color' | 'text-color';
+  property: 'fill-color' | 'fill-pattern' | 'line-color' | 'text-color';
   color: DataDrivenPropertyValueSpecification<string>;
   faded: DataDrivenPropertyValueSpecification<string>;
 }
@@ -816,8 +851,14 @@ const TRACE_FADING_PAINT: FadingPaint[] = [
   {
     layer: 'waterbodies',
     property: 'fill-color',
-    color: COLORS.water,
-    faded: fadedOverLand(COLORS.water),
+    color: WATERBODIES_COLOR_EXP,
+    faded: FADED_WATERBODIES_COLOR_EXP,
+  },
+  {
+    layer: MARSH_LAYER_ID,
+    property: 'fill-pattern',
+    color: 'marsh-tufts',
+    faded: 'marsh-tufts-faded',
   },
   {
     layer: WATERBODIES_INTERMITTENT_OUTLINE_LAYER_ID,
@@ -942,8 +983,20 @@ const WATER_STYLE: StyleSpecification = {
       'source-layer': 'waterbodies',
       'type': 'fill',
       'paint': {
-        'fill-color': COLORS.water,
+        'fill-color': WATERBODIES_COLOR_EXP,
         'fill-opacity': WATERBODIES_OPACITY_EXP,
+      },
+    },
+    {
+      'id': MARSH_LAYER_ID,
+      'source': 'water',
+      'source-layer': 'waterbodies',
+      'type': 'fill',
+      // Zoomed out, tufts crowd in among all the other lines in big marshes
+      'minzoom': 12,
+      'filter': ['==', ['get', 'type'], 'swamp/marsh'],
+      'paint': {
+        'fill-pattern': 'marsh-tufts',
       },
     },
     {
@@ -1033,6 +1086,7 @@ const WATER_STYLE: StyleSpecification = {
 };
 
 export {
+  MARSH_PATTERNS,
   NO_STYLE,
   ROCK_STYLE,
   TRACE_FADING_PAINT,
