@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { TRACE_DIRECTIONS, TRACE_LAYER_IDS } from './flowTrace';
 import {
+  MARSH_PATTERNS,
   ROCK_STYLE,
   TRACE_FADING_PAINT,
   WATER_STYLE,
@@ -125,6 +126,59 @@ describe('waterbody colors', () => {
     const { color, faded } = waterbodyFading();
     expect(lightness(evaluateForWaterbody(faded, SWAMP)))
       .toBeGreaterThan(lightness(evaluateForWaterbody(color, SWAMP)));
+  });
+});
+
+describe('marsh pattern', () => {
+  const MARSH_LAYER_ID = 'waterbodies-marsh';
+
+  it('draws tufts over swamps and marshes only', () => {
+    const marsh = layer(MARSH_LAYER_ID) as {
+      'type': string;
+      'source-layer'?: string;
+      'filter'?: FilterSpecification;
+    };
+    expect(marsh.type).toBe('fill');
+    expect(marsh['source-layer']).toBe('waterbodies');
+    if (!marsh.filter) throw new Error('marsh layer should have a filter');
+    const { filter: evaluate } = featureFilter(marsh.filter, 'filter');
+    const draws = (properties: Record<string, unknown>) => evaluate(
+      { zoom: 14 },
+      { type: 'Polygon', properties },
+    );
+    expect(draws(SWAMP)).toBe(true);
+    expect(draws(LAKE)).toBe(false);
+  });
+
+  it('hides tufts when zoomed out, where they get too busy', () => {
+    expect((layer(MARSH_LAYER_ID) as { minzoom?: number }).minzoom).toBe(12);
+  });
+
+  it('draws tufts over the swamp fill, under waterways', () => {
+    const ids = WATER_STYLE.layers.map(l => l.id);
+    expect(ids.indexOf(MARSH_LAYER_ID)).toBeGreaterThan(ids.indexOf('waterbodies'));
+    expect(ids.indexOf(MARSH_LAYER_ID)).toBeLessThan(ids.indexOf('waterways'));
+  });
+
+  it('draws tufts lighter than open water but darker than the swamp fill', () => {
+    const fill = paint('waterbodies', 'fill-color');
+    const tufts = lightness(MARSH_PATTERNS[String(paint(MARSH_LAYER_ID, 'fill-pattern'))]);
+    expect(tufts).toBeGreaterThan(lightness(evaluateForWaterbody(fill, LAKE)));
+    expect(tufts).toBeLessThan(lightness(evaluateForWaterbody(fill, SWAMP)));
+  });
+
+  it('uses a pattern the map knows how to draw', () => {
+    expect(Object.keys(MARSH_PATTERNS)).toContain(paint(MARSH_LAYER_ID, 'fill-pattern'));
+  });
+
+  it('swaps in lighter tufts while tracing', () => {
+    const fading = TRACE_FADING_PAINT.find(p => p.layer === MARSH_LAYER_ID);
+    if (!fading) throw new Error('marsh tufts should fade while tracing');
+    expect(fading.property).toBe('fill-pattern');
+    const { color: pattern, faded: fadedPattern } = fading;
+    expect(Object.keys(MARSH_PATTERNS)).toContain(fadedPattern);
+    expect(lightness(MARSH_PATTERNS[String(fadedPattern)]))
+      .toBeGreaterThan(lightness(MARSH_PATTERNS[String(pattern)]));
   });
 });
 
