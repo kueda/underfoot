@@ -1,0 +1,49 @@
+{
+    "id": "us-vt",
+    "name": "Vermont (state)",
+    "description": "US state of Vermont",
+    "admin1": "United States",
+    "admin2": "Vermont",
+    "rock": [
+        "of2006_1272_vt"
+    ],
+    "geojson": {
+        "$ref": "file://./us-vt.geojson"
+    },
+    "bbox": {
+        "bottom": 42.72696,
+        "left": -73.43774,
+        "right": -71.465386,
+        "top": 45.016665
+    },
+    "osm": "https://download.geofabrik.de/north-america/us/vermont-latest.osm.pbf",
+    "water": [
+        "nhdplus_h_0108_hu4",
+        "nhdplus_h_0202_hu4",
+        "nhdplus_h_0430_hu4",
+        "tiger_water_25011",
+        "tiger_water_33019",
+        "tiger_water_50003",
+        "tiger_water_25003",
+        "tiger_water_50013",
+        "tiger_water_50007",
+        "tiger_water_50015",
+        "tiger_water_50023",
+        "tiger_water_50027",
+        "tiger_water_33005",
+        "tiger_water_33009",
+        "tiger_water_50021",
+        "tiger_water_36083",
+        "tiger_water_50005",
+        "tiger_water_50001",
+        "tiger_water_50009",
+        "tiger_water_50019",
+        "tiger_water_50011",
+        "tiger_water_36019",
+        "tiger_water_50025",
+        "tiger_water_50017",
+        "tiger_water_36031",
+        "tiger_water_33007",
+        "tiger_water_36115"
+    ]
+}

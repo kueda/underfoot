@@ -1,0 +1,60 @@
+{
+    "id": "us-nj",
+    "name": "New Jersey (state)",
+    "description": "US state of New Jersey",
+    "admin1": "United States",
+    "admin2": "New Jersey",
+    "rock": [
+        "of2006_1272_nj"
+    ],
+    "geojson": {
+        "$ref": "file://./us-nj.geojson"
+    },
+    "bbox": {
+        "bottom": 38.7911303,
+        "left": -75.563386,
+        "right": -73.893628,
+        "top": 41.357279
+    },
+    "osm": "https://download.geofabrik.de/north-america/us/new-jersey-latest.osm.pbf",
+    "water": [
+        "nhdplus_h_0202_hu4",
+        "nhdplus_h_0204_hu4",
+        "nhdplus_h_0203_hu4",
+        "tiger_water_36005",
+        "tiger_water_34033",
+        "tiger_water_34023",
+        "tiger_water_34041",
+        "tiger_water_34031",
+        "tiger_water_34013",
+        "tiger_water_36047",
+        "tiger_water_34037",
+        "tiger_water_34003",
+        "tiger_water_36087",
+        "tiger_water_36119",
+        "tiger_water_42017",
+        "tiger_water_42103",
+        "tiger_water_36085",
+        "tiger_water_34015",
+        "tiger_water_34019",
+        "tiger_water_34025",
+        "tiger_water_34017",
+        "tiger_water_34001",
+        "tiger_water_34021",
+        "tiger_water_42101",
+        "tiger_water_34029",
+        "tiger_water_42089",
+        "tiger_water_34035",
+        "tiger_water_34027",
+        "tiger_water_36061",
+        "tiger_water_34009",
+        "tiger_water_34005",
+        "tiger_water_36071",
+        "tiger_water_10003",
+        "tiger_water_34011",
+        "tiger_water_34039",
+        "tiger_water_42045",
+        "tiger_water_34007",
+        "tiger_water_42095"
+    ]
+}

@@ -1,0 +1,35 @@
+{
+    "id": "us-ri",
+    "name": "Rhode Island (state)",
+    "description": "US state of Rhode Island",
+    "admin1": "United States",
+    "admin2": "Rhode Island",
+    "rock": [
+        "of2006_1272_ri"
+    ],
+    "geojson": {
+        "$ref": "file://./us-ri.geojson"
+    },
+    "bbox": {
+        "bottom": 41.095834,
+        "left": -71.907431,
+        "right": -71.088571,
+        "top": 42.0189359
+    },
+    "osm": "https://download.geofabrik.de/north-america/us/rhode-island-latest.osm.pbf",
+    "water": [
+        "nhdplus_h_0109_hu4",
+        "nhdplus_h_0203_hu4",
+        "nhdplus_h_0110_hu4",
+        "tiger_water_25005",
+        "tiger_water_09150",
+        "tiger_water_44001",
+        "tiger_water_44003",
+        "tiger_water_44005",
+        "tiger_water_25021",
+        "tiger_water_44007",
+        "tiger_water_09180",
+        "tiger_water_25027",
+        "tiger_water_44009"
+    ]
+}

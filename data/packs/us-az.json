@@ -1,0 +1,61 @@
+{
+    "id": "us-az",
+    "name": "Arizona (state)",
+    "description": "US state of Arizona",
+    "admin1": "United States",
+    "admin2": "Arizona",
+    "rock": [
+        "of2005_1305_az"
+    ],
+    "geojson": {
+        "$ref": "file://./us-az.geojson"
+    },
+    "bbox": {
+        "bottom": 31.3322135,
+        "left": -114.8183584,
+        "right": -109.0448744,
+        "top": 37.0038722
+    },
+    "osm": "https://download.geofabrik.de/north-america/us/arizona-latest.osm.pbf",
+    "water": [
+        "nhdplus_h_1507_hu4",
+        "nhdplus_h_1407_hu4",
+        "nhdplus_h_1408_hu4",
+        "nhdplus_h_1503_hu4",
+        "nhdplus_h_1506_hu4",
+        "nhdplus_h_1505_hu4",
+        "nhdplus_h_1508_hu4",
+        "nhdplus_h_1502_hu4",
+        "nhdplus_h_1501_hu4",
+        "nhdplus_h_1504_hu4",
+        "tiger_water_49053",
+        "tiger_water_04013",
+        "tiger_water_35003",
+        "tiger_water_04003",
+        "tiger_water_35031",
+        "tiger_water_35006",
+        "tiger_water_35023",
+        "tiger_water_04023",
+        "tiger_water_06065",
+        "tiger_water_04011",
+        "tiger_water_32017",
+        "tiger_water_49025",
+        "tiger_water_35017",
+        "tiger_water_04019",
+        "tiger_water_06025",
+        "tiger_water_04007",
+        "tiger_water_04005",
+        "tiger_water_49037",
+        "tiger_water_04001",
+        "tiger_water_35045",
+        "tiger_water_04027",
+        "tiger_water_04009",
+        "tiger_water_04021",
+        "tiger_water_32003",
+        "tiger_water_04017",
+        "tiger_water_04012",
+        "tiger_water_06071",
+        "tiger_water_04025",
+        "tiger_water_04015"
+    ]
+}

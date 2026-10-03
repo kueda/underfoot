@@ -1,0 +1,35 @@
+{
+    "id": "us-de",
+    "name": "Delaware (state)",
+    "description": "US state of Delaware",
+    "admin1": "United States",
+    "admin2": "Delaware",
+    "rock": [
+        "of2005_1325_de"
+    ],
+    "geojson": {
+        "$ref": "file://./us-de.geojson"
+    },
+    "bbox": {
+        "bottom": 38.4511785,
+        "left": -75.7890215,
+        "right": -74.9849355,
+        "top": 39.8395147
+    },
+    "osm": "https://download.geofabrik.de/north-america/us/delaware-latest.osm.pbf",
+    "water": [
+        "nhdplus_h_0208_hu4",
+        "nhdplus_h_0206_hu4",
+        "nhdplus_h_0204_hu4",
+        "tiger_water_24047",
+        "tiger_water_34033",
+        "tiger_water_24015",
+        "tiger_water_10005",
+        "tiger_water_34015",
+        "tiger_water_10001",
+        "tiger_water_42029",
+        "tiger_water_24045",
+        "tiger_water_10003",
+        "tiger_water_42045"
+    ]
+}
