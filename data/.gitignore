@@ -14,5 +14,5 @@ imposm-cache/
 simplified_wbd_hu4.geojson
 sources/*/work*
 sources/work-*
-tiger_counties.geojson
+tiger_counties*.geojson
 venv/

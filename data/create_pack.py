@@ -283,7 +283,11 @@ def find_nhd_hu4_sources(geojson_path):
     return [f"nhdplus_h_{feature.properties['huc4']}_hu4" for feature in intersecting_features]
 
 
-TIGER_COUNTIES_GEOJSON_PATH = "tiger_counties.geojson"
+# Matches the vintage of the TIGER water files in sources/util/tiger_water.py,
+# so the tiger_water_<GEOID> sources we pick exist. Later vintages replace
+# Connecticut's counties with planning regions that have different GEOIDs.
+TIGER_COUNTIES_VINTAGE = "2020"
+TIGER_COUNTIES_GEOJSON_PATH = f"tiger_counties_{TIGER_COUNTIES_VINTAGE}.geojson"
 
 
 def ensure_tiger_counties():
@@ -291,7 +295,8 @@ def ensure_tiger_counties():
     if os.path.isfile(TIGER_COUNTIES_GEOJSON_PATH):
         return
     tiger_counties_shp_url = (
-        "https://www2.census.gov/geo/tiger/GENZ2022/shp/cb_2022_us_county_20m.zip"
+        f"https://www2.census.gov/geo/tiger/GENZ{TIGER_COUNTIES_VINTAGE}/shp/"
+        f"cb_{TIGER_COUNTIES_VINTAGE}_us_county_20m.zip"
     )
     with tempfile.TemporaryDirectory() as tmpdir:
         zip_path = os.path.join(tmpdir, os.path.basename(tiger_counties_shp_url))
@@ -300,7 +305,7 @@ def ensure_tiger_counties():
         call_cmd(["unzip", "-u", "-o", zip_path, "-d", tmpdir])
         call_cmd([
             "ogr2ogr", TIGER_COUNTIES_GEOJSON_PATH,
-            os.path.join(tmpdir, "cb_2022_us_county_20m.shp")
+            os.path.join(tmpdir, f"cb_{TIGER_COUNTIES_VINTAGE}_us_county_20m.shp")
         ])
 
 

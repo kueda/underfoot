@@ -2,12 +2,14 @@
 
 import json
 import os
+import re
 import subprocess
 import sys
 
 import pytest
 
 import create_pack
+from sources.util import tiger_water
 
 
 def box_feature(left, bottom, right, top, properties=None):
@@ -155,7 +157,7 @@ def test_create_pack_specifies_water_sources_by_identifier_without_source_files(
         box_feature(0.5, -1, 2, 2, {"huc4": "1802"}),
         box_feature(5, 5, 6, 6, {"huc4": "1803"})
     ])
-    write_feature_collection(tmp_path / "tiger_counties.geojson", [
+    write_feature_collection(tmp_path / create_pack.TIGER_COUNTIES_GEOJSON_PATH, [
         box_feature(-1, -1, 2, 2, {"GEOID": "06001"}),
         box_feature(5, 5, 6, 6, {"GEOID": "06003"})
     ])
@@ -180,3 +182,48 @@ def test_create_pack_specifies_water_sources_by_identifier_without_source_files(
         tmp_path / "packs" / "test-pack.json",
         tmp_path / "packs" / "test-pack.geojson"
     }
+
+
+class StopDownload(Exception):
+    pass
+
+
+def test_tiger_counties_match_the_tiger_water_vintage(tmp_path, monkeypatch):
+    """Regression test: county boundaries came from 2022, when Connecticut's
+    counties became planning regions with new GEOIDs, so packs got
+    tiger_water_<GEOID> sources that the 2020 TIGER water files don't have"""
+    monkeypatch.chdir(tmp_path)
+    urls = []
+
+    def fake_download_file(url, path):
+        urls.append(url)
+        raise StopDownload()
+
+    monkeypatch.setattr(create_pack, "download_file", fake_download_file)
+    monkeypatch.setattr(tiger_water, "download_file", fake_download_file)
+    monkeypatch.setattr(tiger_water, "make_work_dir", lambda path: str(tmp_path))
+    with pytest.raises(StopDownload):
+        create_pack.ensure_tiger_counties()
+    with pytest.raises(StopDownload):
+        tiger_water.download("09001")
+    counties_url, water_url = urls
+    counties_year = re.search(r"cb_(\d{4})_us_county", counties_url).group(1)
+    water_year = re.search(r"tl_(\d{4})_09001_areawater", water_url).group(1)
+    assert counties_year == water_year
+
+
+def test_ensure_tiger_counties_ignores_counties_cached_from_another_vintage(
+        tmp_path, monkeypatch):
+    """A cached tiger_counties.geojson from 2022 would keep giving packs
+    Connecticut planning region GEOIDs"""
+    monkeypatch.chdir(tmp_path)
+    write_feature_collection(tmp_path / "tiger_counties.geojson", [
+        box_feature(0, 0, 1, 1, {"GEOID": "09150"})
+    ])
+
+    def fake_download_file(url, path):
+        raise StopDownload()
+
+    monkeypatch.setattr(create_pack, "download_file", fake_download_file)
+    with pytest.raises(StopDownload):
+        create_pack.ensure_tiger_counties()
