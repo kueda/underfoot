@@ -49,6 +49,9 @@ jobs:
     needs: [image, list-packs]
     strategy:
       fail-fast: false
+      # Each pack runs several jobs at once, and too many at once get
+      # rate limited by servers like Census that we download from
+      max-parallel: 4
       matrix:
         pack: ${{ fromJson(needs.list-packs.outputs.matrix) }}
     uses: ./.github/workflows/build-pack.yml
