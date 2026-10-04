@@ -95,14 +95,30 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Cache source work for water
-        uses: actions/cache@v5
+      # Restore and save separately so downloads from a failed build are
+      # saved for the next attempt. Each run saves under its own key because
+      # cache keys can't be overwritten, and restores the latest one for the
+      # same pack definition, falling back to the latest one for the pack.
+      # Slashes delimit the pack ID, so us-ca doesn't match us-ca-oakland.
+      - name: Restore source work for water
+        id: restore-water-cache
+        uses: actions/cache/restore@v5
         with:
           path: data/sources/work-*
-          key: cache-source-work-water-3-${{ inputs.pack }}-${{ hashFiles(format('data/packs/{0}.json', inputs.pack)) }}
+          key: cache-source-work-water-4-${{ inputs.pack }}/${{ hashFiles(format('data/packs/{0}.json', inputs.pack)) }}/${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            cache-source-work-water-4-${{ inputs.pack }}/${{ hashFiles(format('data/packs/{0}.json', inputs.pack)) }}/
+            cache-source-work-water-4-${{ inputs.pack }}/
 
       - name: Build water
         run: python packs.py ${{ inputs.pack }} --only water
+
+      - name: Save source work for water
+        if: always()
+        uses: actions/cache/save@v5
+        with:
+          path: data/sources/work-*
+          key: ${{ steps.restore-water-cache.outputs.cache-primary-key }}
 
       - name: Upload water
         uses: actions/upload-artifact@v7
