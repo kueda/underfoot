@@ -47,11 +47,14 @@ def download_file(url, path=None, curl_args=None):
     """Downloads url to path, defaulting to the url's basename in the cwd.
     Downloads to a temporary path first so a failed or interrupted download
     never leaves a partial file at path for later runs to mistake for a
-    finished one."""
+    finished one. Retries transient errors like 429 Too Many Requests, which
+    servers like Census send when we download many files at once."""
     if path is None:
         path = os.path.basename(url)
     part_path = f"{path}.part"
-    call_cmd(["curl", "--fail", "-L", "-o", part_path, *(curl_args or []), url])
+    call_cmd([
+        "curl", "--fail", "-L", "--retry", "5", "-o", part_path, *(curl_args or []), url
+    ])
     os.replace(part_path, path)
     return path
 

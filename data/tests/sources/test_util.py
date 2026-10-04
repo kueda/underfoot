@@ -68,3 +68,36 @@ def test_download_file_fails_on_http_error(tmp_path):
         assert not dest.exists()
     finally:
         server.shutdown()
+
+
+def test_download_file_retries_when_rate_limited(tmp_path):
+    """Regression test: Census servers answer bursts of requests with 429 Too
+    Many Requests, and one of those used to fail a whole pack build"""
+    requests = []
+
+    class RateLimitOnceHandler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):  # pylint: disable=invalid-name
+            requests.append(self.path)
+            if len(requests) == 1:
+                self.send_response(429)
+                self.send_header("Retry-After", "1")
+                self.end_headers()
+                self.wfile.write(b"slow down")
+                return
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"zip contents")
+
+        def log_message(self, *args):  # pylint: disable=arguments-differ
+            pass
+
+    server = http.server.HTTPServer(("127.0.0.1", 0), RateLimitOnceHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        dest = tmp_path / "dest.zip"
+        util.download_file(f"http://127.0.0.1:{server.server_port}/x.zip", str(dest))
+        assert dest.read_bytes() == b"zip contents"
+        assert len(requests) == 2
+    finally:
+        server.shutdown()
