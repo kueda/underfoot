@@ -95,3 +95,17 @@ def test_download_gives_up_and_leaves_no_file_when_server_never_sends_a_zip(
     with pytest.raises(ValueError, match="tl_2020_35001_areawater.zip"):
         tiger_water.download("35001")
     assert not (tmp_path / "tl_2020_35001_areawater.zip").exists()
+
+
+def test_download_retries_bypass_a_cached_response_that_is_not_a_zip(tmp_path, monkeypatch):
+    """Regression test: Census's CDN cached a "Request Rejected" page for a
+    TIGER file and served it for every request to that URL, so retries with
+    the same URL could never get the file"""
+    busy = b"<html>Request Rejected</html>"
+    urls = fake_downloads(monkeypatch, tmp_path, [busy, busy, "35001"])
+    tiger_water.download("35001")
+    url = "https://www2.census.gov/geo/tiger/TIGER2020/AREAWATER/tl_2020_35001_areawater.zip"
+    assert urls[0] == url
+    assert all(retry_url.startswith(f"{url}?") for retry_url in urls[1:])
+    assert len(set(urls)) == len(urls)
+    assert (tmp_path / "tl_2020_35001_areawater.shp").read_bytes() == b"shp"

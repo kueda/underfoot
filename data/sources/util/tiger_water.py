@@ -15,10 +15,13 @@ DOWNLOAD_ATTEMPTS = 5
 def download_zip(url, path):
     """Download a zip archive, retrying when the server sends something else.
     Census servers sometimes answer bursts of requests with a short page and
-    a 200 status, so curl --fail doesn't catch it"""
+    a 200 status, so curl --fail doesn't catch it. Census's CDN can cache
+    that page and serve it for every request to the URL, so retries add a
+    unique query string to get past the cache."""
     for attempt in range(1, DOWNLOAD_ATTEMPTS + 1):
-        log(f"DOWNLOADING {url}")
-        download_file(url, path)
+        attempt_url = url if attempt == 1 else f"{url}?nocache={attempt}-{time.time_ns()}"
+        log(f"DOWNLOADING {attempt_url}")
+        download_file(attempt_url, path)
         if zipfile.is_zipfile(path):
             return
         os.remove(path)
