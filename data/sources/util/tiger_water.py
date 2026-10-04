@@ -4,9 +4,29 @@ import json
 import os
 import re
 import time
+import zipfile
 from . import log, call_cmd, download_file, make_work_dir, SRS as UNDERFOOT_SRS
 
 SRS = "EPSG:4269"
+
+DOWNLOAD_ATTEMPTS = 5
+
+
+def download_zip(url, path):
+    """Download a zip archive, retrying when the server sends something else.
+    Census servers sometimes answer bursts of requests with a short page and
+    a 200 status, so curl --fail doesn't catch it"""
+    for attempt in range(1, DOWNLOAD_ATTEMPTS + 1):
+        log(f"DOWNLOADING {url}")
+        download_file(url, path)
+        if zipfile.is_zipfile(path):
+            return
+        os.remove(path)
+        if attempt < DOWNLOAD_ATTEMPTS:
+            delay = 2 ** attempt
+            log(f"{url} didn't return a zip archive, retrying in {delay}s...")
+            time.sleep(delay)
+    raise ValueError(f"{url} didn't return a zip archive after {DOWNLOAD_ATTEMPTS} attempts")
 
 
 def download(fips):
@@ -15,11 +35,10 @@ def download(fips):
     url = f"https://www2.census.gov/geo/tiger/TIGER2020/AREAWATER/tl_2020_{fips}_areawater.zip"
     # Download the data
     download_path = os.path.join(work_path, os.path.basename(url))
-    if os.path.isfile(download_path):
+    if zipfile.is_zipfile(download_path):
         log(f"Download exists at {download_path}, skipping...")
     else:
-        log(f"DOWNLOADING {url}")
-        download_file(url, download_path)
+        download_zip(url, download_path)
     # Unpack the zip
     shp_path = os.path.join(work_path, f"tl_2020_{fips}_areawater.shp")
     if os.path.isfile(shp_path):
