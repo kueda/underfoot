@@ -4,7 +4,7 @@ import { PackBoundingBox, PackMetadata, UnzippedPackData } from './types';
 // Namespaces packs loaded from a local file so their ids can never collide
 // with a manifest pack's id (which would silently overwrite it in packStore
 // and confuse the "update available" check against manifest.updatedAt).
-const LOCAL_ID_PREFIX = 'local:';
+export const LOCAL_ID_PREFIX = 'local:';
 
 export class Pack {
   admin1: string;
@@ -55,9 +55,10 @@ export class Pack {
   }
 
   // Derives placeholder metadata for a pack loaded from a local file, since
-  // there's no manifest entry to supply a name/id. description, bbox, and
-  // admin1/2 aren't read anywhere in the app today, so they're just
-  // zeroed/blanked out.
+  // there's no manifest entry to supply a name/id. description and bbox
+  // aren't read anywhere in the app today, and admin1/2 only name the groups
+  // in the "All" tab, which lists local packs ungrouped (when offline), so
+  // they're just zeroed/blanked out.
   static metadataFromFileName(fileName: string): PackMetadata {
     const base = fileName.replace(/\.pmtiles\.zip$/i, '').replace(/\.zip$/i, '');
     const slug = base

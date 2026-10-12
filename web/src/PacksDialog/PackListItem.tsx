@@ -1,7 +1,10 @@
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import CircularProgress from '@mui/material/CircularProgress';
 import DeleteIcon from '@mui/icons-material/Delete';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
 import IconButton from '@mui/material/IconButton';
 import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
@@ -16,6 +19,7 @@ import Tooltip from '@mui/material/Tooltip';
 import { useEffect, useRef, useState } from 'react';
 
 import { Pack } from '../packs/Pack';
+import { packCountLabel } from '../packs/packTree';
 import { PackStore } from '../packs/types';
 
 // Each line of a two-line secondary text truncates on its own, since the
@@ -31,6 +35,9 @@ interface Props {
   onChoose?: (packId: string | null) => void;
   onDelete?: () => void | Promise<void>;
   onDownload?: () => void | Promise<void>;
+  // Number of packs nested under this one. When positive, the row gets a button that opens them.
+  nestedPackCount?: number;
+  onOpen?: () => void;
   pack: Pack;
   packStore: PackStore;
   // A shared link points at this pack: scroll it into view and prompt to download.
@@ -42,6 +49,8 @@ const PackListItem = ({
   onChoose,
   onDelete,
   onDownload,
+  onOpen,
+  nestedPackCount = 0,
   pack,
   packStore,
   requested,
@@ -211,27 +220,68 @@ const PackListItem = ({
       </Tooltip>
     );
   }
+  // A pack with packs inside it is opened, not acted on: no radio, and tapping the row or its
+  // button goes in. Choosing, downloading, updating, and deleting it are on its own row inside,
+  // so the way in gets the same weight the download button has.
+  const opensNestedPacks = nestedPackCount > 0 && !!onOpen;
+  if (opensNestedPacks) {
+    secondaryAction = (
+      <Button
+        aria-label={`Show packs within ${pack.name}`}
+        color="primary"
+        onClick={onOpen}
+        endIcon={<ChevronRightIcon />}
+        sx={{
+          'minWidth': 0,
+          'whiteSpace': 'nowrap',
+          'p': 1,
+          // The same offset as the download button's edge="end", so the icons line up
+          'mr': '-12px',
+          // The icon alone on narrow screens, where the count would crowd the row. It's sized
+          // like the download icon, not like a button's smaller end icon.
+          '& .MuiButton-endIcon': {
+            'display': 'flex',
+            'm': { xs: 0, sm: '0 -4px 0 4px' },
+            '& > *:nth-of-type(1)': { fontSize: 24 },
+          },
+        }}
+      >
+        <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+          {packCountLabel(nestedPackCount)}
+        </Box>
+      </Button>
+    );
+  }
   return (
     <ListItem
       key={pack.id}
       ref={itemRef}
       sx={{ pl: 0 }}
-      secondaryAction={secondaryAction}
     >
       <ListItemButton
-        disabled={!isDownloaded}
-        sx={{ pl: 0, paddingRight: '0 !important' }}
+        disabled={!isDownloaded && !opensNestedPacks}
+        // minWidth lets the name and description truncate to make room for the actions, whatever
+        // width they end up
+        sx={{ pl: 0, minWidth: 0 }}
         onClick={() => {
+          if (opensNestedPacks) {
+            onOpen();
+            return;
+          }
           packStore.setCurrent(pack.id);
           if (typeof (onChoose) === 'function') onChoose(pack.id);
         }}
       >
         <ListItemIcon sx={{ display: 'flex', justifyContent: 'center' }}>
-          <Radio
-            edge="start"
-            checked={currentPackId === pack.id}
-            disableRipple
-          />
+          {opensNestedPacks
+            ? <FolderOutlinedIcon />
+            : (
+                <Radio
+                  edge="start"
+                  checked={currentPackId === pack.id}
+                  disableRipple
+                />
+              )}
         </ListItemIcon>
         <ListItemText
           primary={pack.name}
@@ -257,6 +307,9 @@ const PackListItem = ({
           }}
         />
       </ListItemButton>
+      <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+        {secondaryAction}
+      </Box>
     </ListItem>
   );
 };

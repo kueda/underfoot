@@ -82,6 +82,33 @@ Sources can be single scripts or modules. Preferrably they will contain as littl
 
 If you'd like to contribute a source, please file an issue first proposing a new source, and if we agree it should be added, work on a feature branch in your own fork and issue a pull request when it's ready. If that sounds like too much coding, file an issue anyway and I might put together a script if you perform some of the digitization / transcription.
 
+# Adding Packs
+
+A pack is a `packs/<id>.json` file listing the rocks and water sources to build and some metadata. Don't write it by hand; `create_pack.py` runs the sources, computes the boundary, finds the OSM and water sources that cover it, and writes the JSON and a boundary GeoJSON:
+
+```bash
+docker compose run --rm app python create_pack.py sim3040 sim3151 \
+    --id us-ca-darwin-hills \
+    --name "Darwin Hills, CA, USA" \
+    --description "Surficial and bedrock geology of the Darwin Hills area, Inyo County" \
+    --admin1 "United States" \
+    --admin2 "California"
+```
+
+Run `create_pack.py --help` for the options, or `-i` to be prompted for each one.
+
+## Pack IDs
+
+The ID is `<country>-<state>[-<area>]`, all lowercase, e.g. `us` + `ca` + `sfba`. The web app uses it to nest packs in its Packs dialog:
+
+- The first two segments are the country and state levels, and `--admin1` and `--admin2` (full names, e.g. "United States" and "California") label them. `cr` would be a country-level pack and `us-ca` a state-level one.
+- Everything after the state is the pack's name, so hyphens there do not add levels. `us-ca-central-coast` sits directly under `us-ca`, not under a "central" level.
+- A pack sits under the longest other pack ID that is a prefix of its own, so `us-ca-oakland` sits under `us-ca` if that pack exists. The packs above don't have to exist: `us-wy-tetons` still appears under "United States" and "Wyoming" with no `us` or `us-wy` pack, named from its `--admin1` and `--admin2`, so set those carefully.
+- Don't give an unrelated pack an ID that is a prefix of another's (`us-ca-central` next to `us-ca-central-coast`), or it will adopt that pack.
+- Within a level, packs are sorted alphabetically by `--name`.
+
+Changing a pack's ID after release breaks existing downloads and shared links, so choose it carefully.
+
 # Running Tests
 Coverage is pretty limited but there are a few.
 ```bash

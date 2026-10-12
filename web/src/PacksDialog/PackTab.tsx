@@ -9,6 +9,8 @@ import { Pack } from '../packs/Pack';
 import PackListItem from './PackListItem';
 
 interface PackTabProps {
+  // Shown in place of the flat list of packs
+  children?: ReactNode;
   currentPackId: string | null;
   description: string | null;
   headerAction?: ReactNode;
@@ -24,6 +26,7 @@ interface PackTabProps {
 }
 
 const PackTab = ({
+  children,
   currentPackId,
   description,
   headerAction,
@@ -44,20 +47,22 @@ const PackTab = ({
         {description}
       </DialogContentText>
     )}
-    <List>
-      { packs?.map(pack => (
-        <PackListItem
-          key={pack.id}
-          currentPackId={currentPackId}
-          pack={pack}
-          packStore={packStore}
-          requested={pack.id === requestedPackId}
-          onChoose={onChoose}
-          onDelete={onDelete}
-          onDownload={onDownload}
-        />
-      )) }
-    </List>
+    {children ?? (
+      <List>
+        { packs?.map(pack => (
+          <PackListItem
+            key={pack.id}
+            currentPackId={currentPackId}
+            pack={pack}
+            packStore={packStore}
+            requested={pack.id === requestedPackId}
+            onChoose={onChoose}
+            onDelete={onDelete}
+            onDownload={onDownload}
+          />
+        )) }
+      </List>
+    )}
   </TabPanel>
 );
 

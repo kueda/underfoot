@@ -9,8 +9,8 @@ export const DOWNLOAD_CHUNKS = 3;
 
 export function packMetadata(overrides: Partial<PackMetadata> = {}): PackMetadata {
   return {
-    admin1: 'California',
-    admin2: 'Alameda County',
+    admin1: 'United States',
+    admin2: 'California',
     bbox: {
       bottom: 37.7, left: -122.35, right: -122.1, top: 37.9,
     },

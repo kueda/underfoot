@@ -8,8 +8,11 @@ import Tab from '@mui/material/Tab';
 import TabContext from '@mui/lab/TabContext';
 import TabList from '@mui/lab/TabList';
 import Toolbar from '@mui/material/Toolbar';
-import { useCallback, useEffect, useState } from 'react';
+import {
+  useCallback, useEffect, useMemo, useRef, useState,
+} from 'react';
 import { Pack } from '../packs/Pack';
+import { buildPackTree } from '../packs/packTree';
 import {
   useCurrentPackId,
   useHidePacksModal,
@@ -18,6 +21,7 @@ import {
 } from '../useAppStore';
 import { usePackStore } from '../packs/usePackStore';
 import AddLocalPackButton from './AddLocalPackButton';
+import PackNodeList from './PackNodeList';
 import PackTab from './PackTab';
 
 export default function Packs() {
@@ -33,6 +37,9 @@ export default function Packs() {
   const [packs, setPacks] = useState<Pack[] | null>(null);
   const [downloadedPacks, setDownloadedPacks] = useState<Pack[] | null>(null);
   const [currentTab, setCurrentTab] = useState<'all' | 'downloaded'>('all');
+  // The node of the pack hierarchy the "All" tab is showing the contents of; null is the top
+  const [browseNodeId, setBrowseNodeId] = useState<string | null>(null);
+  const packTree = useMemo(() => (packs ? buildPackTree(packs) : null), [packs]);
 
   const packsLoaded = packs !== null;
   const downloadedPacksLoaded = downloadedPacks !== null;
@@ -91,6 +98,24 @@ export default function Packs() {
     if (showRequestedPackPrompt) setCurrentTab('all');
   }, [showRequestedPackPrompt]);
 
+  // Open the level the linked pack is on once the packs are listed, but only once per link so a
+  // refresh of the lists doesn't undo where the user has browsed to since
+  const openedRequestedPackId = useRef<string | null>(null);
+  useEffect(() => {
+    if (!showRequestedPackPrompt) {
+      openedRequestedPackId.current = null;
+      return;
+    }
+    if (!requestedPackId || !packTree || openedRequestedPackId.current === requestedPackId) return;
+    openedRequestedPackId.current = requestedPackId;
+    // A pack with packs inside it has no download button on its own row, so open the level
+    // inside it, where its row does
+    const requestedNode = packTree.get(requestedPackId);
+    setBrowseNodeId(
+      requestedNode?.children.length ? requestedNode.id : requestedNode?.parentId ?? null,
+    );
+  }, [packTree, requestedPackId, showRequestedPackPrompt]);
+
   useEffect(() => {
     // Once the linked pack is downloaded and active, the user is done here.
     if (requestedPackId && currentPackId === requestedPackId) onClose();
@@ -112,8 +137,8 @@ export default function Packs() {
         </DialogTitle>
       </Toolbar>
       <DialogContent>
-        <DialogContentText>
-          <p>Download map data for use offline. Right now it&apos;s mostly just regions of California.</p>
+        <DialogContentText sx={{ my: 2 }}>
+          Download map data for use offline. Right now it&apos;s mostly just regions of California.
         </DialogContentText>
 
         <TabContext value={currentTab}>
@@ -143,7 +168,21 @@ export default function Packs() {
             onChoose={onChoose}
             onDelete={refreshPacks}
             onDownload={refreshPacks}
-          />
+          >
+            {packTree && (
+              <PackNodeList
+                currentNodeId={browseNodeId}
+                currentPackId={currentPackId}
+                packStore={packStore}
+                requestedPackId={requestedPackId}
+                tree={packTree}
+                onChoose={onChoose}
+                onDelete={refreshPacks}
+                onDownload={refreshPacks}
+                onNavigate={setBrowseNodeId}
+              />
+            )}
+          </PackTab>
           <PackTab
             value="downloaded"
             packs={downloadedPacks}

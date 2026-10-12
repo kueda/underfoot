@@ -79,6 +79,9 @@ function collectAlerts(page: Page) {
 async function downloadOaklandPack(page: Page) {
   await page.getByRole('button', { name: 'Download map data' }).click();
   const packsDialog = page.getByRole('dialog', { name: 'Packs' });
+  // The pack is nested under United States and California, neither of which is a pack
+  await packsDialog.getByRole('button', { name: 'United States' }).click();
+  await packsDialog.getByRole('button', { name: 'California' }).click();
   const pack = packsDialog.getByRole('listitem').filter({ hasText: 'Oakland, CA, USA' });
   await pack.getByRole('button', { name: 'download' }).click();
   // Downloading a pack makes it the current pack when there isn't one

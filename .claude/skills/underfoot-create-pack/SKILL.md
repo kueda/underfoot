@@ -70,6 +70,20 @@ to use (usually the smallest one covering nearly all of the pack), then rerun wi
 - Area: short, lowercase, hyphenated (`san-francisco`, `joshua-tree`, `darwin-hills`)
 - Examples: `us-ca-sfba`, `us-ca-oakland`, `us-oh`, `us-nh`
 
+The ID also places the pack in the web app's Packs dialog, which nests packs by ID:
+
+- The first two segments are the levels country and state, and `--admin1` and `--admin2` name
+  them. A pack with a one-segment ID (`cr`) is a country. A pack with a two-segment ID (`us-ca`)
+  is a state, and it holds the packs whose IDs start with it.
+- Everything after the state is the pack's name, so hyphens there are not levels:
+  `us-ca-central-coast` is directly under `us-ca`, not under a "central" level.
+- There is no need for the packs above a pack to exist. `us-wy-tetons` appears under
+  United States and Wyoming even without `us.json` or `us-wy.json`, named from its
+  `--admin1` and `--admin2`, so set those correctly or the group will be named wrongly.
+- A pack nests under the longest existing pack ID that is a prefix of its own. Don't give an
+  unrelated pack an ID that is a prefix of another's (`us-ca-central` next to
+  `us-ca-central-coast`), or it will adopt that pack.
+
 ## Common Mistakes
 
 | Mistake | Fix |
