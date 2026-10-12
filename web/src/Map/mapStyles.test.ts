@@ -374,3 +374,18 @@ describe('flow direction arrows', () => {
     }
   });
 });
+
+describe('OpenStreetMap attribution', () => {
+  // https://osmfoundation.org/wiki/Licence/Attribution_Guidelines
+  const OSM_ATTRIBUTION
+    = 'Other data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+
+  for (const [name, style] of [['rocks', ROCK_STYLE], ['water', WATER_STYLE]] as const) {
+    it(`credits OpenStreetMap contributors in the ${name} style`, () => {
+      for (const id of ['ways', 'context']) {
+        const source = style.sources[id] as { attribution?: string };
+        expect(source.attribution, id).toBe(OSM_ATTRIBUTION);
+      }
+    });
+  }
+});

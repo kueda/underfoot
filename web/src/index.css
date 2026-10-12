@@ -144,10 +144,16 @@ body {
 
 .maplibregl-ctrl-top-left,
 .maplibregl-ctrl-top-right {
-  top: 56px;
+  top: 60px;
 }
 
 .maplibregl-ctrl-bottom-left,
 .maplibregl-ctrl-bottom-right {
   bottom: 91px;
+}
+
+.maplibregl-ctrl.maplibregl-ctrl-attrib {
+  font-size: 10px;
+  /* Match the 24px icon button (20px line + 2px padding) so the text centers on it */
+  line-height: 20px;
 }

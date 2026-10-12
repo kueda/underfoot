@@ -398,24 +398,28 @@ const COMMON_STYLE: StyleSpecification = {
   layers: [],
 };
 
+// Wording and link per https://osmfoundation.org/wiki/Licence/Attribution_Guidelines
+const OSM_ATTRIBUTION
+  = 'Other data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+
 const WAYS_SOURCE: SourceSpecification = {
   type: 'vector',
   tiles: ['pmtiles://ways/{z}/{x}/{y}'],
-  attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>',
+  attribution: OSM_ATTRIBUTION,
   maxzoom: 13,
 };
 
 const CONTOURS_SOURCE: SourceSpecification = {
   type: 'vector',
   tiles: ['pmtiles://contours/{z}/{x}/{y}'],
-  attribution: '<a href="https://registry.opendata.aws/terrain-tiles">Mapzen Terrain Tiles</a>',
+  attribution: 'Contours: <a href="https://registry.opendata.aws/terrain-tiles">Mapzen Terrain Tiles</a>',
   maxzoom: 14,
 };
 
 const CONTEXT_SOURCE: SourceSpecification = {
   type: 'vector',
   tiles: ['pmtiles://context/{z}/{x}/{y}'],
-  attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>',
+  attribution: OSM_ATTRIBUTION,
   maxzoom: 14,
 };
 
@@ -432,7 +436,7 @@ const ROCK_STYLE: StyleSpecification = {
       type: 'vector',
       // this is pmtiles://[[protocol key]]/{z}/{x}/{y}, so the file name we declared earlier gets used here
       tiles: ['pmtiles://rocks/{z}/{x}/{y}'],
-      attribution: 'See unit details for attribution',
+      attribution: 'See details for rock source attribution',
       maxzoom: 14,
     },
     ...COMMON_SOURCES,
@@ -949,7 +953,7 @@ const WATER_STYLE: StyleSpecification = {
       type: 'vector',
       // this is pmtiles://[[protocol key]]/{z}/{x}/{y}, so the file name we declared earlier gets used here
       tiles: ['pmtiles://water/{z}/{x}/{y}'],
-      attribution: 'See unit details for attribution',
+      attribution: 'See details water source attribution',
       maxzoom: 14,
     },
     ...COMMON_SOURCES,

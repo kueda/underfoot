@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { addProtocol, Map, type MapGeoJSONFeature, ScaleControl, setWorkerUrl } from 'maplibre-gl';
+import { addProtocol, AttributionControl, Map, type MapGeoJSONFeature, ScaleControl, setWorkerUrl } from 'maplibre-gl';
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import * as pmtiles from 'pmtiles';
@@ -202,6 +202,7 @@ export default function UnderfootMap() {
         center: [-122, 38],
         zoom: 2,
         maxZoom: 22,
+        // Added below as a compact control so it never crowds the other controls
         attributionControl: false,
         // No rotation: there's no control to put north back up. With this off,
         // MapLibre also ignores the bearing in shared links.
@@ -295,6 +296,9 @@ export default function UnderfootMap() {
         unit: 'metric',
       });
       map.current.addControl(scale, 'bottom-left');
+      // Always collapsed behind a button, showing the attribution of the style's
+      // sources, including OpenStreetMap's
+      map.current.addControl(new AttributionControl({ compact: true }), 'top-right');
     }
 
     map.current.on('move', () => {
