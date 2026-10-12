@@ -13,7 +13,10 @@ export default defineConfig({
     basicSsl(),
 
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'autoUpdate' reloads the page as soon as a new service worker activates,
+      // which wipes out whatever the user is doing. 'prompt' hands the decision
+      // to onNeedRefresh in main.tsx.
+      registerType: 'prompt',
       devOptions: {
         enabled: true,
       },
