@@ -55,3 +55,19 @@ def test_make_pack_includes_metadata_in_zip(build_dir, monkeypatch):
         metadata = json.loads(pack_zip.read(f"{PACK_ID}.pmtiles/pack.json"))
     assert metadata["id"] == PACK_ID
     assert metadata["name"] == "Test Pack"
+
+
+def test_make_water_for_pack_names_waterways_from_the_packs_osm_extract(build_dir, monkeypatch):
+    pack = {
+        "water": ["fake_source"],
+        "bbox": {"left": 0, "bottom": 0, "right": 1, "top": 1},
+        "geojson_path": None,
+        "osm": "http://example.com/region-latest.osm.pbf",
+    }
+    captured = {}
+    monkeypatch.setitem(packs.PACKS, "fake-pack", pack)
+    monkeypatch.setattr(packs, "make_water", lambda *args, **kwargs: captured.update(kwargs))
+
+    packs.make_water_for_pack("fake-pack")
+
+    assert captured["osm_pbf_url"] == "http://example.com/region-latest.osm.pbf"

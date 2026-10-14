@@ -14,10 +14,12 @@ from multiprocessing import Pool
 import psycopg2
 
 from database import DBNAME, SRID, make_database
+from osm import fetch_data
 from sources import util
 from sources.util.citations import load_citation_for_source, CITATIONS_TABLE_NAME
 from sources.util.water import process_nhdplus_hr_source, WATERWAYS_FLOW_FNAME
 from sources.util.tiger_water import process_tiger_water_for_fips
+from waterway_names import apply_osm_names
 
 
 NUM_PROCESSES = 4
@@ -694,8 +696,13 @@ def make_pmtiles(sources, path="./water.pmtiles", bbox=None, geojson_path=None, 
 
 def make_water(
         sources, clean=False, cleandb=False, cleanfiles=False, bbox=None,
-        path="./water.pmtiles", procs=NUM_PROCESSES, debug=False, geojson_path=None):
-    """Process and load all water sources and write them to a PMTiles file"""
+        path="./water.pmtiles", procs=NUM_PROCESSES, debug=False, geojson_path=None,
+        osm_pbf_url=None):
+    """Process and load all water sources and write them to a PMTiles file
+
+    If osm_pbf_url is given, waterways within bbox take their names from the OSM
+    waterways that run along them (see waterway_names.py), replacing the sources' names.
+    """
     if debug:
         util.log("water: making database")
     make_database()
@@ -706,6 +713,8 @@ def make_water(
     process_sources(
         sources, cleandb=(clean or cleandb), cleanfiles=cleanfiles, procs=procs, debug=debug)
     load_waterways(sources, debug=debug)
+    if osm_pbf_url:
+        apply_osm_names(fetch_data(osm_pbf_url), bbox, debug=debug)
     load_waterbodies(sources, debug=debug)
     inherit_waterbody_permanence(debug=debug)
     load_watersheds(sources, debug=debug)

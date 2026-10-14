@@ -76,7 +76,8 @@ export default function PacksDialog() {
             <p>
               <a href="https://www.openstreetmap.org">OpenStreetMap</a> data
               hosted at <a href="https://download.geofabrik.de/">GEOFABRIK</a>. This is
-              where all the streets, peaks, ridges, and springs come from.
+              where all the streets, peaks, ridges, and springs come from, along
+              with many of the names of creeks and rivers.
               Best thing on the Internet after Wikipedia.
             </p>
           </li>

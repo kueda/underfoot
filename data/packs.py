@@ -247,7 +247,8 @@ def make_water_for_pack(pack_id, clean=False, procs=2):
         geojson_path=pack["geojson_path"],
         clean=clean,
         path=water_pmtiles_path,
-        procs=procs)
+        procs=procs,
+        osm_pbf_url=pack["osm"])
 
 
 def make_ways_for_pack(pack_id, clean=False):

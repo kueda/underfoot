@@ -212,6 +212,7 @@ def _stub_make_water_steps(monkeypatch):
         "load_flow",
         "label_waterways",
         "make_pmtiles",
+        "apply_osm_names",
     ):
         monkeypatch.setattr(water, step, lambda *args, **kwargs: None)
     return captured
@@ -402,3 +403,36 @@ def test_label_flow_tree_handles_rivers_longer_than_the_recursion_limit():
     segments = [(str(i), i + 1, i) for i in range(length)]
     labels = water.label_flow_tree(segments)
     assert len(downstream_of(labels, str(length - 1))) == length
+
+
+def test_make_water_names_waterways_from_osm_after_loading_them(monkeypatch):
+    """OSM names replace the sources' names, so they have to be applied after the
+    waterways are loaded and before the tiles are written"""
+    _stub_make_water_steps(monkeypatch)
+    steps = []
+    bbox = {"left": -122.4, "bottom": 37.6, "right": -122.0, "top": 38.0}
+    monkeypatch.setattr(water, "fetch_data", lambda url: f"{url}.pbf")
+    for step in ("load_waterways", "make_pmtiles"):
+        monkeypatch.setattr(
+            water, step, lambda *args, step=step, **kwargs: steps.append(step))
+    monkeypatch.setattr(
+        water, "apply_osm_names",
+        lambda pbf_path, bbox, **kwargs: steps.append(("apply_osm_names", pbf_path, bbox)))
+
+    water.make_water(["fake_source"], bbox=bbox, osm_pbf_url="http://example.com/x.osm")
+
+    assert steps == [
+        "load_waterways",
+        ("apply_osm_names", "http://example.com/x.osm.pbf", bbox),
+        "make_pmtiles",
+    ]
+
+
+def test_make_water_without_an_osm_url_leaves_names_alone(monkeypatch):
+    _stub_make_water_steps(monkeypatch)
+    calls = []
+    monkeypatch.setattr(water, "apply_osm_names", lambda *args, **kwargs: calls.append(args))
+
+    water.make_water(["fake_source"], bbox={"left": 0, "bottom": 0, "right": 1, "top": 1})
+
+    assert not calls
