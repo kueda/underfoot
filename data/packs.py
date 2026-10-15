@@ -234,7 +234,7 @@ def make_contours_for_pack(pack_id, clean=False, procs=2):
 
 def make_water_for_pack(pack_id, clean=False, procs=2, osm_waterways=False):
     """Make water pmtiles given a pack, with waterways from OSM instead of the pack's
-    water sources if osm_waterways"""
+    water sources if the pack's waterways are "osm" or osm_waterways"""
     pack_dir = get_pack_dir(pack_id)
     fname = "water.pmtiles"
     water_pmtiles_path = os.path.join(pack_dir, fname)
@@ -250,7 +250,7 @@ def make_water_for_pack(pack_id, clean=False, procs=2, osm_waterways=False):
         path=water_pmtiles_path,
         procs=procs,
         osm_pbf_url=pack["osm"],
-        osm_waterways=osm_waterways)
+        osm_waterways=osm_waterways or pack.get("waterways") == "osm")
 
 
 def make_ways_for_pack(pack_id, clean=False):

@@ -80,6 +80,11 @@ continuations are added as waterways from the `osm` source and linked into the f
 flow traces follow them. Both read the PBF once with pyosmium (`osmium` in
 `requirements.txt`).
 
+Packs with `"waterways": "osm"` (written by `create_pack.py --osm-waterways`; `packs.py
+--osm-waterways` forces it for any pack) skip all that and take their waterways and flow
+from the OSM extract alone (`osm_waterways.py`); their water sources still provide
+waterbodies and watersheds. That suits places OSM maps waterways well, like the Bay Area.
+
 ## Working on a single source
 
 ```bash

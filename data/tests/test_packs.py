@@ -89,6 +89,30 @@ def test_make_water_for_pack_can_use_osm_waterways(build_dir, monkeypatch):
     assert captured["osm_waterways"] is True
 
 
+@pytest.mark.parametrize("waterways, flag, expected", [
+    ("osm", False, True),
+    (None, False, False),
+    (None, True, True),
+])
+def test_make_water_for_pack_takes_waterways_from_osm_if_the_pack_says_to(
+        build_dir, monkeypatch, waterways, flag, expected):
+    pack = {
+        "water": ["fake_source"],
+        "bbox": {"left": 0, "bottom": 0, "right": 1, "top": 1},
+        "geojson_path": None,
+        "osm": "http://example.com/region-latest.osm.pbf",
+    }
+    if waterways:
+        pack["waterways"] = waterways
+    captured = {}
+    monkeypatch.setitem(packs.PACKS, "fake-pack", pack)
+    monkeypatch.setattr(packs, "make_water", lambda *args, **kwargs: captured.update(kwargs))
+
+    packs.make_water_for_pack("fake-pack", osm_waterways=flag)
+
+    assert captured["osm_waterways"] is expected
+
+
 def test_make_pack_passes_osm_waterways_to_the_water_build(build_dir, monkeypatch):
     calls = {}
     for layer in ("rocks", "ways", "context", "contours"):

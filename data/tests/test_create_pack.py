@@ -145,9 +145,9 @@ def test_choose_osm_url_lets_user_accept_the_huge_extract(tmp_path, monkeypatch)
     assert create_pack.choose_osm_url(pack_path, interactive=True) == "big.osm.pbf"
 
 
-def test_create_pack_specifies_water_sources_by_identifier_without_source_files(tmp_path):
-    """Water sources in the pack are identifiers that water.process_source
-    resolves on its own, so create_pack.py shouldn't write any source scripts"""
+def set_up_create_pack(tmp_path):
+    """A working directory where create_pack.py can make a pack from rock_source
+    without downloading anything"""
     (tmp_path / "packs").mkdir()
     rock_work_path = tmp_path / "sources" / "work-rock_source"
     rock_work_path.mkdir(parents=True)
@@ -161,18 +161,30 @@ def test_create_pack_specifies_water_sources_by_identifier_without_source_files(
         box_feature(-1, -1, 2, 2, {"GEOID": "06001"}),
         box_feature(5, 5, 6, 6, {"GEOID": "06003"})
     ])
-    files_before = {path for path in tmp_path.rglob("*")}
 
+
+def run_create_pack(tmp_path, *args):
+    """Make test-pack from rock_source with create_pack.py and return its JSON"""
     subprocess.run(
         [
             sys.executable, os.path.abspath(create_pack.__file__), "rock_source",
-            "--id", "test-pack", "--osm", "https://example.com/test.osm.pbf"
+            "--id", "test-pack", "--osm", "https://example.com/test.osm.pbf", *args
         ],
         cwd=tmp_path, check=True
     )
-
     with open(tmp_path / "packs" / "test-pack.json", encoding="utf-8") as pack_file:
-        pack = json.load(pack_file)
+        return json.load(pack_file)
+
+
+def test_create_pack_specifies_water_sources_by_identifier_without_source_files(tmp_path):
+    """Water sources in the pack are identifiers that water.process_source
+    resolves on its own, so create_pack.py shouldn't write any source scripts"""
+    set_up_create_pack(tmp_path)
+    files_before = {path for path in tmp_path.rglob("*")}
+
+    pack = run_create_pack(tmp_path)
+
+    assert "waterways" not in pack
     assert pack["water"] == [
         "nhdplus_h_1801_hu4", "nhdplus_h_1802_hu4", "tiger_water_06001"
     ]
@@ -182,6 +194,14 @@ def test_create_pack_specifies_water_sources_by_identifier_without_source_files(
         tmp_path / "packs" / "test-pack.json",
         tmp_path / "packs" / "test-pack.geojson"
     }
+
+
+def test_create_pack_can_take_waterways_from_osm(tmp_path):
+    set_up_create_pack(tmp_path)
+
+    pack = run_create_pack(tmp_path, "--osm-waterways")
+
+    assert pack["waterways"] == "osm"
 
 
 class StopDownload(Exception):
