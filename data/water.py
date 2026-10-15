@@ -19,7 +19,8 @@ from sources import util
 from sources.util.citations import load_citation_for_source, CITATIONS_TABLE_NAME
 from sources.util.water import process_nhdplus_hr_source, WATERWAYS_FLOW_FNAME
 from sources.util.tiger_water import process_tiger_water_for_fips
-from waterway_names import apply_osm_names
+from waterway_gaps import OSM_BBOX_MARGIN_DEG, OSM_SOURCE, apply_osm_gap_fills
+from waterway_names import apply_osm_names, read_osm_waterways, widen_bbox
 
 
 NUM_PROCESSES = 4
@@ -701,7 +702,9 @@ def make_water(
     """Process and load all water sources and write them to a PMTiles file
 
     If osm_pbf_url is given, waterways within bbox take their names from the OSM
-    waterways that run along them (see waterway_names.py), replacing the sources' names.
+    waterways that run along them (see waterway_names.py), replacing the sources' names,
+    and waterways that end short of where they go continue along OSM waterways (see
+    waterway_gaps.py).
     """
     if debug:
         util.log("water: making database")
@@ -713,12 +716,19 @@ def make_water(
     process_sources(
         sources, cleandb=(clean or cleandb), cleanfiles=cleanfiles, procs=procs, debug=debug)
     load_waterways(sources, debug=debug)
+    osm_ways = None
     if osm_pbf_url:
-        apply_osm_names(fetch_data(osm_pbf_url), bbox, debug=debug)
+        osm_ways = read_osm_waterways(
+            fetch_data(osm_pbf_url), widen_bbox(bbox, OSM_BBOX_MARGIN_DEG))
+        apply_osm_names(osm_ways, bbox, debug=debug)
     load_waterbodies(sources, debug=debug)
     inherit_waterbody_permanence(debug=debug)
     load_watersheds(sources, debug=debug)
     load_flow(sources, debug=debug)
+    if osm_ways is not None:
+        apply_osm_gap_fills(osm_ways, bbox, debug=debug)
+        # Cite OSM for the waterways the gap fills added
+        sources = sources + [OSM_SOURCE]
     label_waterways(debug=debug)
     return make_pmtiles(sources, path=path, bbox=bbox, geojson_path=geojson_path, debug=debug)
 

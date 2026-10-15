@@ -166,8 +166,9 @@ def test_read_osm_waterways_returns_rivers_streams_and_canals_inside_the_bbox(tm
     write_pbf(
         pbf,
         ways={
-            1: ({"waterway": "stream", "name": "Ellinwood Creek"}, [1, 2]),
-            2: ({"waterway": "river"}, [2, 3]),
+            1: ({"waterway": "stream", "name": "Ellinwood Creek", "intermittent": "yes"},
+                [1, 2]),
+            2: ({"waterway": "river", "tunnel": "culvert"}, [2, 3]),
             3: ({"waterway": "stream", "name": "Far Creek"}, [4, 5]),
             4: ({"highway": "residential", "name": "Main St"}, [1, 2]),
             5: ({"waterway": "drain", "name": "Storm Drain"}, [1, 3]),
@@ -184,15 +185,21 @@ def test_read_osm_waterways_returns_rivers_streams_and_canals_inside_the_bbox(tm
     assert ways[1]["name"] == "Ellinwood Creek"
     assert ways[1]["waterway"] == "stream"
     assert ways[1]["coords"] == [(-122.0, 37.9), (-122.001, 37.901)]
+    assert ways[1]["refs"] == [1, 2]
+    assert ways[1]["intermittent"] == "yes"
+    assert ways[1]["tunnel"] is None
     assert ways[2]["name"] is None
+    assert ways[2]["tunnel"] == "culvert"
 
 
-def test_apply_osm_names_writes_only_names_that_change(monkeypatch, tmp_path):
-    pbf = tmp_path / "test.osm.pbf"
-    write_pbf(
-        pbf,
-        ways={1: ({"waterway": "stream", "name": "Ellinwood Creek"}, [1, 2])},
-        nodes={1: (LON0, LAT0), 2: lonlat((1000, 0))[0]})
+def test_widen_bbox_adds_the_margin_on_every_side():
+    bbox = {"left": -122.1, "bottom": 37.8, "right": -121.9, "top": 38.0}
+    assert waterway_names.widen_bbox(bbox, 0.5) == {
+        "left": -122.6, "bottom": 37.3, "right": -121.4, "top": 38.5}
+
+
+def test_apply_osm_names_writes_only_names_that_change(monkeypatch):
+    ways = [osm_way(10, [(0, 0), (1000, 0)], "Ellinwood Creek")]
     rows = [
         waterway(1, [(0, 5), (1000, 5)], name="Walnut Creek"),
         waterway(2, [(0, 8), (1000, 8)], name="Ellinwood Creek"),
@@ -204,7 +211,7 @@ def test_apply_osm_names_writes_only_names_that_change(monkeypatch, tmp_path):
         waterway_names, "read_waterway_rows", lambda b: read_bboxes.append(b) or rows)
     monkeypatch.setattr(waterway_names, "write_names", written.append)
 
-    changed = waterway_names.apply_osm_names(str(pbf), bbox)
+    changed = waterway_names.apply_osm_names(ways, bbox)
 
     assert changed == 1
     assert written == [{1: "Ellinwood Creek"}]

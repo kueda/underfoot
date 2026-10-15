@@ -73,8 +73,12 @@ When a pack is built, `water.py` also renames waterways from the pack's OSM extr
 (`waterway_names.py`): an OSM river, stream, or canal that runs along a waterway gives it
 its name, replacing the source's name, so corrections made in OSM show up in Underfoot at
 the next build. It matches by geometry and skips matches that are likely wrong, like short
-segments and siphons; see the module docstring for the rules. It reads the PBF with
-pyosmium (`osmium` in `requirements.txt`).
+segments and siphons; see the module docstring for the rules. Then it continues waterways
+that end short of where they go, like a creek NHD stops above a culvert, along OSM
+waterways until they reach another waterway or a waterbody (`waterway_gaps.py`). Those
+continuations are added as waterways from the `osm` source and linked into the flow, so
+flow traces follow them. Both read the PBF once with pyosmium (`osmium` in
+`requirements.txt`).
 
 ## Working on a single source
 

@@ -26,6 +26,7 @@ import osmium
 import psycopg2
 from psycopg2.extras import execute_values
 from shapely import wkb
+from shapely.affinity import scale
 from shapely.geometry import LineString, Point
 from shapely.ops import linemerge, unary_union
 from shapely.strtree import STRtree
@@ -46,8 +47,6 @@ ISOLATED_LENGTH_M = 200
 JOIN_TOLERANCE_M = 5
 # Waterway types that cross other streams instead of following them
 SKIPPED_TYPES = {"siphon", "aqueduct", "connector"}
-# How far past the pack bbox to look, so waterways at its edge still match
-BBOX_MARGIN_DEG = 0.01
 METERS_PER_DEGREE_LAT = 110540
 METERS_PER_DEGREE_LON_AT_EQUATOR = 111320
 
@@ -56,9 +55,20 @@ def normalize(name):
     return name.lower().strip() if name else None
 
 
+def widen_bbox(bbox, margin_deg):
+    """bbox grown by margin_deg on every side"""
+    return {
+        "left": bbox["left"] - margin_deg,
+        "bottom": bbox["bottom"] - margin_deg,
+        "right": bbox["right"] + margin_deg,
+        "top": bbox["top"] + margin_deg,
+    }
+
+
 def read_osm_waterways(pbf_path, bbox):
     """Rivers, streams, and canals from an OSM PBF with any node in bbox, as dicts of
-    id, name, waterway, and coords as (lon, lat) tuples"""
+    id, name, waterway, intermittent, tunnel, refs (node IDs), and coords as (lon, lat)
+    tuples"""
     ways = []
     processor = (
         osmium.FileProcessor(pbf_path, osmium.osm.NODE | osmium.osm.WAY)
@@ -70,6 +80,7 @@ def read_osm_waterways(pbf_path, bbox):
             continue
         try:
             coords = [(node.lon, node.lat) for node in obj.nodes]
+            refs = [node.ref for node in obj.nodes]
         except osmium.InvalidLocationError:
             continue
         if len(coords) < 2 or not any(
@@ -81,22 +92,32 @@ def read_osm_waterways(pbf_path, bbox):
             "id": obj.id,
             "name": obj.tags.get("name"),
             "waterway": obj.tags["waterway"],
+            "intermittent": obj.tags.get("intermittent"),
+            "tunnel": obj.tags.get("tunnel"),
+            "refs": refs,
             "coords": coords,
         })
     return ways
 
 
-def make_projector(waterways):
-    """Function projecting (lon, lat) points to meters, accurate enough at the scale of
-    a few hundred meters anywhere near the waterways' latitude"""
-    latitudes = [lat for w in waterways for _, lat in w["coords"]]
-    meters_per_degree_lon = METERS_PER_DEGREE_LON_AT_EQUATOR * math.cos(
-        math.radians(sum(latitudes) / len(latitudes)))
+class Projection:
+    """Projects (lon, lat) to meters and back, accurate enough at the scale of a few
+    hundred meters anywhere near the waterways' latitude"""
 
-    def project(coords):
-        return [(lon * meters_per_degree_lon, lat * METERS_PER_DEGREE_LAT) for lon, lat in coords]
+    def __init__(self, waterways):
+        latitudes = [lat for w in waterways for _, lat in w["coords"]]
+        self.x_scale = METERS_PER_DEGREE_LON_AT_EQUATOR * math.cos(
+            math.radians(sum(latitudes) / len(latitudes)))
+        self.y_scale = METERS_PER_DEGREE_LAT
 
-    return project
+    def project(self, coords):
+        return [(lon * self.x_scale, lat * self.y_scale) for lon, lat in coords]
+
+    def unproject(self, coords):
+        return [(x / self.x_scale, y / self.y_scale) for x, y in coords]
+
+    def project_geometry(self, geom):
+        return scale(geom, xfact=self.x_scale, yfact=self.y_scale, origin=(0, 0))
 
 
 def bearing(line, distance, half_window=5):
@@ -124,7 +145,7 @@ class Matcher:
     """Matches waterways to OSM ways, projected into meters"""
 
     def __init__(self, waterways, osm_ways):
-        project = make_projector(waterways)
+        project = Projection(waterways).project
         self.waterways = [
             {**w, "line": LineString(project(w["coords"])), "norm": normalize(w["name"])}
             for w in waterways
@@ -291,18 +312,10 @@ def write_names(names):
     con.close()
 
 
-def apply_osm_names(pbf_path, bbox, debug=False):
-    """Name the waterways in the database from OSM; returns how many names changed"""
-    if debug:
-        util.log(f"water: naming waterways from {pbf_path}")
-    wide_bbox = {
-        "left": bbox["left"] - BBOX_MARGIN_DEG,
-        "bottom": bbox["bottom"] - BBOX_MARGIN_DEG,
-        "right": bbox["right"] + BBOX_MARGIN_DEG,
-        "top": bbox["top"] + BBOX_MARGIN_DEG,
-    }
+def apply_osm_names(osm_ways, bbox, debug=False):
+    """Name the waterways in the database within bbox from osm_ways (see
+    read_osm_waterways); returns how many names changed"""
     rows = read_waterway_rows(bbox)
-    osm_ways = read_osm_waterways(pbf_path, wide_bbox)
     matches = match_names(rows, osm_ways)
     current = {row["key"]: row["name"] for row in rows}
     changes = {key: name for key, name in matches.items() if name != current[key]}
