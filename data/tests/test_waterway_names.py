@@ -192,6 +192,23 @@ def test_read_osm_waterways_returns_rivers_streams_and_canals_inside_the_bbox(tm
     assert ways[2]["tunnel"] == "culvert"
 
 
+def test_read_osm_waterways_can_read_other_kinds_of_waterways(tmp_path):
+    pbf = tmp_path / "test.osm.pbf"
+    write_pbf(
+        pbf,
+        ways={
+            1: ({"waterway": "stream"}, [1, 2]),
+            2: ({"waterway": "drain"}, [1, 2]),
+            3: ({"waterway": "dam"}, [1, 2]),
+        },
+        nodes={1: (-122.0, 37.9), 2: (-122.001, 37.901)})
+    bbox = {"left": -122.1, "bottom": 37.8, "right": -121.9, "top": 38.0}
+
+    ways = read_osm_waterways(str(pbf), bbox, kinds=("stream", "drain"))
+
+    assert sorted(w["id"] for w in ways) == [1, 2]
+
+
 def test_widen_bbox_adds_the_margin_on_every_side():
     bbox = {"left": -122.1, "bottom": 37.8, "right": -121.9, "top": 38.0}
     assert waterway_names.widen_bbox(bbox, 0.5) == {

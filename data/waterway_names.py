@@ -65,10 +65,10 @@ def widen_bbox(bbox, margin_deg):
     }
 
 
-def read_osm_waterways(pbf_path, bbox):
-    """Rivers, streams, and canals from an OSM PBF with any node in bbox, as dicts of
-    id, name, waterway, intermittent, tunnel, refs (node IDs), and coords as (lon, lat)
-    tuples"""
+def read_osm_waterways(pbf_path, bbox, kinds=OSM_WATERWAYS):
+    """Waterways of kinds (values of the waterway tag; rivers, streams, and canals by
+    default) from an OSM PBF with any node in bbox, as dicts of id, name, waterway,
+    intermittent, tunnel, refs (node IDs), and coords as (lon, lat) tuples"""
     ways = []
     processor = (
         osmium.FileProcessor(pbf_path, osmium.osm.NODE | osmium.osm.WAY)
@@ -76,7 +76,7 @@ def read_osm_waterways(pbf_path, bbox):
         .with_filter(osmium.filter.KeyFilter("waterway"))
     )
     for obj in processor:
-        if not obj.is_way() or obj.tags.get("waterway") not in OSM_WATERWAYS:
+        if not obj.is_way() or obj.tags.get("waterway") not in kinds:
             continue
         try:
             coords = [(node.lon, node.lat) for node in obj.nodes]

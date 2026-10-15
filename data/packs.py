@@ -232,8 +232,9 @@ def make_contours_for_pack(pack_id, clean=False, procs=2):
         procs=procs)
 
 
-def make_water_for_pack(pack_id, clean=False, procs=2):
-    """Make water pmtiles given a pack"""
+def make_water_for_pack(pack_id, clean=False, procs=2, osm_waterways=False):
+    """Make water pmtiles given a pack, with waterways from OSM instead of the pack's
+    water sources if osm_waterways"""
     pack_dir = get_pack_dir(pack_id)
     fname = "water.pmtiles"
     water_pmtiles_path = os.path.join(pack_dir, fname)
@@ -248,7 +249,8 @@ def make_water_for_pack(pack_id, clean=False, procs=2):
         clean=clean,
         path=water_pmtiles_path,
         procs=procs,
-        osm_pbf_url=pack["osm"])
+        osm_pbf_url=pack["osm"],
+        osm_waterways=osm_waterways)
 
 
 def make_ways_for_pack(pack_id, clean=False):
@@ -297,11 +299,12 @@ def write_pack_metadata(pack_id, pack_dir):
 
 def make_pack(pack_id, clean=False, clean_rocks=False, clean_water=False,
               clean_ways=False, clean_context=False, clean_contours=False,
-              procs=2):
+              procs=2, osm_waterways=False):
     """Generate a pack and write it to the build directory"""
     pack_dir = get_pack_dir(pack_id)
     make_rocks_for_pack(pack_id, clean=(clean or clean_rocks), procs=procs)
-    make_water_for_pack(pack_id, clean=(clean or clean_water), procs=procs)
+    make_water_for_pack(
+        pack_id, clean=(clean or clean_water), procs=procs, osm_waterways=osm_waterways)
     make_ways_for_pack(pack_id, clean=(clean or clean_ways))
     make_context_for_pack(pack_id, clean=(clean or clean_context))
     make_contours_for_pack(pack_id, clean=(clean or clean_contours), procs=procs)
@@ -328,7 +331,8 @@ def make_all_packs_from_args(args):
                 clean_ways=args.clean_ways,
                 clean_context=args.clean_context,
                 clean_contours=args.clean_contours,
-                procs=args.procs)
+                procs=args.procs,
+                osm_waterways=args.osm_waterways)
             util.log(f"Pack available at {os.path.relpath(pack_path)}")
         except: # pylint: disable=bare-except
             fails.append(pack_id)
@@ -353,7 +357,8 @@ def make_single_pack_from_args(args):
         clean_ways=args.clean_ways,
         clean_context=args.clean_context,
         clean_contours=args.clean_contours,
-        procs=args.procs)
+        procs=args.procs,
+        osm_waterways=args.osm_waterways)
     make_manifest(manifest_url=args.manifest_url, s3_bucket_url=args.s3_bucket_url)
     util.log(f"Pack available at {os.path.relpath(pack_path)}")
 
@@ -390,6 +395,13 @@ if __name__ == "__main__":
         "--clean-contours",
         action="store_true",
         help="Clean all cached files for contours before building")
+    parser.add_argument(
+        "--osm-waterways",
+        action="store_true",
+        help="""
+            Take waterways and their flow from the pack's OSM extract instead of its water
+            sources, which still provide waterbodies and watersheds
+        """)
     parser.add_argument(
         "--procs",
         type=int,
@@ -431,7 +443,8 @@ if __name__ == "__main__":
             make_water_for_pack(
                 args.pack,
                 clean=args.clean,
-                procs=args.procs)
+                procs=args.procs,
+                osm_waterways=args.osm_waterways)
         if "contours" in args.only:
             make_contours_for_pack(
                 args.pack,
