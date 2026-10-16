@@ -129,7 +129,11 @@ def link_lakes(network, waterbodies):
     """
     if not network:
         return network
+    # Project the waterways again with the lakes' projection instead of using their
+    # lines, since projections from different coordinates scale differently, and
+    # scaling about lon 0 turns that into an offset of a few hundred meters
     projection = Projection([{"coords": w["coords"]} for w in network])
+    lines = {w["hydroseq"]: LineString(projection.project(w["coords"])) for w in network}
     lakes = []
     for kind, geom in waterbodies:
         polygon = projection.project_geometry(geom)
@@ -158,7 +162,7 @@ def link_lakes(network, waterbodies):
     # stream that starts near the shore and ends at it
     outflows = defaultdict(list)
     for waterway in network:
-        line = waterway["line"]
+        line = lines[waterway["hydroseq"]]
         start, end = Point(line.coords[0]), Point(line.coords[-1])
         lake = lake_near(start)
         if lake is not None and line.difference(lakes[lake]).length > 0.5 * line.length \
@@ -167,12 +171,12 @@ def link_lakes(network, waterbodies):
     for waterway in network:
         if waterway["dnhydroseq"]:
             continue
-        lake = lake_near(Point(waterway["line"].coords[-1]))
+        lake = lake_near(Point(lines[waterway["hydroseq"]].coords[-1]))
         options = [w for w in outflows.get(lake, [])
                    if not flows_into(w["hydroseq"], waterway["hydroseq"])]
         if options:
-            waterway["dnhydroseq"] = min(
-                options, key=lambda w: (KIND_RANK[w["kind"]], -w["line"].length))["hydroseq"]
+            waterway["dnhydroseq"] = min(options, key=lambda w: (
+                KIND_RANK[w["kind"]], -lines[w["hydroseq"]].length))["hydroseq"]
     return network
 
 

@@ -115,6 +115,26 @@ def test_streams_into_a_lake_flow_into_its_outflow():
     assert flows_into(network, "1-1") == "2-1"
 
 
+def test_streams_into_a_lake_flow_into_its_outflow_in_a_large_network():
+    """Splitting ways where many tributaries join, far from the lake, mustn't change how
+    the lake lines up with the waterways"""
+    main = [(5000, 100000 + i * 100) for i in range(50)]
+    tributaries = [
+        osm_way(100 + i, [200 + i, 300 + i], [(5100, point[1]), point])
+        for i, point in enumerate(main[1:-1], 1)
+    ]
+    network = build_network([
+        osm_way(1, [1, 2], [(0, 0), (0, 290)]),
+        osm_way(2, [3, 4], [(0, 710), (0, 1000)]),
+        osm_way(3, [300 + i for i in range(len(main))], main),
+        *tributaries,
+    ])
+
+    link_lakes(network, [LAKE])
+
+    assert flows_into(network, "1-1") == "2-1"
+
+
 def test_lake_without_an_outflow_is_where_streams_end():
     network = build_network([osm_way(1, [1, 2], [(0, 0), (0, 290)])])
 
