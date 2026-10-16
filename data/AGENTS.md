@@ -84,6 +84,8 @@ Packs with `"waterways": "osm"` (written by `create_pack.py --osm-waterways`; `p
 --osm-waterways` forces it for any pack) skip all that and take their waterways and flow
 from the OSM extract alone (`osm_waterways.py`); their water sources still provide
 waterbodies and watersheds. That suits places OSM maps waterways well, like the Bay Area.
+To route flow through lakes, those packs also read OSM's water areas, which line up with
+its waterways better than the sources' lakes do; the map still shows the sources' lakes.
 
 ## Working on a single source
 

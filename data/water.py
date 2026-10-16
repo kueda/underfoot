@@ -723,8 +723,9 @@ def make_water(
     load_waterways(waterway_sources, debug=debug)
     osm_ways = None
     if osm_pbf_url:
+        pbf_path = fetch_data(osm_pbf_url)
         osm_ways = read_osm_waterways(
-            fetch_data(osm_pbf_url), widen_bbox(bbox, OSM_BBOX_MARGIN_DEG),
+            pbf_path, widen_bbox(bbox, OSM_BBOX_MARGIN_DEG),
             kinds=OSM_WATERWAY_KINDS if osm_waterways else OSM_WATERWAYS)
         if not osm_waterways:
             apply_osm_names(osm_ways, bbox, debug=debug)
@@ -734,7 +735,7 @@ def make_water(
     load_flow(waterway_sources, debug=debug)
     if osm_ways is not None:
         if osm_waterways:
-            apply_osm_network(osm_ways, bbox, debug=debug)
+            apply_osm_network(osm_ways, bbox, pbf_path, debug=debug)
         else:
             apply_osm_gap_fills(osm_ways, bbox, debug=debug)
         # Cite OSM for the waterways it provided

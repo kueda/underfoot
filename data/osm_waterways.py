@@ -11,7 +11,9 @@ over canals and ditches, then the straightest. That makes the flow a tree, like 
 main path NHD's flow data follows.
 
 OSM rarely draws paths through lakes, so streams that end at a lake flow into the
-waterway leaving it, if there is one. Where several leave it, they prefer one that
+waterway leaving it, if there is one. Lakes come from both the pack's water sources and
+OSM: OSM's line up with its waterways, but the sources have some lakes OSM lacks, and
+the sea, which OSM only implies with its coastline. Where several waterways leave a lake, they prefer one that
 reaches water or the edge of the map over a dead end like a tunnel that stops at its
 portal, then one with the same name, then rivers and streams, then the longest way
 downstream. Huge waterbodies like bays are left alone, since the creeks that end in them
@@ -21,6 +23,7 @@ don't flow out through anything.
 import math
 from collections import defaultdict
 
+import osmium
 import psycopg2
 from psycopg2.extras import execute_values
 from shapely import wkb
@@ -41,6 +44,9 @@ OSM_WATERWAY_KINDS = ("river", "stream", "canal", "ditch", "drain")
 # Where flow forks, it follows these before those
 KIND_RANK = {"river": 0, "stream": 0, "canal": 1, "ditch": 2, "drain": 3}
 LAKE_TYPES = {"lake/pond", "reservoir"}
+# Values of the water tag on OSM areas that are lakes or ponds; None is a plain
+# natural=water
+OSM_LAKE_WATER = {None, "lake", "pond", "oxbow", "lagoon"}
 # A stream ending this close to a lake flows into it, and a waterway starting this close
 # to one flows out of it
 NEAR_LAKE_M = 50
@@ -152,10 +158,6 @@ def link_lakes(network, waterbodies, bbox=None):
         return [i for i in lake_tree.query(point.buffer(NEAR_LAKE_M))
                 if lakes[i].distance(point) <= NEAR_LAKE_M]
 
-    def lake_near(point):
-        near = lakes_near(point)
-        return min(near, key=lambda i: lakes[i].distance(point)) if near else None
-
     def downstream(start):
         """Hydroseqs of start and the waterways it flows into, in order"""
         path = []
@@ -196,8 +198,10 @@ def link_lakes(network, waterbodies, bbox=None):
     for waterway in network:
         if waterway["dnhydroseq"]:
             continue
-        lake = lake_near(Point(lines[waterway["hydroseq"]].coords[-1]))
-        options = [w for w in outflows.get(lake, [])
+        # Any lake near its end, since a lake drawn by more than one source can end a
+        # stream at one drawing and start its outflow at another
+        options = [w for lake in lakes_near(Point(lines[waterway["hydroseq"]].coords[-1]))
+                   for w in outflows.get(lake, [])
                    if waterway["hydroseq"] not in downstream(w["hydroseq"])]
         if not options:
             continue
@@ -225,6 +229,46 @@ def read_waterbodies(bbox):
             (bbox["left"], bbox["bottom"], bbox["right"], bbox["top"]))
         waterbodies = [(kind, wkb.loads(bytes(geom))) for kind, geom in cur.fetchall()]
     con.close()
+    return waterbodies
+
+
+def osm_waterbody_type(tags):
+    """Waterbody type of an OSM area like the sources' types, the value of its water tag
+    if the sources have no such type, or None if it isn't water"""
+    natural, water, landuse = tags.get("natural"), tags.get("water"), tags.get("landuse")
+    if natural == "bay":
+        return "bay/estuary/gulf/sound"
+    if water == "reservoir" or landuse == "reservoir":
+        return "reservoir"
+    if natural == "wetland":
+        return "swamp/marsh"
+    if natural == "water":
+        return "lake/pond" if water in OSM_LAKE_WATER else water
+    return None
+
+
+def read_osm_waterbodies(pbf_path, bbox):
+    """(type, shapely (multi)polygon in lon/lat) of the water areas in an OSM PBF that
+    intersect bbox; see osm_waterbody_type"""
+    waterbodies = []
+    factory = osmium.geom.WKBFactory()
+    processor = (
+        osmium.FileProcessor(pbf_path)
+        .with_areas()
+        .with_filter(osmium.filter.KeyFilter("natural", "water", "landuse"))
+    )
+    for obj in processor:
+        if not obj.is_area():
+            continue
+        kind = osm_waterbody_type(obj.tags)
+        if kind is None:
+            continue
+        geom = wkb.loads(factory.create_multipolygon(obj), hex=True)
+        left, bottom, right, top = geom.bounds
+        if right < bbox["left"] or left > bbox["right"] or top < bbox["bottom"] \
+                or bottom > bbox["top"]:
+            continue
+        waterbodies.append((kind, geom))
     return waterbodies
 
 
@@ -259,14 +303,19 @@ def write_network(network):
     con.close()
 
 
-def apply_osm_network(osm_ways, bbox, debug=False):
+def apply_osm_network(osm_ways, bbox, pbf_path, debug=False):
     """Load waterways and their flow from osm_ways (see read_osm_waterways, with
-    OSM_WATERWAY_KINDS), linking them through the lakes near bbox; returns how many
-    waterways were loaded"""
+    OSM_WATERWAY_KINDS), linking them through the lakes near bbox in the database and in
+    the OSM PBF at pbf_path; returns how many waterways were loaded
+
+    OSM's lakes line up with its waterways, since they're mapped together, but it lacks
+    some lakes the sources have, and the sea and some bays, which mark where waterways
+    reach water."""
     network = build_network(osm_ways)
     # Same as where water.py read the ways from
     read_bbox = widen_bbox(bbox, OSM_BBOX_MARGIN_DEG)
-    link_lakes(network, read_waterbodies(read_bbox), bbox=read_bbox)
+    waterbodies = read_waterbodies(read_bbox) + read_osm_waterbodies(pbf_path, read_bbox)
+    link_lakes(network, waterbodies, bbox=read_bbox)
     if debug:
         util.log(f"water: {len(network)} waterways from {len(osm_ways)} OSM ways")
     if network:
