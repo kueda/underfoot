@@ -399,8 +399,8 @@ if __name__ == "__main__":
         "--osm-waterways",
         action="store_true",
         help="""
-            Take waterways and their flow from the pack's OSM extract instead of its water
-            sources, which still provide waterbodies and watersheds
+            Take waterways, their flow, and waterbodies from the pack's OSM extract instead
+            of its water sources, which still provide watersheds
         """)
     parser.add_argument(
         "--procs",

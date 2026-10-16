@@ -1,5 +1,6 @@
 *.DS_Store
 *.pbf
+water-polygons-split-*.zip
 *.pyc
 *__pycache__*
 .claude-model

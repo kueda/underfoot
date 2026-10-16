@@ -216,6 +216,7 @@ def _stub_make_water_steps(monkeypatch):
         "apply_osm_names",
         "apply_osm_gap_fills",
         "apply_osm_network",
+        "apply_osm_waterbodies",
     ):
         monkeypatch.setattr(water, step, lambda *args, **kwargs: None)
     return captured
@@ -463,26 +464,30 @@ def test_make_water_without_an_osm_url_leaves_waterways_alone(monkeypatch):
 
 
 def test_make_water_can_take_waterways_and_flow_from_osm_instead_of_the_sources(monkeypatch):
-    """The sources still provide waterbodies and watersheds"""
+    """The sources still provide watersheds, and OSM provides the waterbodies, which line up
+    with its waterways, with the sea from the water polygons made from its coastline"""
     captured = _stub_make_water_steps(monkeypatch)
     steps = []
     bbox = {"left": -122.4, "bottom": 37.6, "right": -122.0, "top": 38.0}
     osm_ways = [{"id": 1}]
     monkeypatch.setattr(water, "fetch_data", lambda url: f"{url}.pbf")
-    for step in ("load_waterways", "load_waterbodies", "load_watersheds", "load_flow"):
+    for step in ("load_waterways", "load_watersheds", "load_flow"):
         monkeypatch.setattr(
             water, step, lambda sources, step=step, **kwargs: steps.append((step, sources)))
     monkeypatch.setattr(
+        water, "load_waterbodies",
+        lambda sources, **kwargs: steps.append(("load_waterbodies", sources)))
+    monkeypatch.setattr(
+        water, "apply_osm_waterbodies",
+        lambda pbf_path, sea_path, b, **kwargs: steps.append(
+            ("apply_osm_waterbodies", pbf_path, sea_path, b)))
+    monkeypatch.setattr(
         water, "read_osm_waterways",
         lambda pbf_path, read_bbox, kinds: steps.append(("read", kinds)) or osm_ways)
-    for step in ("apply_osm_names", "apply_osm_gap_fills"):
+    for step in ("apply_osm_names", "apply_osm_gap_fills", "apply_osm_network"):
         monkeypatch.setattr(
             water, step,
             lambda ways, b, step=step, **kwargs: steps.append((step, ways, b)))
-    monkeypatch.setattr(
-        water, "apply_osm_network",
-        lambda ways, b, pbf_path, **kwargs: steps.append(
-            ("apply_osm_network", ways, b, pbf_path)))
     monkeypatch.setattr(water, "label_waterways", lambda **kwargs: steps.append("label"))
     monkeypatch.setattr(
         water, "make_pmtiles",
@@ -494,10 +499,12 @@ def test_make_water_can_take_waterways_and_flow_from_osm_instead_of_the_sources(
     assert steps == [
         ("load_waterways", []),
         ("read", water.OSM_WATERWAY_KINDS),
-        ("load_waterbodies", ["fake_source"]),
+        ("load_waterbodies", []),
+        ("apply_osm_waterbodies", "http://example.com/x.osm.pbf",
+         f"{water.OSM_WATER_POLYGONS_URL}.pbf", bbox),
         ("load_watersheds", ["fake_source"]),
         ("load_flow", []),
-        ("apply_osm_network", osm_ways, bbox, "http://example.com/x.osm.pbf"),
+        ("apply_osm_network", osm_ways, bbox),
         "label",
         ("make_pmtiles", ["fake_source", "osm"]),
     ]

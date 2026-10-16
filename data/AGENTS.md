@@ -82,10 +82,12 @@ flow traces follow them. Both read the PBF once with pyosmium (`osmium` in
 
 Packs with `"waterways": "osm"` (written by `create_pack.py --osm-waterways`; `packs.py
 --osm-waterways` forces it for any pack) skip all that and take their waterways and flow
-from the OSM extract alone (`osm_waterways.py`); their water sources still provide
-waterbodies and watersheds. That suits places OSM maps waterways well, like the Bay Area.
-To route flow through lakes, those packs also read OSM's water areas, which line up with
-its waterways better than the sources' lakes do; the map still shows the sources' lakes.
+from the OSM extract alone (`osm_waterways.py`), along with their waterbodies, which line
+up with OSM's waterways better than NHD's do; their water sources still provide watersheds.
+That suits places OSM maps waterways well, like the Bay Area. OSM only implies the sea
+with its coastline, so those packs take the sea from the water polygons
+osmdata.openstreetmap.de makes from it, a 900 MB download cached as
+`water-polygons-split-4326.zip`.
 
 ## Working on a single source
 

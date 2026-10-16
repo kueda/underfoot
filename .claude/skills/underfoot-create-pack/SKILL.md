@@ -59,8 +59,8 @@ to use (usually the smallest one covering nearly all of the pack), then rerun wi
 `--osm <url>`. Don't edit the `osm` field in the generated JSON instead.
 
 **Waterways from OSM:** Pass `--osm-waterways` to write `"waterways": "osm"`, which builds
-the pack's waterways and their flow from its OSM extract instead of NHD/TIGER (waterbodies and
-watersheds still come from the water sources). Only do this when the user asks for it; it suits
+the pack's waterways, their flow, and its waterbodies from OSM instead of NHD/TIGER
+(watersheds still come from the water sources). Only do this when the user asks for it; it suits
 places where OSM maps waterways well, like the San Francisco Bay Area, not places like rural
 New Mexico where OSM lacks most of NHD's streams.
 

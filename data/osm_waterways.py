@@ -1,9 +1,10 @@
-"""Waterways and their flow from OpenStreetMap alone
+"""Waterways, their flow, and waterbodies from OpenStreetMap alone
 
 Where OSM maps waterways well, as in the San Francisco Bay Area, it has more of them than
 NHD, with more names, and it gives the direction of flow: by convention a waterway is
 drawn in the direction it flows. So for those packs we can use OSM's waterways instead
-of NHD's, which avoids the seams of mixing the two.
+of NHD's, which avoids the seams of mixing the two. Their waterbodies come from OSM too,
+since OSM's lakes line up with its waterways and NHD's don't always.
 
 Ways are split where other ways join them, and each piece flows into one of the pieces
 leaving its end, preferring the same way, then the same name, then rivers and streams
@@ -11,23 +12,25 @@ over canals and ditches, then the straightest. That makes the flow a tree, like 
 main path NHD's flow data follows.
 
 OSM rarely draws paths through lakes, so streams that end at a lake flow into the
-waterway leaving it, if there is one. Lakes come from both the pack's water sources and
-OSM: OSM's line up with its waterways, but the sources have some lakes OSM lacks, and
-the sea, which OSM only implies with its coastline. Where several waterways leave a lake, they prefer one that
+waterway leaving it, if there is one. Where several leave it, they prefer one that
 reaches water or the edge of the map over a dead end like a tunnel that stops at its
 portal, then one with the same name, then rivers and streams, then the longest way
 downstream. Huge waterbodies like bays are left alone, since the creeks that end in them
 don't flow out through anything.
+
+OSM only implies the sea with its coastline, so the sea comes from the water polygons
+osmdata.openstreetmap.de makes from it.
 """
 
 import math
 from collections import defaultdict
 
+import fiona
 import osmium
 import psycopg2
 from psycopg2.extras import execute_values
 from shapely import wkb
-from shapely.geometry import LineString, Point
+from shapely.geometry import LineString, Point, box, shape
 from shapely.strtree import STRtree
 
 from database import DBNAME, SRID
@@ -41,12 +44,41 @@ WATERWAYS_TABLE_NAME = "waterways"
 WATERBODIES_TABLE_NAME = "waterbodies"
 WATERWAYS_FLOW_TABLE_NAME = "waterways_flow"
 OSM_WATERWAY_KINDS = ("river", "stream", "canal", "ditch", "drain")
+# OSM only implies the sea with its coastline, so the sea comes from the water polygons
+# osmdata.openstreetmap.de makes from it every day
+OSM_WATER_POLYGONS_URL = \
+    "https://osmdata.openstreetmap.de/download/water-polygons-split-4326.zip"
+OSM_WATER_POLYGONS_SHP = "water-polygons-split-4326/water_polygons.shp"
 # Where flow forks, it follows these before those
 KIND_RANK = {"river": 0, "stream": 0, "canal": 1, "ditch": 2, "drain": 3}
 LAKE_TYPES = {"lake/pond", "reservoir"}
-# Values of the water tag on OSM areas that are lakes or ponds; None is a plain
-# natural=water
-OSM_LAKE_WATER = {None, "lake", "pond", "oxbow", "lagoon"}
+# Waterbody type and is_natural of OSM water areas by their water tag, using the
+# sources' types. None is a plain natural=water, and values not listed are lakes.
+OSM_WATER_TYPES = {
+    "reservoir": ("reservoir", 0),
+    "basin": ("storage", 0),
+    "wastewater": ("treatment", 0),
+    "salt_pond": ("evaporator", 0),
+    "river": ("stream/river", 1),
+    "stream": ("stream/river", 1),
+    "tidal_channel": ("stream/river", 1),
+    "canal": ("canal/ditch", 0),
+    "ditch": ("canal/ditch", 0),
+    "drain": ("canal/ditch", 0),
+    "lock": ("canal/ditch", 0),
+}
+# Small artificial water that isn't part of the hydrology
+OSM_SKIPPED_WATER = {"fountain", "reflecting_pool", "pool"}
+# Waterbody type of OSM wetlands by their wetland tag; others, like wet meadows, are
+# left out
+OSM_WETLAND_TYPES = {
+    None: "swamp/marsh",
+    "marsh": "swamp/marsh",
+    "swamp": "swamp/marsh",
+    "saltmarsh": "swamp/marsh",
+    "reedbed": "swamp/marsh",
+    "tidalflat": "foreshore",
+}
 # A stream ending this close to a lake flows into it, and a waterway starting this close
 # to one flows out of it
 NEAR_LAKE_M = 50
@@ -232,24 +264,36 @@ def read_waterbodies(bbox):
     return waterbodies
 
 
-def osm_waterbody_type(tags):
-    """Waterbody type of an OSM area like the sources' types, the value of its water tag
-    if the sources have no such type, or None if it isn't water"""
+def osm_waterbody_attributes(tags):
+    """Name, type, is_natural, and permanence of an OSM area, like the sources'
+    waterbodies, or None if it isn't water we show. Bays are left out, since the sources
+    provide the sea, which OSM only implies with its coastline."""
     natural, water, landuse = tags.get("natural"), tags.get("water"), tags.get("landuse")
-    if natural == "bay":
-        return "bay/estuary/gulf/sound"
-    if water == "reservoir" or landuse == "reservoir":
-        return "reservoir"
     if natural == "wetland":
-        return "swamp/marsh"
-    if natural == "water":
-        return "lake/pond" if water in OSM_LAKE_WATER else water
-    return None
+        kind, is_natural = OSM_WETLAND_TYPES.get(tags.get("wetland"), None), 1
+        if kind is None:
+            return None
+    elif natural == "water" or landuse in ("reservoir", "basin"):
+        water = water or (landuse if landuse in ("reservoir", "basin") else None)
+        if water in OSM_SKIPPED_WATER:
+            return None
+        kind, is_natural = OSM_WATER_TYPES.get(water, ("lake/pond", 1))
+    else:
+        return None
+    if "yes" in (tags.get("intermittent"), tags.get("seasonal")):
+        permanence = "intermittent"
+    elif tags.get("intermittent") == "no":
+        permanence = "perennial"
+    else:
+        permanence = None
+    return {"name": tags.get("name"), "type": kind, "is_natural": is_natural,
+            "permanence": permanence}
 
 
 def read_osm_waterbodies(pbf_path, bbox):
-    """(type, shapely (multi)polygon in lon/lat) of the water areas in an OSM PBF that
-    intersect bbox; see osm_waterbody_type"""
+    """Waterbodies from the water areas in an OSM PBF that intersect bbox, as dicts of
+    source_id, source_id_attr, geom (shapely (multi)polygon in lon/lat), and
+    osm_waterbody_attributes"""
     waterbodies = []
     factory = osmium.geom.WKBFactory()
     processor = (
@@ -260,16 +304,59 @@ def read_osm_waterbodies(pbf_path, bbox):
     for obj in processor:
         if not obj.is_area():
             continue
-        kind = osm_waterbody_type(obj.tags)
-        if kind is None:
+        attributes = osm_waterbody_attributes(obj.tags)
+        if attributes is None:
             continue
         geom = wkb.loads(factory.create_multipolygon(obj), hex=True)
         left, bottom, right, top = geom.bounds
         if right < bbox["left"] or left > bbox["right"] or top < bbox["bottom"] \
                 or bottom > bbox["top"]:
             continue
-        waterbodies.append((kind, geom))
+        waterbodies.append({
+            "source_id": str(obj.orig_id()),
+            "source_id_attr": "OSM way" if obj.from_way() else "OSM relation",
+            "geom": geom,
+            **attributes,
+        })
     return waterbodies
+
+
+def read_osm_sea(zip_path, bbox):
+    """The sea within bbox, as waterbodies like read_osm_waterbodies's, from the water
+    polygons osmdata.openstreetmap.de makes from OSM's coastline (zip_path is a download of
+    OSM_WATER_POLYGONS_URL), which are already split into small pieces"""
+    clip = box(bbox["left"], bbox["bottom"], bbox["right"], bbox["top"])
+    sea = []
+    with fiona.open(f"/vsizip/{zip_path}/{OSM_WATER_POLYGONS_SHP}") as polygons:
+        for feature in polygons.filter(bbox=clip.bounds):
+            geom = shape(feature["geometry"]).intersection(clip)
+            if geom.is_empty or geom.area == 0:
+                continue
+            sea.append({"source_id": None, "source_id_attr": None, "geom": geom,
+                        "name": None, "type": "ocean/sea", "is_natural": 1,
+                        "permanence": None})
+    return sea
+
+
+def write_waterbodies(waterbodies):
+    """Add the waterbodies to the database; OSM is cited by write_network"""
+    con = psycopg2.connect(f"dbname={DBNAME}")
+    with con, con.cursor() as cur:
+        execute_values(
+            cur,
+            f"""
+                INSERT INTO {WATERBODIES_TABLE_NAME} (
+                    name, source, source_id, source_id_attr, type, is_natural, permanence,
+                    geom)
+                VALUES %s
+            """,
+            [
+                (w["name"], OSM_SOURCE, w["source_id"], w["source_id_attr"], w["type"],
+                 w["is_natural"], w["permanence"], psycopg2.Binary(w["geom"].wkb))
+                for w in waterbodies
+            ],
+            template=f"(%s, %s, %s, %s, %s, %s, %s, ST_Multi(ST_GeomFromWKB(%s, {SRID})))")
+    con.close()
 
 
 def write_network(network):
@@ -303,19 +390,28 @@ def write_network(network):
     con.close()
 
 
-def apply_osm_network(osm_ways, bbox, pbf_path, debug=False):
-    """Load waterways and their flow from osm_ways (see read_osm_waterways, with
-    OSM_WATERWAY_KINDS), linking them through the lakes near bbox in the database and in
-    the OSM PBF at pbf_path; returns how many waterways were loaded
+def apply_osm_waterbodies(pbf_path, sea_path, bbox, debug=False):
+    """Load waterbodies from the water areas in the OSM PBF at pbf_path (see
+    read_osm_waterbodies) and the sea from the water polygons at sea_path (see
+    read_osm_sea), from where water.py reads the OSM ways; returns how many waterbodies
+    were loaded"""
+    read_bbox = widen_bbox(bbox, OSM_BBOX_MARGIN_DEG)
+    waterbodies = read_osm_waterbodies(pbf_path, read_bbox) + read_osm_sea(sea_path, read_bbox)
+    if debug:
+        util.log(f"water: {len(waterbodies)} waterbodies from OSM")
+    if waterbodies:
+        write_waterbodies(waterbodies)
+    return len(waterbodies)
 
-    OSM's lakes line up with its waterways, since they're mapped together, but it lacks
-    some lakes the sources have, and the sea and some bays, which mark where waterways
-    reach water."""
+
+def apply_osm_network(osm_ways, bbox, debug=False):
+    """Load waterways and their flow from osm_ways (see read_osm_waterways, with
+    OSM_WATERWAY_KINDS), linking them through the lakes near bbox; returns how many
+    waterways were loaded"""
     network = build_network(osm_ways)
     # Same as where water.py read the ways from
     read_bbox = widen_bbox(bbox, OSM_BBOX_MARGIN_DEG)
-    waterbodies = read_waterbodies(read_bbox) + read_osm_waterbodies(pbf_path, read_bbox)
-    link_lakes(network, waterbodies, bbox=read_bbox)
+    link_lakes(network, read_waterbodies(read_bbox), bbox=read_bbox)
     if debug:
         util.log(f"water: {len(network)} waterways from {len(osm_ways)} OSM ways")
     if network:

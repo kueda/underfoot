@@ -1,7 +1,12 @@
 """Tests for building waterways and their flow from OpenStreetMap alone."""
 
+import os
+import zipfile
+
+import fiona
 import osmium
-from shapely.geometry import Point, Polygon
+import pytest
+from shapely.geometry import Point, Polygon, box as shapely_box, mapping
 
 import osm_waterways
 from osm_waterways import build_network, link_lakes, read_osm_waterbodies
@@ -285,19 +290,49 @@ def square(nodes, first_id, left, bottom, size):
     return ids + ids[:1]
 
 
+@pytest.mark.parametrize("tags, expected", [
+    ({"natural": "water"}, ("lake/pond", 1, None)),
+    ({"natural": "water", "water": "pond", "intermittent": "yes"},
+     ("lake/pond", 1, "intermittent")),
+    ({"natural": "water", "water": "lake", "seasonal": "yes"}, ("lake/pond", 1, "intermittent")),
+    ({"natural": "water", "water": "lake", "intermittent": "no"}, ("lake/pond", 1, "perennial")),
+    ({"natural": "water", "water": "reservoir"}, ("reservoir", 0, None)),
+    ({"landuse": "reservoir"}, ("reservoir", 0, None)),
+    ({"natural": "water", "water": "basin"}, ("storage", 0, None)),
+    ({"landuse": "basin"}, ("storage", 0, None)),
+    ({"natural": "water", "water": "wastewater"}, ("treatment", 0, None)),
+    ({"natural": "water", "water": "salt_pond"}, ("evaporator", 0, None)),
+    ({"natural": "water", "water": "river"}, ("stream/river", 1, None)),
+    ({"natural": "water", "water": "stream"}, ("stream/river", 1, None)),
+    ({"natural": "water", "water": "canal"}, ("canal/ditch", 0, None)),
+    ({"natural": "wetland"}, ("swamp/marsh", 1, None)),
+    ({"natural": "wetland", "wetland": "saltmarsh"}, ("swamp/marsh", 1, None)),
+    ({"natural": "wetland", "wetland": "tidalflat"}, ("foreshore", 1, None)),
+    ({"natural": "wetland", "wetland": "wet_meadow"}, None),
+    ({"natural": "water", "water": "fountain"}, None),
+    ({"natural": "water", "water": "reflecting_pool"}, None),
+    ({"natural": "water", "water": "pool"}, None),
+    # The sources' sea water covers bays
+    ({"natural": "bay"}, None),
+    ({"landuse": "residential"}, None),
+])
+def test_osm_waterbody_attributes(tags, expected):
+    attributes = osm_waterways.osm_waterbody_attributes(tags)
+    if expected is None:
+        assert attributes is None
+    else:
+        assert (attributes["type"], attributes["is_natural"], attributes["permanence"]) == \
+            expected
+
+
 def test_read_osm_waterbodies_returns_water_areas_inside_the_bbox(tmp_path):
     nodes = {}
     ways = {
-        1: ({"natural": "water"}, square(nodes, 10, -122.0, 37.9, 0.01)),
-        2: ({"natural": "water", "water": "reservoir"}, square(nodes, 20, -121.98, 37.9, 0.01)),
-        3: ({"landuse": "reservoir"}, square(nodes, 30, -121.96, 37.9, 0.01)),
-        4: ({"natural": "water", "water": "pond"}, square(nodes, 40, -121.94, 37.9, 0.01)),
-        5: ({"natural": "water", "water": "canal"}, square(nodes, 50, -121.92, 37.9, 0.01)),
-        6: ({"natural": "wetland"}, square(nodes, 60, -122.0, 37.92, 0.01)),
-        7: ({"landuse": "residential"}, square(nodes, 70, -121.98, 37.92, 0.01)),
-        8: ({"natural": "water"}, square(nodes, 80, -100.0, 40.0, 0.01)),
-        # Outer ring of a bay multipolygon
-        9: ({}, square(nodes, 90, -121.96, 37.92, 0.01)),
+        1: ({"natural": "water", "name": "Kent Lake"}, square(nodes, 10, -122.0, 37.9, 0.01)),
+        2: ({"landuse": "residential"}, square(nodes, 20, -121.98, 37.9, 0.01)),
+        3: ({"natural": "water"}, square(nodes, 30, -100.0, 40.0, 0.01)),
+        # Outer ring of a multipolygon
+        4: ({}, square(nodes, 40, -121.96, 37.9, 0.01)),
     }
     pbf = tmp_path / "test.osm.pbf"
     with osmium.SimpleWriter(str(pbf)) as writer:
@@ -306,26 +341,20 @@ def test_read_osm_waterbodies_returns_water_areas_inside_the_bbox(tmp_path):
         for way_id, (tags, node_ids) in ways.items():
             writer.add_way(osmium.osm.mutable.Way(id=way_id, nodes=node_ids, tags=tags))
         writer.add_relation(osmium.osm.mutable.Relation(
-            id=1, members=[("w", 9, "outer")],
-            tags={"type": "multipolygon", "natural": "bay", "name": "Some Bay"}))
+            id=1, members=[("w", 4, "outer")],
+            tags={"type": "multipolygon", "natural": "water", "water": "river"}))
     bbox = {"left": -122.1, "bottom": 37.8, "right": -121.9, "top": 38.0}
 
-    waterbodies = read_osm_waterbodies(str(pbf), bbox)
+    waterbodies = {(w["source_id_attr"], w["source_id"]): w
+                   for w in read_osm_waterbodies(str(pbf), bbox)}
 
-    def kind_at(lon, lat):
-        kinds = [kind for kind, geom in waterbodies if geom.contains(Point(lon, lat))]
-        assert len(kinds) <= 1
-        return kinds[0] if kinds else None
-
-    assert len(waterbodies) == 7
-    assert kind_at(-121.995, 37.905) == "lake/pond"
-    assert kind_at(-121.975, 37.905) == "reservoir"
-    assert kind_at(-121.955, 37.905) == "reservoir"
-    assert kind_at(-121.935, 37.905) == "lake/pond"
-    assert kind_at(-121.915, 37.905) == "canal"
-    assert kind_at(-121.995, 37.925) == "swamp/marsh"
-    assert kind_at(-121.975, 37.925) is None
-    assert kind_at(-121.955, 37.925) == "bay/estuary/gulf/sound"
+    assert set(waterbodies) == {("OSM way", "1"), ("OSM relation", "1")}
+    lake = waterbodies[("OSM way", "1")]
+    assert (lake["name"], lake["type"]) == ("Kent Lake", "lake/pond")
+    assert lake["geom"].contains(Point(-121.995, 37.905))
+    river = waterbodies[("OSM relation", "1")]
+    assert (river["name"], river["type"]) == (None, "stream/river")
+    assert river["geom"].contains(Point(-121.955, 37.905))
 
 
 def test_apply_osm_network_writes_the_linked_network(monkeypatch):
@@ -334,39 +363,59 @@ def test_apply_osm_network_writes_the_linked_network(monkeypatch):
         osm_way(2, [3, 4], [(0, 710), (0, 1000)]),
     ]
     bbox = {"left": -122.1, "bottom": 37.8, "right": -121.9, "top": 38.0}
-    read, read_osm, written = [], [], []
+    read, written = [], []
     monkeypatch.setattr(
         osm_waterways, "read_waterbodies", lambda b: read.append(b) or [LAKE])
-    monkeypatch.setattr(
-        osm_waterways, "read_osm_waterbodies",
-        lambda pbf_path, b: read_osm.append((pbf_path, b)) or [])
     monkeypatch.setattr(osm_waterways, "write_network", written.append)
 
-    count = osm_waterways.apply_osm_network(ways, bbox, pbf_path="x.osm.pbf")
+    count = osm_waterways.apply_osm_network(ways, bbox)
 
     assert count == 2
     [network] = written
     assert flows_into(network, "1-1") == "2-1"
-    read_bbox = osm_waterways.widen_bbox(bbox, osm_waterways.OSM_BBOX_MARGIN_DEG)
-    assert read == [read_bbox]
-    assert read_osm == [("x.osm.pbf", read_bbox)]
+    assert read == [osm_waterways.widen_bbox(bbox, osm_waterways.OSM_BBOX_MARGIN_DEG)]
 
 
-def test_apply_osm_network_links_through_lakes_only_osm_draws(monkeypatch):
-    ways = [
-        osm_way(1, [1, 2], [(0, 0), (0, 290)]),
-        osm_way(2, [3, 4], [(0, 710), (0, 1000)]),
-    ]
+def test_read_osm_sea_clips_the_water_polygons_to_the_bbox(tmp_path):
+    shp_dir = tmp_path / os.path.dirname(osm_waterways.OSM_WATER_POLYGONS_SHP)
+    shp_dir.mkdir()
+    schema = {"geometry": "Polygon", "properties": {"x": "int"}}
+    with fiona.open(tmp_path / osm_waterways.OSM_WATER_POLYGONS_SHP, "w", driver="ESRI Shapefile",
+                    crs="EPSG:4326", schema=schema) as shp:
+        shp.write({"geometry": mapping(shapely_box(-122.3, 37.7, -122.0, 37.9)),
+                   "properties": {"x": 1}})
+        shp.write({"geometry": mapping(shapely_box(-100.0, 40.0, -99.0, 41.0)),
+                   "properties": {"x": 2}})
+    zip_path = tmp_path / "water-polygons.zip"
+    with zipfile.ZipFile(zip_path, "w") as archive:
+        for path in shp_dir.iterdir():
+            archive.write(path, path.relative_to(tmp_path))
     bbox = {"left": -122.1, "bottom": 37.8, "right": -121.9, "top": 38.0}
-    written = []
-    monkeypatch.setattr(osm_waterways, "read_waterbodies", lambda b: [])
-    monkeypatch.setattr(osm_waterways, "read_osm_waterbodies", lambda pbf_path, b: [LAKE])
-    monkeypatch.setattr(osm_waterways, "write_network", written.append)
 
-    osm_waterways.apply_osm_network(ways, bbox, pbf_path="x.osm.pbf")
+    [sea] = osm_waterways.read_osm_sea(str(zip_path), bbox)
 
-    [network] = written
-    assert flows_into(network, "1-1") == "2-1"
+    assert (sea["type"], sea["name"], sea["is_natural"]) == ("ocean/sea", None, 1)
+    assert sea["geom"].equals(shapely_box(-122.1, 37.8, -122.0, 37.9))
+
+
+def test_apply_osm_waterbodies_adds_water_areas_and_sea_where_the_ways_were_read(monkeypatch):
+    bbox = {"left": -122.1, "bottom": 37.8, "right": -121.9, "top": 38.0}
+    waterbodies = [{"source_id": "1"}, {"source_id": "2"}]
+    sea = [{"source_id": None}]
+    read, written = [], []
+    monkeypatch.setattr(
+        osm_waterways, "read_osm_waterbodies",
+        lambda pbf_path, b: read.append((pbf_path, b)) or waterbodies)
+    monkeypatch.setattr(
+        osm_waterways, "read_osm_sea", lambda sea_path, b: read.append((sea_path, b)) or sea)
+    monkeypatch.setattr(osm_waterways, "write_waterbodies", written.append)
+
+    count = osm_waterways.apply_osm_waterbodies("x.osm.pbf", "water.zip", bbox)
+
+    assert count == 3
+    assert written == [waterbodies + sea]
+    read_bbox = osm_waterways.widen_bbox(bbox, osm_waterways.OSM_BBOX_MARGIN_DEG)
+    assert read == [("x.osm.pbf", read_bbox), ("water.zip", read_bbox)]
 
 
 def test_apply_osm_network_knows_outflows_leaving_the_ways_it_read_go_somewhere(monkeypatch):
@@ -381,10 +430,9 @@ def test_apply_osm_network_knows_outflows_leaving_the_ways_it_read_go_somewhere(
             "top": 38.0}
     written = []
     monkeypatch.setattr(osm_waterways, "read_waterbodies", lambda b: [LAKE])
-    monkeypatch.setattr(osm_waterways, "read_osm_waterbodies", lambda pbf_path, b: [])
     monkeypatch.setattr(osm_waterways, "write_network", written.append)
 
-    osm_waterways.apply_osm_network(ways, bbox, pbf_path="x.osm.pbf")
+    osm_waterways.apply_osm_network(ways, bbox)
 
     [network] = written
     assert flows_into(network, "1-1") == "3-1"

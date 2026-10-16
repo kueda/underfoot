@@ -15,7 +15,8 @@ import psycopg2
 
 from database import DBNAME, SRID, make_database
 from osm import fetch_data
-from osm_waterways import OSM_WATERWAY_KINDS, apply_osm_network
+from osm_waterways import (
+    OSM_WATER_POLYGONS_URL, OSM_WATERWAY_KINDS, apply_osm_network, apply_osm_waterbodies)
 from sources import util
 from sources.util.citations import load_citation_for_source, CITATIONS_TABLE_NAME
 from sources.util.water import process_nhdplus_hr_source, WATERWAYS_FLOW_FNAME
@@ -707,8 +708,9 @@ def make_water(
     and waterways that end short of where they go continue along OSM waterways (see
     waterway_gaps.py).
 
-    If osm_waterways is also true, the waterways and their flow come from OSM alone (see
-    osm_waterways.py), and the sources only provide waterbodies and watersheds.
+    If osm_waterways is also true, the waterways, their flow, and the waterbodies other
+    than the sea come from OSM (see osm_waterways.py), and the sources only provide the
+    sea and watersheds.
     """
     if debug:
         util.log("water: making database")
@@ -729,13 +731,19 @@ def make_water(
             kinds=OSM_WATERWAY_KINDS if osm_waterways else OSM_WATERWAYS)
         if not osm_waterways:
             apply_osm_names(osm_ways, bbox, debug=debug)
-    load_waterbodies(sources, debug=debug)
+    if osm_ways is not None and osm_waterways:
+        # OSM's lakes line up with its waterways, since they're mapped together
+        load_waterbodies([], debug=debug)
+        apply_osm_waterbodies(
+            pbf_path, fetch_data(OSM_WATER_POLYGONS_URL), bbox, debug=debug)
+    else:
+        load_waterbodies(sources, debug=debug)
     inherit_waterbody_permanence(debug=debug)
     load_watersheds(sources, debug=debug)
     load_flow(waterway_sources, debug=debug)
     if osm_ways is not None:
         if osm_waterways:
-            apply_osm_network(osm_ways, bbox, pbf_path, debug=debug)
+            apply_osm_network(osm_ways, bbox, debug=debug)
         else:
             apply_osm_gap_fills(osm_ways, bbox, debug=debug)
         # Cite OSM for the waterways it provided

@@ -412,8 +412,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--osm-waterways",
         action="store_true",
-        help="Take waterways and their flow from the OSM extract instead of the water sources, "
-             "for places OSM maps waterways well")
+        help="Take waterways, their flow, and waterbodies from OSM instead of the water "
+             "sources, for places OSM maps waterways well")
     parser.add_argument(
         "-i",
         "--interactive",
