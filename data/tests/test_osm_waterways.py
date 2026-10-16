@@ -155,6 +155,74 @@ def test_lake_outflow_prefers_streams_to_canals():
     assert flows_into(network, "1-1") == "3-1"
 
 
+def test_lake_outflow_prefers_one_that_reaches_water_to_a_dead_end():
+    """Like a dam's outlet works rather than a longer tunnel that ends at its portal"""
+    marsh = ("swamp/marsh", box(50, 820, 150, 900))
+    network = build_network([
+        osm_way(1, [1, 2], [(0, 0), (0, 290)]),
+        osm_way(2, [3, 4], [(-100, 710), (-100, 2000)]),
+        osm_way(3, [5, 6], [(100, 710), (100, 800)]),
+    ])
+
+    link_lakes(network, [LAKE, marsh])
+
+    assert flows_into(network, "1-1") == "3-1"
+
+
+def test_lake_outflow_can_start_closer_to_a_pond_beside_the_lake():
+    """Like a creek leaving a dam from a pond at its intake"""
+    pond = ("lake/pond", box(80, 705, 120, 740))
+    network = build_network([
+        osm_way(1, [1, 2], [(0, 0), (0, 290)]),
+        osm_way(2, [3, 4], [(-100, 710), (-100, 1000)], waterway="canal"),
+        osm_way(3, [5, 6], [(100, 710), (100, 1000)]),
+    ])
+
+    link_lakes(network, [LAKE, pond])
+
+    assert flows_into(network, "1-1") == "3-1"
+
+
+def test_lake_outflow_that_leaves_the_bbox_is_not_a_dead_end():
+    """Its ways continue beyond the OSM waterways we read"""
+    [(left, bottom), (right, top)] = lonlat((-5000, -5000), (200, 5000))
+    network = build_network([
+        osm_way(1, [1, 2], [(0, 0), (0, 290)]),
+        osm_way(2, [3, 4], [(-100, 710), (-100, 1000)]),
+        osm_way(3, [5, 6], [(100, 710), (250, 760)]),
+    ])
+
+    link_lakes(network, [LAKE],
+               bbox={"left": left, "bottom": bottom, "right": right, "top": top})
+
+    assert flows_into(network, "1-1") == "3-1"
+
+
+def test_lake_outflow_prefers_the_name_of_the_stream_flowing_in():
+    network = build_network([
+        osm_way(1, [1, 2], [(0, 0), (0, 290)], name="Coyote Creek"),
+        osm_way(2, [3, 4], [(-100, 710), (-100, 2000)]),
+        osm_way(3, [5, 6], [(100, 710), (100, 1000)], name="coyote creek"),
+    ])
+
+    link_lakes(network, [LAKE])
+
+    assert flows_into(network, "1-1") == "3-1"
+
+
+def test_lake_outflow_prefers_the_longest_way_downstream():
+    network = build_network([
+        osm_way(1, [1, 2], [(0, 0), (0, 290)]),
+        osm_way(2, [3, 4], [(-100, 710), (-100, 1000)]),
+        osm_way(3, [5, 6], [(100, 710), (100, 800)]),
+        osm_way(4, [6, 7], [(100, 800), (100, 2000)]),
+    ])
+
+    link_lakes(network, [LAKE])
+
+    assert flows_into(network, "1-1") == "3-1"
+
+
 def test_stream_ending_at_a_lake_is_not_its_outflow_even_if_it_starts_near_it():
     """Like a creek whose last piece starts at a junction near the shore"""
     network = build_network([
@@ -209,3 +277,23 @@ def test_apply_osm_network_writes_the_linked_network(monkeypatch):
     [network] = written
     assert flows_into(network, "1-1") == "2-1"
     assert read == [osm_waterways.widen_bbox(bbox, osm_waterways.OSM_BBOX_MARGIN_DEG)]
+
+
+def test_apply_osm_network_knows_outflows_leaving_the_ways_it_read_go_somewhere(monkeypatch):
+    ways = [
+        osm_way(1, [1, 2], [(0, 0), (0, 290)]),
+        osm_way(2, [3, 4], [(-100, 710), (-100, 1000)]),
+        osm_way(3, [5, 6], [(100, 710), (250, 760)]),
+    ]
+    # Widened to where the ways were read from, the bbox's right edge is at x = 200
+    [(edge, _)] = lonlat((200, 0))
+    bbox = {"left": -122.1, "bottom": 37.8, "right": edge - osm_waterways.OSM_BBOX_MARGIN_DEG,
+            "top": 38.0}
+    written = []
+    monkeypatch.setattr(osm_waterways, "read_waterbodies", lambda b: [LAKE])
+    monkeypatch.setattr(osm_waterways, "write_network", written.append)
+
+    osm_waterways.apply_osm_network(ways, bbox)
+
+    [network] = written
+    assert flows_into(network, "1-1") == "3-1"

@@ -11,8 +11,11 @@ over canals and ditches, then the straightest. That makes the flow a tree, like 
 main path NHD's flow data follows.
 
 OSM rarely draws paths through lakes, so streams that end at a lake flow into the
-waterway leaving it, if there is one. Huge waterbodies like bays are left alone, since
-the creeks that end in them don't flow out through anything.
+waterway leaving it, if there is one. Where several leave it, they prefer one that
+reaches water or the edge of the map over a dead end like a tunnel that stops at its
+portal, then one with the same name, then rivers and streams, then the longest way
+downstream. Huge waterbodies like bays are left alone, since the creeks that end in them
+don't flow out through anything.
 """
 
 import math
@@ -27,7 +30,7 @@ from shapely.strtree import STRtree
 from database import DBNAME, SRID
 from sources import util
 from sources.util.citations import CITATIONS_TABLE_NAME, create_table as create_citations_table
-from waterway_gaps import OSM_BBOX_MARGIN_DEG, OSM_CITATION, OSM_SOURCE
+from waterway_gaps import NEAR_WATER_M, OSM_BBOX_MARGIN_DEG, OSM_CITATION, OSM_SOURCE
 from waterway_names import Projection, widen_bbox
 
 # Same tables water.py loads
@@ -121,11 +124,13 @@ def build_network(osm_ways):
     return network
 
 
-def link_lakes(network, waterbodies):
+def link_lakes(network, waterbodies, bbox=None):
     """Send the waterways that end at a lake into the waterway flowing out of it
 
     network: from build_network
     waterbodies: (type, shapely (multi)polygon in lon/lat) tuples
+    bbox: where the OSM ways were read from, if they were; ways leaving it continue
+      beyond it
     """
     if not network:
         return network
@@ -134,49 +139,77 @@ def link_lakes(network, waterbodies):
     # scaling about lon 0 turns that into an offset of a few hundred meters
     projection = Projection([{"coords": w["coords"]} for w in network])
     lines = {w["hydroseq"]: LineString(projection.project(w["coords"])) for w in network}
-    lakes = []
-    for kind, geom in waterbodies:
-        polygon = projection.project_geometry(geom)
-        if kind in LAKE_TYPES and polygon.area <= MAX_LAKE_KM2 * 1e6:
-            lakes.append(polygon)
+    water = [projection.project_geometry(geom) for _, geom in waterbodies]
+    lakes = [polygon for (kind, _), polygon in zip(waterbodies, water)
+             if kind in LAKE_TYPES and polygon.area <= MAX_LAKE_KM2 * 1e6]
     if not lakes:
         return network
     lake_tree = STRtree(lakes)
+    water_tree = STRtree(water)
     by_hydroseq = {w["hydroseq"]: w for w in network}
 
-    def lake_near(point):
-        near = [i for i in lake_tree.query(point.buffer(NEAR_LAKE_M))
+    def lakes_near(point):
+        return [i for i in lake_tree.query(point.buffer(NEAR_LAKE_M))
                 if lakes[i].distance(point) <= NEAR_LAKE_M]
+
+    def lake_near(point):
+        near = lakes_near(point)
         return min(near, key=lambda i: lakes[i].distance(point)) if near else None
 
-    def flows_into(start, target):
-        seen = set()
-        while start in by_hydroseq and start not in seen:
-            if start == target:
-                return True
-            seen.add(start)
+    def downstream(start):
+        """Hydroseqs of start and the waterways it flows into, in order"""
+        path = []
+        while start in by_hydroseq and start not in path:
+            path.append(start)
             start = by_hydroseq[start]["dnhydroseq"]
-        return False
+        return path
+
+    def dead_end(hydroseq):
+        """Whether water from hydroseq stops short of any waterbody, like a tunnel that
+        ends at its portal, as opposed to reaching one or leaving bbox"""
+        lon, lat = by_hydroseq[hydroseq]["coords"][-1]
+        if bbox and not (bbox["left"] <= lon <= bbox["right"]
+                         and bbox["bottom"] <= lat <= bbox["top"]):
+            return False
+        end = Point(lines[hydroseq].coords[-1])
+        return not any(water[i].distance(end) <= NEAR_WATER_M
+                       for i in water_tree.query(end.buffer(NEAR_WATER_M)))
 
     # Waterways that start at a lake and flow away from it, unlike the last piece of a
-    # stream that starts near the shore and ends at it
+    # stream that starts near the shore and ends at it. One can flow out of more than one
+    # lake, like a creek leaving a dam from a pond at its intake.
     outflows = defaultdict(list)
     for waterway in network:
         line = lines[waterway["hydroseq"]]
         start, end = Point(line.coords[0]), Point(line.coords[-1])
-        lake = lake_near(start)
-        if lake is not None and line.difference(lakes[lake]).length > 0.5 * line.length \
-                and lakes[lake].distance(end) > lakes[lake].distance(start):
-            outflows[lake].append(waterway)
+        for lake in lakes_near(start):
+            if line.difference(lakes[lake]).length > 0.5 * line.length \
+                    and lakes[lake].distance(end) > lakes[lake].distance(start):
+                outflows[lake].append(waterway)
+    # Where each outflow goes before any lakes are linked. One that ends at another lake
+    # reaches water, so it isn't a dead end even though it will flow on from there.
+    ends = {}
+    for waterway in (w for options in outflows.values() for w in options):
+        path = downstream(waterway["hydroseq"])
+        ends[waterway["hydroseq"]] = (
+            dead_end(path[-1]), sum(lines[h].length for h in path))
     for waterway in network:
         if waterway["dnhydroseq"]:
             continue
         lake = lake_near(Point(lines[waterway["hydroseq"]].coords[-1]))
         options = [w for w in outflows.get(lake, [])
-                   if not flows_into(w["hydroseq"], waterway["hydroseq"])]
-        if options:
-            waterway["dnhydroseq"] = min(options, key=lambda w: (
-                KIND_RANK[w["kind"]], -lines[w["hydroseq"]].length))["hydroseq"]
+                   if waterway["hydroseq"] not in downstream(w["hydroseq"])]
+        if not options:
+            continue
+        name = waterway["name"].lower() if waterway["name"] else None
+        # Water leaves by the outflow that goes somewhere, preferring the same name as
+        # it came in by, then streams over canals, then the longest way downstream
+        waterway["dnhydroseq"] = min(options, key=lambda w: (
+            ends[w["hydroseq"]][0],
+            not name or (w["name"] or "").lower() != name,
+            KIND_RANK[w["kind"]],
+            -ends[w["hydroseq"]][1],
+        ))["hydroseq"]
     return network
 
 
@@ -231,7 +264,9 @@ def apply_osm_network(osm_ways, bbox, debug=False):
     OSM_WATERWAY_KINDS), linking them through the lakes near bbox; returns how many
     waterways were loaded"""
     network = build_network(osm_ways)
-    link_lakes(network, read_waterbodies(widen_bbox(bbox, OSM_BBOX_MARGIN_DEG)))
+    # Same as where water.py read the ways from
+    read_bbox = widen_bbox(bbox, OSM_BBOX_MARGIN_DEG)
+    link_lakes(network, read_waterbodies(read_bbox), bbox=read_bbox)
     if debug:
         util.log(f"water: {len(network)} waterways from {len(osm_ways)} OSM ways")
     if network:
