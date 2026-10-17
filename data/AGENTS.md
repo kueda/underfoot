@@ -77,15 +77,14 @@ segments and siphons; see the module docstring for the rules. Then it continues 
 that end short of where they go, like a creek NHD stops above a culvert, along OSM
 waterways until they reach another waterway or a waterbody (`waterway_gaps.py`). Those
 continuations are added as waterways from the `osm` source and linked into the flow, so
-flow traces follow them. Both read the PBF once with pyosmium (`osmium` in
-`requirements.txt`).
+flow traces follow them. Both use the OSM waterways read once from the PBF with pyosmium
+(`osm_waterways.py`; `osmium` in `requirements.txt`).
 
 Packs with `"hydrography": "osm"` (written by `create_pack.py --osm-hydrography`;
 `packs.py --osm-hydrography` forces it for any pack) skip all that and take their
-waterways and flow from the OSM extract alone (`osm_waterways.py`), along with their
+waterways and flow from the OSM extract alone (`osm_hydrography.py`), along with their
 waterbodies, which line up with OSM's waterways better than NHD's do; their water sources
-still provide watersheds.
-That suits places OSM maps waterways well, like the Bay Area. OSM only implies the sea
+still provide watersheds. That suits places OSM maps waterways well, like the Bay Area. OSM only implies the sea
 with its coastline, so those packs take the sea from the water polygons
 osmdata.openstreetmap.de makes from it, a 900 MB download cached as
 `water-polygons-split-4326.zip`.

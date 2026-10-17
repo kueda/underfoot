@@ -27,18 +27,14 @@ from shapely.ops import substring
 from shapely.strtree import STRtree
 
 from database import DBNAME, SRID
+from geometry import Projection, longest_line_coords, widen_bbox
+from osm_waterways import (
+    OSM_BBOX_MARGIN_DEG, WATERWAYS_FLOW_TABLE_NAME, WATERWAYS_TABLE_NAME,
+    insert_osm_waterways, osm_attributes)
 from sources import util
-from sources.util.citations import CITATIONS_TABLE_NAME, create_table as create_citations_table
-from waterway_names import Projection, longest_line_coords, widen_bbox
 
-# Same tables water.py loads
-WATERWAYS_TABLE_NAME = "waterways"
+# Same table water.py loads
 WATERBODIES_TABLE_NAME = "waterbodies"
-WATERWAYS_FLOW_TABLE_NAME = "waterways_flow"
-OSM_SOURCE = "osm"
-OSM_CITATION = "OpenStreetMap contributors. OpenStreetMap. https://www.openstreetmap.org/copyright"
-# How far past the pack bbox to read OSM ways and waterways, so traces can leave it
-OSM_BBOX_MARGIN_DEG = 0.05
 # How close an OSM way has to come to a dead end's end to continue it
 START_M = 15
 # How close a trace has to come to a waterway to flow into it
@@ -90,20 +86,6 @@ def without_repeats(coords):
         if not kept or Point(coord).distance(Point(kept[-1])) > 0.01:
             kept.append(coord)
     return kept
-
-
-def osm_attributes(way):
-    """Name, type, is_natural, permanence, and surface of a waterway from an OSM way"""
-    natural = way["waterway"] in ("river", "stream")
-    # Culverts and other tunnels are man-made even when the stream isn't
-    tunnel = way["tunnel"] not in (None, "no")
-    return {
-        "name": way["name"],
-        "type": "stream" if natural else "canal/ditch",
-        "is_natural": 1 if natural and not tunnel else 0,
-        "permanence": {"yes": "intermittent", "no": "perennial"}.get(way["intermittent"]),
-        "surface": "underground" if tunnel else "surface",
-    }
 
 
 class GapFiller:
@@ -381,42 +363,6 @@ def read_network(bbox):
         downstream = dict(cur.fetchall())
     con.close()
     return waterways, waterbodies, downstream
-
-
-def insert_osm_waterways(cur, waterways, flow):
-    """Insert waterways from OSM, dicts of source_id, coords, and osm_attributes, and their
-    flow, as (source_id, hydroseq, dnhydroseq)"""
-    execute_values(
-        cur,
-        f"""
-            INSERT INTO {WATERWAYS_TABLE_NAME} (
-                name, source, source_id, source_id_attr, type, is_natural, permanence,
-                surface, geom)
-            VALUES %s
-        """,
-        [
-            (w["name"], OSM_SOURCE, w["source_id"], "OSM way", w["type"], w["is_natural"],
-             w["permanence"], w["surface"], LineString(w["coords"]).wkt)
-            for w in waterways
-        ],
-        template=f"(%s, %s, %s, %s, %s, %s, %s, %s, ST_Multi(ST_GeomFromText(%s, {SRID})))")
-    execute_values(
-        cur,
-        f"INSERT INTO {WATERWAYS_FLOW_TABLE_NAME} (source, source_id, hydroseq, dnhydroseq) "
-        "VALUES %s",
-        [(OSM_SOURCE, source_id, hydroseq, dn) for source_id, hydroseq, dn in flow])
-
-
-def cite_osm():
-    """Cite OSM for the water taken from it"""
-    create_citations_table()
-    con = psycopg2.connect(f"dbname={DBNAME}")
-    with con, con.cursor() as cur:
-        cur.execute(f"DELETE FROM {CITATIONS_TABLE_NAME} WHERE source = %s", (OSM_SOURCE,))
-        cur.execute(
-            f"INSERT INTO {CITATIONS_TABLE_NAME} (source, citation) VALUES (%s, %s)",
-            (OSM_SOURCE, OSM_CITATION))
-    con.close()
 
 
 def write_gap_fills(result):

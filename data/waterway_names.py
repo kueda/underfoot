@@ -22,21 +22,19 @@ guards keep wrong names out, since they would replace right ones:
 import math
 from collections import defaultdict
 
-import osmium
 import psycopg2
 from psycopg2.extras import execute_values
 from shapely import wkb
-from shapely.affinity import scale
 from shapely.geometry import LineString, Point
-from shapely.ops import linemerge, unary_union
+from shapely.ops import unary_union
 from shapely.strtree import STRtree
 
 from database import DBNAME, SRID
+from geometry import Projection, longest_line_coords
 from sources import util
 
 # Same table water.py loads waterways into
 WATERWAYS_TABLE_NAME = "waterways"
-OSM_WATERWAYS = ("river", "stream", "canal")
 BUFFER_M = 25
 MIN_OVERLAP = 0.8
 # How much better the best name has to cover a waterway than any other name
@@ -47,77 +45,10 @@ ISOLATED_LENGTH_M = 200
 JOIN_TOLERANCE_M = 5
 # Waterway types that cross other streams instead of following them
 SKIPPED_TYPES = {"siphon", "aqueduct", "connector"}
-METERS_PER_DEGREE_LAT = 110540
-METERS_PER_DEGREE_LON_AT_EQUATOR = 111320
 
 
 def normalize(name):
     return name.lower().strip() if name else None
-
-
-def widen_bbox(bbox, margin_deg):
-    """bbox grown by margin_deg on every side"""
-    return {
-        "left": bbox["left"] - margin_deg,
-        "bottom": bbox["bottom"] - margin_deg,
-        "right": bbox["right"] + margin_deg,
-        "top": bbox["top"] + margin_deg,
-    }
-
-
-def read_osm_waterways(pbf_path, bbox, kinds=OSM_WATERWAYS):
-    """Waterways of kinds (values of the waterway tag; rivers, streams, and canals by
-    default) from an OSM PBF with any node in bbox, as dicts of id, name, waterway,
-    intermittent, tunnel, refs (node IDs), and coords as (lon, lat) tuples"""
-    ways = []
-    processor = (
-        osmium.FileProcessor(pbf_path, osmium.osm.NODE | osmium.osm.WAY)
-        .with_locations()
-        .with_filter(osmium.filter.KeyFilter("waterway"))
-    )
-    for obj in processor:
-        if not obj.is_way() or obj.tags.get("waterway") not in kinds:
-            continue
-        try:
-            coords = [(node.lon, node.lat) for node in obj.nodes]
-            refs = [node.ref for node in obj.nodes]
-        except osmium.InvalidLocationError:
-            continue
-        if len(coords) < 2 or not any(
-            bbox["left"] <= lon <= bbox["right"] and bbox["bottom"] <= lat <= bbox["top"]
-            for lon, lat in coords
-        ):
-            continue
-        ways.append({
-            "id": obj.id,
-            "name": obj.tags.get("name"),
-            "waterway": obj.tags["waterway"],
-            "intermittent": obj.tags.get("intermittent"),
-            "tunnel": obj.tags.get("tunnel"),
-            "refs": refs,
-            "coords": coords,
-        })
-    return ways
-
-
-class Projection:
-    """Projects (lon, lat) to meters and back, accurate enough at the scale of a few
-    hundred meters anywhere near the waterways' latitude"""
-
-    def __init__(self, waterways):
-        latitudes = [lat for w in waterways for _, lat in w["coords"]]
-        self.x_scale = METERS_PER_DEGREE_LON_AT_EQUATOR * math.cos(
-            math.radians(sum(latitudes) / len(latitudes)))
-        self.y_scale = METERS_PER_DEGREE_LAT
-
-    def project(self, coords):
-        return [(lon * self.x_scale, lat * self.y_scale) for lon, lat in coords]
-
-    def unproject(self, coords):
-        return [(x / self.x_scale, y / self.y_scale) for x, y in coords]
-
-    def project_geometry(self, geom):
-        return scale(geom, xfact=self.x_scale, yfact=self.y_scale, origin=(0, 0))
 
 
 def bearing(line, distance, half_window=5):
@@ -262,16 +193,6 @@ def match_names(waterways, osm_ways):
     for i in matcher.isolated_renames(names):
         names[i] = None
     return {w["key"]: name for w, name in zip(matcher.waterways, names) if name}
-
-
-def longest_line_coords(geom):
-    """Coordinates of the longest line in a (multi)linestring, after joining the pieces
-    that connect end to end"""
-    if geom.geom_type == "MultiLineString":
-        geom = linemerge(geom)
-    if geom.geom_type == "MultiLineString":
-        geom = max(geom.geoms, key=lambda part: part.length)
-    return list(geom.coords)
 
 
 def read_waterway_rows(bbox):
