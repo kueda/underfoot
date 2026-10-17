@@ -1,7 +1,10 @@
 # pylint: disable=missing-function-docstring
 """Tests for statewide USGS geology processing"""
 
+import zipfile
+
 import pandas as pd
+import pytest
 from sources.util import usgs_states
 
 HEADER = (
@@ -71,3 +74,53 @@ def test_merge_attributes_merges_csvs_with_and_without_header(tmp_path, monkeypa
     me_path.write_text(f"{ME_ROW}\n", encoding="ISO-8859-1")
     merged = pd.read_csv(usgs_states.merge_attributes([str(nh_path), str(me_path)]))
     assert sorted(merged["UNIT_LINK"]) == ["MEC1;0", "NHCAh;0"]
+
+
+def write_shapes_zip(tmp_path, state, shp_basename):
+    zip_path = tmp_path / f"{state}geol_dd.zip"
+    with zipfile.ZipFile(zip_path, "w") as zip_f:
+        for ext in ["shp", "shx", "dbf", "prj"]:
+            zip_f.writestr(f"{shp_basename}.{ext}", "")
+
+
+def test_download_shapes_finds_poly_dd_shapefile(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    write_shapes_zip(tmp_path, "WI", "wigeol_poly_dd")
+    path = usgs_states.download_shapes("WI", "https://example.com")
+    assert path == str(tmp_path / "wigeol_poly_dd.shp")
+
+
+def test_download_shapes_finds_dd_polygon_shapefile(tmp_path, monkeypatch):
+    # OF 2005-1351 names its polygon shapefiles <state>geol_dd_polygon.shp
+    monkeypatch.chdir(tmp_path)
+    write_shapes_zip(tmp_path, "IA", "iageol_dd_polygon")
+    path = usgs_states.download_shapes("IA", "https://example.com")
+    assert path == str(tmp_path / "iageol_dd_polygon.shp")
+
+
+@pytest.mark.parametrize("unit_age,expected", [
+    ("Phanerozoic | Mesozoic | Cretaceous-Late [Gulfian]", "Late Cretaceous"),
+    ("Phanerozoic | Cenozoic | Tertiary | Eocene", "Eocene"),
+    ("Phanerozoic | Paleozoic | Carboniferous Pennsylvanian-Middle", "Middle Pennsylvanian"),
+    ("Phanerozoic | Cenozoic | Quaternary | Pleistocene Holocene", "Pleistocene to Holocene"),
+    ("Phanerozoic | Paleozoic Mesozoic | Permian Triassic-Early(?)", "Permian to Early Triassic"),
+    ("Phanerozoic | Cenozoic | Tertiary | Eocene (44-49 Ma)", "Eocene"),
+    ("Phanerozoic | Mesozoic | Cretaceous-Early [Comanchean", "Early Cretaceous"),
+    ("Phanerozoic | Paleozoic| Ordovician-Late", "Late Ordovician"),
+    ("Phanerozoic | Paleozoic | Cambrian-Furongian", "Furongian"),
+    ("Proterozoic | Paleoproterozoic", "Paleoproterozoic"),
+    ("preCambrian-Proterozoic [Grenville]", "Proterozoic"),
+    ("Upper Cretaceous", "Upper Cretaceous"),
+    ("Cambrian-Ordovician", "Cambrian-Ordovician"),
+])
+def test_normalize_unit_age(unit_age, expected):
+    assert usgs_states.normalize_unit_age(unit_age) == expected
+
+
+def test_schemify_attributes_normalizes_hierarchical_unit_age(tmp_path, monkeypatch):
+    # OF 2005-1351 lists ages from eon to epoch
+    row = schemify_row(
+        tmp_path, monkeypatch, UNIT_AGE="Phanerozoic | Mesozoic | Cretaceous-Late"
+    )
+    assert row["span"] == "Late Cretaceous"
+    assert row["controlled_span"] == "upper cretaceous"

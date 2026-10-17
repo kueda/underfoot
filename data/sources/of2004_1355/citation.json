@@ -1,0 +1,44 @@
+[
+  {
+    "type": "webpage",
+    "container-title": "USGS Publications Warehouse",
+    "title": "Preliminary Integrated Geologic Map Databases of the United States: The Upper Midwest States: Minnesota, Wisconsin, Michigan, Illinois, and Indiana (OFR 2004-1355)",
+    "URL": "https://pubs.usgs.gov/of/2004/1355/",
+    "note": "Version 1.1",
+    "author": [
+      {
+        "family": "Nicholson",
+        "given": "Suzanne W."
+      },
+      {
+        "family": "Dicken",
+        "given": "Connie L."
+      },
+      {
+        "family": "Foose",
+        "given": "Michael P."
+      },
+      {
+        "family": "Mueller",
+        "given": "Julia A.L."
+      }
+    ],
+    "accessed": {
+      "date-parts": [
+        [
+          "2026",
+          10,
+          17
+        ]
+      ]
+    },
+    "issued": {
+      "date-parts": [
+        [
+          "2007",
+          12
+        ]
+      ]
+    }
+  }
+]

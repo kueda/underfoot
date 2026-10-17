@@ -1,0 +1,48 @@
+[
+  {
+    "type": "webpage",
+    "container-title": "USGS Publications Warehouse",
+    "title": "Preliminary Integrated Geologic Map Databases of the United States: Alabama, Florida, Georgia, Mississippi, North Carolina, and South Carolina (OFR 2005-1323)",
+    "URL": "https://pubs.usgs.gov/of/2005/1323/",
+    "note": "Version 1.1",
+    "author": [
+      {
+        "family": "Dicken",
+        "given": "Connie L."
+      },
+      {
+        "family": "Nicholson",
+        "given": "Suzanne W."
+      },
+      {
+        "family": "Horton",
+        "given": "John D."
+      },
+      {
+        "family": "Foose",
+        "given": "Michael P."
+      },
+      {
+        "family": "Mueller",
+        "given": "Julia A.L."
+      }
+    ],
+    "accessed": {
+      "date-parts": [
+        [
+          "2026",
+          10,
+          17
+        ]
+      ]
+    },
+    "issued": {
+      "date-parts": [
+        [
+          "2007",
+          12
+        ]
+      ]
+    }
+  }
+]
