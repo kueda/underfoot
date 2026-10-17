@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import type { Map } from 'maplibre-gl';
 import { describe, expect, it } from 'vitest';
 
-import type { RockUnit } from '../../packs/types';
+import type { RockUnit, WaterFeature } from '../../packs/types';
 import OsmEditLink from './OsmEditLink';
 
 const map = {
@@ -23,6 +23,12 @@ describe('OsmEditLink', () => {
     const rockUnit: RockUnit = { source: 'osm', id: 1, code: 'Qal', lithology: 'alluvium' };
     render(<OsmEditLink feature={rockUnit} map={map} />);
     expect(screen.getByRole('link', { name: 'edit this!' })).toBeTruthy();
+  });
+
+  it('does not link connectors through waterbodies, which are not in OpenStreetMap', () => {
+    const connector: WaterFeature = { source: 'osm', layer: 'waterways', type: 'artificial' };
+    render(<OsmEditLink feature={connector} map={map} />);
+    expect(screen.queryByRole('link', { name: 'edit this!' })).toBeNull();
   });
 
   it('does not link features from other sources', () => {
