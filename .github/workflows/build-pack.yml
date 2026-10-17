@@ -11,6 +11,12 @@ on:
         description: Prebuilt app image ref (from .github/workflows/build-image.yml)
         type: string
         required: true
+      publish:
+        description: |
+          Publish the pack to Digital Ocean. If false, upload the pack zip as
+          a workflow artifact instead.
+        type: boolean
+        default: true
     secrets:
       DO_SPACES_KEY:
         required: true
@@ -285,7 +291,16 @@ jobs:
           zip ${{ inputs.pack }}.pmtiles.zip ${{ inputs.pack }}/*
           cd ../
 
+      - name: Upload pack zip as artifact
+        if: ${{ !inputs.publish }}
+        uses: actions/upload-artifact@v7
+        with:
+          path: data/build/${{ inputs.pack }}.pmtiles.zip
+          # Upload the zip as-is so it doesn't get wrapped in another zip
+          archive: false
+
       - name: Log in to GHCR
+        if: ${{ inputs.publish }}
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
@@ -293,6 +308,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Make the manifest
+        if: ${{ inputs.publish }}
         run: |
           docker run --rm -v "$PWD:/app" -w /app \
             --user "$(id -u):$(id -g)" -e HOME=/tmp ${{ inputs.image }} \
@@ -301,6 +317,7 @@ jobs:
               --manifest-url https://static.underfoot.rocks/manifest.json
 
       - name: Set up s3cmd for Digital Ocean
+        if: ${{ inputs.publish }}
         uses: s3-actions/s3cmd@v1.2.0
         with:
           provider: digitalocean
@@ -309,6 +326,7 @@ jobs:
           secret_key: ${{ secrets.DO_SPACES_SECRET }}
 
       - name: Upload pack to Digital Ocean
+        if: ${{ inputs.publish }}
         run: |
           s3cmd put build/manifest.json s3://underfoot2/manifest.json
           s3cmd setacl s3://underfoot2/manifest.json --acl-public
@@ -316,9 +334,11 @@ jobs:
           s3cmd setacl s3://underfoot2/${{ inputs.pack }}.pmtiles.zip --acl-public
 
       - name: Set up doctl
+        if: ${{ inputs.publish }}
         uses: digitalocean/action-doctl@v2
         with:
           token: ${{ secrets.DO_ACCESS_TOKEN }}
 
       - name: Flush the CDN cache
+        if: ${{ inputs.publish }}
         run: doctl compute cdn flush ee6a9baf-c5bd-423d-bbcf-305e3a3f5e40

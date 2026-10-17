@@ -9,6 +9,12 @@ on:
           e.g. "us-ca-oakland us-ca-la"
         required: true
         type: string
+      publish:
+        description: |
+          Publish to Digital Ocean. Uncheck to download the pack zip from the
+          workflow run's artifacts instead.
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -43,4 +49,5 @@ jobs:
     with:
       pack: ${{ matrix.pack }}
       image: ${{ needs.image.outputs.image }}
+      publish: ${{ inputs.publish }}
     secrets: inherit
