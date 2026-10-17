@@ -738,7 +738,9 @@ const FADED_WATERBODIES_COLOR_EXP = byWaterbodyType(
   fadedOverLand(COLORS.water, SWAMP_OPACITY * FADED_OPACITY),
 );
 
+const MARSH_FILL_LAYER_ID = 'waterbodies-marsh-fill';
 const MARSH_LAYER_ID = 'waterbodies-marsh';
+const MARSH_FILTER: ExpressionFilterSpecification = ['==', ['get', 'type'], 'swamp/marsh'];
 
 // How strong the water color is in marsh tufts, so they mark the marsh
 // without competing with the waterways drawn over it
@@ -854,6 +856,12 @@ interface FadingPaint {
 const TRACE_FADING_PAINT: FadingPaint[] = [
   {
     layer: 'waterbodies',
+    property: 'fill-color',
+    color: WATERBODIES_COLOR_EXP,
+    faded: FADED_WATERBODIES_COLOR_EXP,
+  },
+  {
+    layer: MARSH_FILL_LAYER_ID,
     property: 'fill-color',
     color: WATERBODIES_COLOR_EXP,
     faded: FADED_WATERBODIES_COLOR_EXP,
@@ -982,10 +990,11 @@ const WATER_STYLE: StyleSpecification = {
       },
     },
     {
-      'id': 'waterbodies',
+      'id': MARSH_FILL_LAYER_ID,
       'source': 'water',
       'source-layer': 'waterbodies',
       'type': 'fill',
+      'filter': MARSH_FILTER,
       'paint': {
         'fill-color': WATERBODIES_COLOR_EXP,
         'fill-opacity': WATERBODIES_OPACITY_EXP,
@@ -998,9 +1007,23 @@ const WATER_STYLE: StyleSpecification = {
       'type': 'fill',
       // Zoomed out, tufts crowd in among all the other lines in big marshes
       'minzoom': 12,
-      'filter': ['==', ['get', 'type'], 'swamp/marsh'],
+      'filter': MARSH_FILTER,
       'paint': {
         'fill-pattern': 'marsh-tufts',
+      },
+    },
+    {
+      // Open water draws over marshes and their tufts, since big marshes can
+      // cover the rivers and ponds in them, like OSM's marshes along the Napa
+      // River
+      'id': 'waterbodies',
+      'source': 'water',
+      'source-layer': 'waterbodies',
+      'type': 'fill',
+      'filter': ['!', MARSH_FILTER],
+      'paint': {
+        'fill-color': WATERBODIES_COLOR_EXP,
+        'fill-opacity': WATERBODIES_OPACITY_EXP,
       },
     },
     {
