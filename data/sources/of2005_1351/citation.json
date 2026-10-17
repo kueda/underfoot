@@ -1,0 +1,56 @@
+[
+  {
+    "type": "webpage",
+    "container-title": "USGS Publications Warehouse",
+    "title": "Preliminary Integrated Geologic Map Databases of the United States: Central States: Montana, Wyoming, Colorado, New Mexico, North Dakota, South Dakota, Nebraska, Kansas, Oklahoma, Texas, Iowa, Missouri, Arkansas, and Louisiana (OFR 2005-1351)",
+    "URL": "https://pubs.usgs.gov/of/2005/1351/",
+    "note": "Version 1.2",
+    "author": [
+      {
+        "family": "Stoeser",
+        "given": "Douglas B."
+      },
+      {
+        "family": "Green",
+        "given": "Gregory N."
+      },
+      {
+        "family": "Morath",
+        "given": "Laurie C."
+      },
+      {
+        "family": "Heran",
+        "given": "William D."
+      },
+      {
+        "family": "Wilson",
+        "given": "Anna B."
+      },
+      {
+        "family": "Moore",
+        "given": "David W."
+      },
+      {
+        "family": "Van Gosen",
+        "given": "Bradley S."
+      }
+    ],
+    "accessed": {
+      "date-parts": [
+        [
+          "2026",
+          10,
+          17
+        ]
+      ]
+    },
+    "issued": {
+      "date-parts": [
+        [
+          "2007",
+          12
+        ]
+      ]
+    }
+  }
+]

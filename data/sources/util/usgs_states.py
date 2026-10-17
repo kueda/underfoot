@@ -55,11 +55,18 @@ def download_shapes(state, base_url):
     if not os.path.isfile(download_path):
         log(f"DOWNLOADING {url}")
         download_file(url)
-    shp_path = f"{state.lower()}geol_poly_dd.shp"
-    if not os.path.isfile(shp_path):
+    # OF 2005-1351 names them <state>geol_dd_polygon.shp
+    shp_paths = [
+        f"{state.lower()}geol_poly_dd.shp",
+        f"{state.lower()}geol_dd_polygon.shp"
+    ]
+    if not any(os.path.isfile(path) for path in shp_paths):
         log("EXTRACTING ARCHIVE...")
         unzip(download_path)
-    return os.path.realpath(shp_path)
+    for path in shp_paths:
+        if os.path.isfile(path):
+            return os.path.realpath(path)
+    raise FileNotFoundError(f"Could not find polygon shapefile in {url}")
 
 
 def download_attributes(state, base_url):
@@ -79,6 +86,38 @@ def download_attributes(state, base_url):
     if not os.path.isfile(csv_path):
         raise FileNotFoundError(f"Could not find attributes CSV in {url}")
     return os.path.realpath(csv_path)
+
+
+AGE_MODIFIERS = ["Early", "Middle", "Late"]
+
+
+def normalize_unit_age(unit_age):
+    """
+    Convert ages like "Phanerozoic | Mesozoic | Cretaceous-Late [Gulfian]"
+    from OF 2005-1351, which list the age from eon to epoch, into a span like
+    "Late Cretaceous". Other ages are returned unchanged.
+    """
+    if "|" not in unit_age and not unit_age.startswith("preCambrian-"):
+        return unit_age
+    # Drop stage names, uncertainty, and radiometric ages
+    age = re.sub(r"\[[^\]]*(\]|$)", "", unit_age)
+    age = re.sub(r"\([^)]*\)", "", age)
+    # The last level is the most specific
+    age = age.split("|")[-1]
+    terms = []
+    for term in age.split():
+        if "-" in term:
+            name, modifier = term.split("-", 1)
+            term = f"{modifier} {name}" if modifier in AGE_MODIFIERS else modifier
+        terms.append(term)
+    # Carboniferous only qualifies Mississippian and Pennsylvanian
+    terms = [
+        term for i, term in enumerate(terms)
+        if term != "Carboniferous" or i == len(terms) - 1
+    ]
+    if len(terms) == 1:
+        return terms[0]
+    return f"{terms[0]} to {terms[-1]}"
 
 
 def schemify_attributes(attributes_path):
@@ -109,7 +148,7 @@ def schemify_attributes(attributes_path):
                 row["rock_type"] = rock_type_from_lithology(
                     row["ROCKTYPE1"]
                 )
-                row["span"] = row["UNIT_AGE"]
+                row["span"] = normalize_unit_age(row["UNIT_AGE"])
                 if not row["span"]:
                     row["span"] = span_from_text(row["title"])
                 if not row["span"]:
