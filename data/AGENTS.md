@@ -69,6 +69,26 @@ into the `underfoot` PostGIS database (`underfoot_osm` for OSM), and writes
 PMTiles to `build/`. Cached source output lives in `sources/work-<name>/` and is
 reused across builds unless a `--clean` or `--clean-<layer>` flag is passed.
 
+When a pack is built, `water.py` also renames waterways from the pack's OSM extract
+(`waterway_names.py`): an OSM river, stream, or canal that runs along a waterway gives it
+its name, replacing the source's name, so corrections made in OSM show up in Underfoot at
+the next build. It matches by geometry and skips matches that are likely wrong, like short
+segments and siphons; see the module docstring for the rules. Then it continues waterways
+that end short of where they go, like a creek NHD stops above a culvert, along OSM
+waterways until they reach another waterway or a waterbody (`waterway_gaps.py`). Those
+continuations are added as waterways from the `osm` source and linked into the flow, so
+flow traces follow them. Both use the OSM waterways read once from the PBF with pyosmium
+(`osm_waterways.py`; `osmium` in `requirements.txt`).
+
+Packs with `"hydrography": "osm"` (written by `create_pack.py --osm-hydrography`;
+`packs.py --osm-hydrography` forces it for any pack) skip all that and take their
+waterways and flow from the OSM extract alone (`osm_hydrography.py`), along with their
+waterbodies, which line up with OSM's waterways better than NHD's do; their water sources
+still provide watersheds. That suits places OSM maps waterways well, like the Bay Area. OSM only implies the sea
+with its coastline, so those packs take the sea from the water polygons
+osmdata.openstreetmap.de makes from it, a 900 MB download cached as
+`water-polygons-split-4326.zip`.
+
 ## Working on a single source
 
 ```bash

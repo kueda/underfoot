@@ -129,8 +129,16 @@ describe('waterbody colors', () => {
   });
 });
 
+// Whether a layer's filter lets it draw a polygon with the given properties
+function draws(id: string, properties: Record<string, unknown>) {
+  const { filter } = layer(id) as { filter?: FilterSpecification };
+  if (!filter) return true;
+  return featureFilter(filter, 'filter').filter({ zoom: 14 }, { type: 'Polygon', properties });
+}
+
 describe('marsh pattern', () => {
   const MARSH_LAYER_ID = 'waterbodies-marsh';
+  const MARSH_FILL_LAYER_ID = 'waterbodies-marsh-fill';
 
   it('draws tufts over swamps and marshes only', () => {
     const marsh = layer(MARSH_LAYER_ID) as {
@@ -156,8 +164,31 @@ describe('marsh pattern', () => {
 
   it('draws tufts over the swamp fill, under waterways', () => {
     const ids = WATER_STYLE.layers.map(l => l.id);
-    expect(ids.indexOf(MARSH_LAYER_ID)).toBeGreaterThan(ids.indexOf('waterbodies'));
+    expect(ids.indexOf(MARSH_LAYER_ID)).toBeGreaterThan(ids.indexOf(MARSH_FILL_LAYER_ID));
     expect(ids.indexOf(MARSH_LAYER_ID)).toBeLessThan(ids.indexOf('waterways'));
+  });
+
+  // Like a river channel through a marsh, where OSM maps a big marsh over the river
+  it('draws open water over swamps and marshes and their tufts', () => {
+    const ids = WATER_STYLE.layers.map(l => l.id);
+    expect(ids.indexOf('waterbodies')).toBeGreaterThan(ids.indexOf(MARSH_LAYER_ID));
+    expect(draws(MARSH_FILL_LAYER_ID, SWAMP)).toBe(true);
+    expect(draws(MARSH_FILL_LAYER_ID, LAKE)).toBe(false);
+    expect(draws('waterbodies', LAKE)).toBe(true);
+    expect(draws('waterbodies', SWAMP)).toBe(false);
+  });
+
+  it('fills swamps and marshes like the other waterbodies', () => {
+    for (const property of ['fill-color', 'fill-opacity']) {
+      expect(paint(MARSH_FILL_LAYER_ID, property), property)
+        .toEqual(paint('waterbodies', property));
+    }
+  });
+
+  it('fades the swamp fill like the other waterbodies while tracing', () => {
+    const fading = TRACE_FADING_PAINT.find(p => p.layer === MARSH_FILL_LAYER_ID);
+    const waterbodies = TRACE_FADING_PAINT.find(p => p.layer === 'waterbodies');
+    expect(fading).toEqual({ ...waterbodies, layer: MARSH_FILL_LAYER_ID });
   });
 
   it('draws tufts lighter than open water but darker than the swamp fill', () => {

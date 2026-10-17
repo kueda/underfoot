@@ -14,10 +14,18 @@ from multiprocessing import Pool
 import psycopg2
 
 from database import DBNAME, SRID, make_database
+from geometry import widen_bbox
+from osm import fetch_data
+from osm_hydrography import OSM_WATER_POLYGONS_URL, apply_osm_network, apply_osm_waterbodies
+from osm_waterways import (
+    ENHANCING_WATERWAY_KINDS, HYDROGRAPHY_WATERWAY_KINDS, OSM_BBOX_MARGIN_DEG, OSM_SOURCE,
+    cite_osm, read_osm_waterways)
 from sources import util
 from sources.util.citations import load_citation_for_source, CITATIONS_TABLE_NAME
 from sources.util.water import process_nhdplus_hr_source, WATERWAYS_FLOW_FNAME
 from sources.util.tiger_water import process_tiger_water_for_fips
+from waterway_gaps import apply_osm_gap_fills
+from waterway_names import apply_osm_names
 
 
 NUM_PROCESSES = 4
@@ -167,10 +175,8 @@ def process_sources(sources, clean=False, cleandb=False, cleanfiles=False, procs
             [[src, clean, cleandb, cleanfiles] for src in sources])
 
 
-def load_waterways(sources, debug=False):
-    """Load waterways into the database"""
-    if debug:
-        util.log(f"water: loading waterways for sources: {sources}")
+def create_waterways_table():
+    """Replace the waterways table with an empty one"""
     util.run_sql(f"DROP TABLE IF EXISTS {WATERWAYS_TABLE_NAME}", dbname=DBNAME)
     util.run_sql(
         f"""
@@ -194,6 +200,12 @@ def load_waterways(sources, debug=False):
     util.run_sql(f"""
         CREATE INDEX {WATERWAYS_TABLE_NAME}_geom_idx ON {WATERWAYS_TABLE_NAME} USING GIST(geom)
     """)
+
+
+def load_waterways(sources, debug=False):
+    """Load the sources' waterways into the waterways table"""
+    if debug:
+        util.log(f"water: loading waterways for sources: {sources}")
     for source in sources:
         source_table_name = f"{source}_waterways"
         sql = f"""
@@ -227,10 +239,8 @@ def load_waterways(sources, debug=False):
             util.log(f"{source_table_name} doesn't exist, skipping...")
 
 
-def load_waterbodies(sources, debug=False):
-    """Load waterbodies into the database"""
-    if debug:
-        util.log(f"water: loading waterbodies for sources: {sources}")
+def create_waterbodies_table():
+    """Replace the waterbodies table with an empty one"""
     util.run_sql(
         f"DROP TABLE IF EXISTS {WATERBODIES_TABLE_NAME}", dbname=DBNAME)
     util.run_sql(
@@ -252,6 +262,12 @@ def load_waterbodies(sources, debug=False):
     util.run_sql(f"""
         CREATE INDEX {WATERBODIES_TABLE_NAME}_geom_idx ON {WATERBODIES_TABLE_NAME} USING GIST(geom)
     """)
+
+
+def load_waterbodies(sources, debug=False):
+    """Load the sources' waterbodies into the waterbodies table"""
+    if debug:
+        util.log(f"water: loading waterbodies for sources: {sources}")
     for source in sources:
         source_table_name = f"{source}_waterbodies"
         try:
@@ -309,10 +325,8 @@ def inherit_waterbody_permanence(debug=False):
     """)
 
 
-def load_watersheds(sources, debug=False):
-    """Load watersheds into the database"""
-    if debug:
-        util.log(f"water: loading watersheds for sources: {sources}")
+def create_watersheds_tables():
+    """Replace the watersheds table and its mask with empty ones"""
     util.run_sql(
         f"DROP TABLE IF EXISTS \"{WATERSHEDS_TABLE_NAME}\"",
         dbname=DBNAME
@@ -342,6 +356,13 @@ def load_watersheds(sources, debug=False):
         """,
         dbname=DBNAME
     )
+
+
+def load_watersheds(sources, debug=False):
+    """Load the sources' watersheds into the watersheds table, each covering only what the
+    ones before it don't"""
+    if debug:
+        util.log(f"water: loading watersheds for sources: {sources}")
     for source in sources:
         source_table_name = f"{source}_watersheds"
         num_mask_rows = util.run_sql(
@@ -431,11 +452,8 @@ def load_watersheds(sources, debug=False):
                 continue
 
 
-def load_flow(sources, debug=False):
-    """Combine waterways flow from multiple sources into a single table
-    """
-    if debug:
-        util.log(f"water: loading waterway flow for sources: {sources}")
+def create_flow_table():
+    """Replace the waterways flow table with an empty one"""
     util.run_sql(f"DROP TABLE IF EXISTS {WATERWAYS_FLOW_TABLE_NAME}", dbname=DBNAME)
     util.run_sql(
         f"""
@@ -448,6 +466,22 @@ def load_flow(sources, debug=False):
         """,
         dbname=DBNAME
     )
+
+
+def create_tables(debug=False):
+    """Replace the tables make_water loads with empty ones"""
+    if debug:
+        util.log("water: creating tables")
+    create_waterways_table()
+    create_waterbodies_table()
+    create_watersheds_tables()
+    create_flow_table()
+
+
+def load_flow(sources, debug=False):
+    """Combine the sources' waterway flow into the waterways flow table"""
+    if debug:
+        util.log(f"water: loading waterway flow for sources: {sources}")
     for source in sources:
         source_table_name = f"{source}_{WATERWAYS_FLOW_TABLE_NAME}"
         # just merge in the source table and use the original source_ids
@@ -694,8 +728,21 @@ def make_pmtiles(sources, path="./water.pmtiles", bbox=None, geojson_path=None, 
 
 def make_water(
         sources, clean=False, cleandb=False, cleanfiles=False, bbox=None,
-        path="./water.pmtiles", procs=NUM_PROCESSES, debug=False, geojson_path=None):
-    """Process and load all water sources and write them to a PMTiles file"""
+        path="./water.pmtiles", procs=NUM_PROCESSES, debug=False, geojson_path=None,
+        osm_pbf_url=None, osm_hydrography=False):
+    """Process and load all water sources and write them to a PMTiles file
+
+    If osm_pbf_url is given, waterways within bbox take their names from the OSM
+    waterways that run along them (see waterway_names.py), replacing the sources' names,
+    and waterways that end short of where they go continue along OSM waterways (see
+    waterway_gaps.py).
+
+    If osm_hydrography is also true, the hydrography (the waterways, their flow, and the
+    waterbodies) comes from OSM, with the sea from the water polygons made from its
+    coastline (see osm_hydrography.py), and the sources only provide watersheds.
+    """
+    if osm_hydrography and not osm_pbf_url:
+        raise ValueError("Taking hydrography from OSM needs osm_pbf_url")
     if debug:
         util.log("water: making database")
     make_database()
@@ -705,11 +752,31 @@ def make_water(
     # process_source skipping the reload because the old rows are still there
     process_sources(
         sources, cleandb=(clean or cleandb), cleanfiles=cleanfiles, procs=procs, debug=debug)
-    load_waterways(sources, debug=debug)
-    load_waterbodies(sources, debug=debug)
-    inherit_waterbody_permanence(debug=debug)
+    create_tables(debug=debug)
     load_watersheds(sources, debug=debug)
-    load_flow(sources, debug=debug)
+    if osm_hydrography:
+        pbf_path = fetch_data(osm_pbf_url)
+        osm_ways = read_osm_waterways(
+            pbf_path, widen_bbox(bbox, OSM_BBOX_MARGIN_DEG), kinds=HYDROGRAPHY_WATERWAY_KINDS)
+        # OSM's lakes line up with its waterways, since they're mapped together
+        apply_osm_waterbodies(
+            pbf_path, fetch_data(OSM_WATER_POLYGONS_URL), bbox, debug=debug)
+        apply_osm_network(osm_ways, bbox, debug=debug)
+    else:
+        load_waterways(sources, debug=debug)
+        load_waterbodies(sources, debug=debug)
+        inherit_waterbody_permanence(debug=debug)
+        load_flow(sources, debug=debug)
+        if osm_pbf_url:
+            osm_ways = read_osm_waterways(
+                fetch_data(osm_pbf_url), widen_bbox(bbox, OSM_BBOX_MARGIN_DEG),
+                kinds=ENHANCING_WATERWAY_KINDS)
+            apply_osm_names(osm_ways, bbox, debug=debug)
+            apply_osm_gap_fills(osm_ways, bbox, debug=debug)
+    if osm_pbf_url:
+        # Cite OSM for the water and names it provided
+        cite_osm()
+        sources = sources + [OSM_SOURCE]
     label_waterways(debug=debug)
     return make_pmtiles(sources, path=path, bbox=bbox, geojson_path=geojson_path, debug=debug)
 

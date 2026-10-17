@@ -3,6 +3,8 @@
 import os
 import sys
 
+import pytest
+
 import water
 from sources import util
 
@@ -205,6 +207,7 @@ def _stub_make_water_steps(monkeypatch):
         water.util, "run_sql", lambda sql, **kwargs: captured["sql"].append(sql)
     )
     for step in (
+        "create_tables",
         "load_waterways",
         "load_waterbodies",
         "inherit_waterbody_permanence",
@@ -212,6 +215,12 @@ def _stub_make_water_steps(monkeypatch):
         "load_flow",
         "label_waterways",
         "make_pmtiles",
+        "read_osm_waterways",
+        "apply_osm_names",
+        "apply_osm_gap_fills",
+        "apply_osm_network",
+        "apply_osm_waterbodies",
+        "cite_osm",
     ):
         monkeypatch.setattr(water, step, lambda *args, **kwargs: None)
     return captured
@@ -293,14 +302,42 @@ def test_inherit_waterbody_permanence_only_joins_artificial_paths(monkeypatch):
     assert "type = 'artificial'" in statements[0]
 
 
-def test_load_waterways_has_no_is_imaginary_column(monkeypatch):
+def test_create_tables_has_no_is_imaginary_column(monkeypatch):
     statements = []
     monkeypatch.setattr(water.util, "run_sql", lambda sql, **kwargs: statements.append(sql))
 
-    water.load_waterways(["fake_source"])
+    water.create_tables()
 
     assert statements
     assert not [sql for sql in statements if "is_imaginary" in sql]
+
+
+def test_create_tables_creates_the_tables_make_water_loads(monkeypatch):
+    statements = []
+    monkeypatch.setattr(water.util, "run_sql", lambda sql, **kwargs: statements.append(sql))
+
+    water.create_tables()
+
+    for table in (water.WATERWAYS_TABLE_NAME, water.WATERBODIES_TABLE_NAME,
+                  water.WATERSHEDS_TABLE_NAME, water.WATERSHEDS_MASK_TABLE_NAME,
+                  water.WATERWAYS_FLOW_TABLE_NAME):
+        assert [sql for sql in statements if f"CREATE TABLE {table} (" in sql], table
+
+
+@pytest.mark.parametrize("load", [
+    "load_waterways", "load_waterbodies", "load_watersheds", "load_flow"])
+def test_loading_sources_leaves_the_tables_to_create_tables(monkeypatch, load):
+    """So loading nothing from the sources doesn't have to be called just to make
+    the tables"""
+    statements = []
+    monkeypatch.setattr(
+        water.util, "run_sql", lambda sql, **kwargs: statements.append(sql) or [[0]])
+
+    getattr(water, load)(["fake_source"])
+
+    assert not [sql for sql in statements if "DROP TABLE IF EXISTS" in sql
+                and "_dump" not in sql]
+    assert not [sql for sql in statements if "CREATE TABLE" in sql and "_dump" not in sql]
 
 
 def test_make_pmtiles_leaves_is_imaginary_out_of_the_tiles(monkeypatch, tmp_path):
@@ -402,3 +439,125 @@ def test_label_flow_tree_handles_rivers_longer_than_the_recursion_limit():
     segments = [(str(i), i + 1, i) for i in range(length)]
     labels = water.label_flow_tree(segments)
     assert len(downstream_of(labels, str(length - 1))) == length
+
+
+def test_make_water_uses_osm_waterways_for_names_and_gaps(monkeypatch):
+    """OSM names replace the sources' names, so they're applied after the waterways are
+    loaded. Dead ends are continued once the flow is loaded, since that's how they're
+    found, and before it's labeled, so the continuations are part of the flow. Both use
+    the same OSM waterways, read once from a little past the bbox."""
+    _stub_make_water_steps(monkeypatch)
+    steps = []
+    bbox = {"left": -122.4, "bottom": 37.6, "right": -122.0, "top": 38.0}
+    osm_ways = [{"id": 1}]
+    monkeypatch.setattr(water, "fetch_data", lambda url: f"{url}.pbf")
+    for step in ("create_tables", "load_waterways", "load_flow", "label_waterways"):
+        monkeypatch.setattr(
+            water, step, lambda *args, step=step, **kwargs: steps.append(step))
+    monkeypatch.setattr(
+        water, "make_pmtiles",
+        lambda sources, **kwargs: steps.append(("make_pmtiles", sources)))
+    monkeypatch.setattr(
+        water, "read_osm_waterways",
+        lambda pbf_path, read_bbox, **kwargs: steps.append(
+            ("read", pbf_path, read_bbox)) or osm_ways)
+    for step in ("apply_osm_names", "apply_osm_gap_fills"):
+        monkeypatch.setattr(
+            water, step,
+            lambda ways, b, step=step, **kwargs: steps.append((step, ways, b)))
+
+    water.make_water(["fake_source"], bbox=bbox, osm_pbf_url="http://example.com/x.osm")
+
+    assert steps == [
+        "create_tables",
+        "load_waterways",
+        "load_flow",
+        ("read", "http://example.com/x.osm.pbf",
+         water.widen_bbox(bbox, water.OSM_BBOX_MARGIN_DEG)),
+        ("apply_osm_names", osm_ways, bbox),
+        ("apply_osm_gap_fills", osm_ways, bbox),
+        "label_waterways",
+        ("make_pmtiles", ["fake_source", "osm"]),
+    ]
+
+
+def test_make_water_without_an_osm_url_leaves_waterways_alone(monkeypatch):
+    _stub_make_water_steps(monkeypatch)
+    calls = []
+    for step in ("read_osm_waterways", "apply_osm_names", "apply_osm_gap_fills"):
+        monkeypatch.setattr(water, step, lambda *args, step=step, **kwargs: calls.append(step))
+    pmtiles_sources = []
+    monkeypatch.setattr(
+        water, "make_pmtiles", lambda sources, **kwargs: pmtiles_sources.append(sources))
+
+    water.make_water(["fake_source"], bbox={"left": 0, "bottom": 0, "right": 1, "top": 1})
+
+    assert not calls
+    assert pmtiles_sources == [["fake_source"]]
+
+
+def test_make_water_can_take_waterways_and_flow_from_osm_instead_of_the_sources(monkeypatch):
+    """The sources still provide watersheds, and OSM provides the waterbodies, which line up
+    with its waterways, with the sea from the water polygons made from its coastline"""
+    captured = _stub_make_water_steps(monkeypatch)
+    steps = []
+    bbox = {"left": -122.4, "bottom": 37.6, "right": -122.0, "top": 38.0}
+    osm_ways = [{"id": 1}]
+    monkeypatch.setattr(water, "fetch_data", lambda url: f"{url}.pbf")
+    monkeypatch.setattr(water, "create_tables", lambda **kwargs: steps.append("create_tables"))
+    for step in ("load_waterways", "load_waterbodies", "load_watersheds", "load_flow"):
+        monkeypatch.setattr(
+            water, step, lambda sources, step=step, **kwargs: steps.append((step, sources)))
+    monkeypatch.setattr(
+        water, "apply_osm_waterbodies",
+        lambda pbf_path, sea_path, b, **kwargs: steps.append(
+            ("apply_osm_waterbodies", pbf_path, sea_path, b)))
+    monkeypatch.setattr(
+        water, "read_osm_waterways",
+        lambda pbf_path, read_bbox, kinds: steps.append(("read", kinds)) or osm_ways)
+    for step in ("apply_osm_names", "apply_osm_gap_fills", "apply_osm_network"):
+        monkeypatch.setattr(
+            water, step,
+            lambda ways, b, step=step, **kwargs: steps.append((step, ways, b)))
+    monkeypatch.setattr(water, "label_waterways", lambda **kwargs: steps.append("label"))
+    monkeypatch.setattr(
+        water, "make_pmtiles",
+        lambda sources, **kwargs: steps.append(("make_pmtiles", sources)))
+
+    water.make_water(["fake_source"], bbox=bbox, osm_pbf_url="http://example.com/x.osm",
+                     osm_hydrography=True)
+
+    assert steps == [
+        "create_tables",
+        ("load_watersheds", ["fake_source"]),
+        ("read", water.HYDROGRAPHY_WATERWAY_KINDS),
+        ("apply_osm_waterbodies", "http://example.com/x.osm.pbf",
+         f"{water.OSM_WATER_POLYGONS_URL}.pbf", bbox),
+        ("apply_osm_network", osm_ways, bbox),
+        "label",
+        ("make_pmtiles", ["fake_source", "osm"]),
+    ]
+    assert "cleandb" in captured
+
+
+def test_make_water_cites_osm_even_if_it_only_names_waterways(monkeypatch):
+    """OSM names waterways even where no dead ends continue along it"""
+    _stub_make_water_steps(monkeypatch)
+    cited = []
+    monkeypatch.setattr(water, "fetch_data", lambda url: f"{url}.pbf")
+    monkeypatch.setattr(water, "cite_osm", lambda: cited.append("osm"))
+
+    water.make_water(["fake_source"], bbox={"left": 0, "bottom": 0, "right": 1, "top": 1},
+                     osm_pbf_url="http://example.com/x.osm")
+
+    assert cited == ["osm"]
+
+
+def test_make_water_needs_an_osm_extract_to_take_hydrography_from_osm(monkeypatch):
+    """Without one it would make a pack with no waterways at all"""
+    captured = _stub_make_water_steps(monkeypatch)
+
+    with pytest.raises(ValueError):
+        water.make_water(["fake_source"], bbox={"left": 0, "bottom": 0, "right": 1, "top": 1},
+                         osm_hydrography=True)
+    assert "cleandb" not in captured

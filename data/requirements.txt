@@ -3,6 +3,7 @@ Fiona
 httpx
 mercantile
 numpy<2.0
+osmium
 pandas
 psycopg2
 pytest

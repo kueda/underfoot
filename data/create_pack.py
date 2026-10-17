@@ -410,6 +410,12 @@ if __name__ == "__main__":
         metavar="URL",
         help="URL of the OSM PBF extract to use, skipping the Geofabrik lookup")
     parser.add_argument(
+        "--osm-hydrography",
+        action="store_true",
+        help="Take hydrography (waterways, their flow, and waterbodies) from OSM instead of "
+             "the water sources, which still provide watersheds, for places OSM maps water "
+             "well")
+    parser.add_argument(
         "-i",
         "--interactive",
         action="store_true",
@@ -438,6 +444,8 @@ if __name__ == "__main__":
     data["bbox"] = generate_bbox(geojson_path)
     data["osm"] = args.osm or choose_osm_url(geojson_path, interactive=args.interactive)
     data["water"] = find_water_sources(geojson_path)
+    if args.osm_hydrography:
+        data["hydrography"] = "osm"
     outfile_path = os.path.join("packs", f"{data['id']}.json",)
     with open(outfile_path, "w", encoding="utf-8") as outfile:
         json.dump(data, outfile, indent=4)

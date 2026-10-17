@@ -346,6 +346,9 @@ export default function UnderfootMap() {
       if (mapFeature.properties.permanence) {
         newUnderfootFeature.permanence = String(mapFeature.properties.permanence);
       }
+      if (mapFeature.properties.type) {
+        newUnderfootFeature.type = String(mapFeature.properties.type);
+      }
       if (citations && newUnderfootFeature.source) {
         newUnderfootFeature.citation = citations[newUnderfootFeature.source];
       }
@@ -563,7 +566,7 @@ export default function UnderfootMap() {
               onClick={() => toggleTrace(direction)}
             />
           ))}
-          <MapBottomSheet feature={underfootFeature} mapType={mapType} />
+          <MapBottomSheet feature={underfootFeature} mapType={mapType} map={map.current} />
         </>
       ) }
       { !loadedPackId && !packLoading && (

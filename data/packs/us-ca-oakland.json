@@ -21,5 +21,6 @@
         "nhdplus_h_1805_hu4",
         "tiger_water_06013",
         "tiger_water_06001"
-    ]
+    ],
+    "hydrography": "osm"
 }

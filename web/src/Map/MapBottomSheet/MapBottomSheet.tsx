@@ -3,21 +3,24 @@ import { useRef, useState } from 'react';
 import IconButton from '@mui/material/IconButton';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
+import type { Map } from 'maplibre-gl';
 
 import type { RockUnit, UnderfootFeature, WaterFeature } from '../../packs/types';
 import RocksHeader from './RocksHeader';
 import RocksBody from './RocksBody';
 import WaterHeader from './WaterHeader';
 import WaterBody from './WaterBody';
+import OsmEditLink from './OsmEditLink';
 
 interface Props {
   feature?: UnderfootFeature | RockUnit | WaterFeature;
   mapType: 'rocks' | 'water';
+  map?: Map;
 }
 
 const CLOSED_HEIGHT = '90px';
 
-function MapBottomSheet({ feature, mapType }: Props) {
+function MapBottomSheet({ feature, mapType, map }: Props) {
   const [snap, setSnap] = useState<number | string | null | undefined>(CLOSED_HEIGHT);
   const bodyRef = useRef<HTMLDivElement>(null);
   const descRef = useRef<HTMLParagraphElement>(null);
@@ -76,6 +79,7 @@ function MapBottomSheet({ feature, mapType }: Props) {
               { mapType === 'rocks'
                 ? <RocksBody feature={feature as RockUnit} descRef={descRef} />
                 : <WaterBody feature={feature as WaterFeature} />}
+              <OsmEditLink feature={feature} map={map} />
             </div>
           </div>
         </Vaul.Content>

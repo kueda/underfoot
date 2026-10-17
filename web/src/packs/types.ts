@@ -52,6 +52,7 @@ export interface WaterFeature extends UnderfootFeature {
   layer: string;
   // How often it has water, e.g. perennial, intermittent, or ephemeral
   permanence?: string;
+  type?: string;
 }
 
 export type UnzippedPackData = {
