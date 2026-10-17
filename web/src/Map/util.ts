@@ -1,4 +1,4 @@
-import type { Map, StyleSpecification } from 'maplibre-gl';
+import type { Map, StyleSpecification, VectorSourceSpecification } from 'maplibre-gl';
 import Papa from 'papaparse';
 import * as pmtiles from 'pmtiles';
 
@@ -6,7 +6,7 @@ import { RockUnit, UnzippedPackData } from '../packs/types';
 import { Citation, Citations, UnderfootFeatures } from './types';
 import { ROCK_STYLE, WATER_STYLE } from './mapStyles';
 
-export function loadMapFromPackData(
+export async function loadMapFromPackData(
   packData: UnzippedPackData,
   protocol: pmtiles.Protocol,
   map: Map,
@@ -36,7 +36,11 @@ export function loadMapFromPackData(
     new pmtiles.FileSource(new File([pmtilesBlob], mapType)),
   );
   protocol.add(pmtilesData);
-  map.setStyle(style);
+  // Packs from small-scale sources may stop short of the style's maxzoom, so
+  // overzoom past whatever their tiles reach
+  const { maxZoom } = await pmtilesData.getHeader();
+  const source = style.sources[mapType] as VectorSourceSpecification;
+  map.setStyle({ ...style, sources: { ...style.sources, [mapType]: { ...source, maxzoom: maxZoom } } });
   if (featuresBlob) {
     Papa.parse(new File([featuresBlob], `${mapType}_metadata`), {
       header: true,

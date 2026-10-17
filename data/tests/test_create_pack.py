@@ -204,6 +204,20 @@ def test_create_pack_can_take_hydrography_from_osm(tmp_path):
     assert pack["hydrography"] == "osm"
 
 
+def test_create_pack_can_lower_the_rock_maxzoom(tmp_path):
+    set_up_create_pack(tmp_path)
+
+    pack = run_create_pack(tmp_path, "--rock-maxzoom", "10")
+
+    assert pack["rock_maxzoom"] == 10
+
+
+def test_create_pack_leaves_out_the_rock_maxzoom_by_default(tmp_path):
+    set_up_create_pack(tmp_path)
+
+    assert "rock_maxzoom" not in run_create_pack(tmp_path)
+
+
 class StopDownload(Exception):
     pass
 

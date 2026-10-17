@@ -24,7 +24,7 @@ import re
 
 from elevation import make_contours
 from osm import make_ways, make_context
-from rocks import make_rocks
+from rocks import MAXZOOM as ROCKS_MAXZOOM, make_rocks
 from water import make_water
 from sources import util
 
@@ -189,6 +189,7 @@ def make_rocks_for_pack(pack_id, clean=False, procs=2):
         pack["rock"],
         bbox=pack["bbox"],
         geojson_path=pack["geojson_path"],
+        maxzoom=pack.get("rock_maxzoom", ROCKS_MAXZOOM),
         clean=clean,
         path=rocks_pmtiles_path,
         procs=procs)

@@ -416,6 +416,12 @@ if __name__ == "__main__":
              "the water sources, which still provide watersheds, for places OSM maps water "
              "well")
     parser.add_argument(
+        "--rock-maxzoom",
+        type=int,
+        metavar="ZOOM",
+        help="Highest zoom to tile the rocks to, for small-scale sources whose detail doesn't "
+             "need zoom 14; the map overzooms past it")
+    parser.add_argument(
         "-i",
         "--interactive",
         action="store_true",
@@ -446,6 +452,8 @@ if __name__ == "__main__":
     data["water"] = find_water_sources(geojson_path)
     if args.osm_hydrography:
         data["hydrography"] = "osm"
+    if args.rock_maxzoom:
+        data["rock_maxzoom"] = args.rock_maxzoom
     outfile_path = os.path.join("packs", f"{data['id']}.json",)
     with open(outfile_path, "w", encoding="utf-8") as outfile:
         json.dump(data, outfile, indent=4)
