@@ -353,6 +353,7 @@ WIKI_SPANS = {
   "precambrian": [4600, 541.0],
     "hadean": [4600, 4000],  # noqa: E131
     "archaean": [4000, 2500],
+    "archean": [4000, 2500],
       "eoarchean": [4000, 3600],  # noqa: E131
       "isuan": [4000, 3600],
       "paleoarchean": [3600, 3200],

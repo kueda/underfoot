@@ -20,6 +20,14 @@ def test_ages_from_span_parses_cretaceous():
     assert_ages_from_span_parses_span("Cretaceous")
 
 
+def test_ages_from_span_parses_american_spelling_of_archean():
+    assert rocks.ages_from_span("Archean")[:2] == (2_500_000_000, 4_000_000_000)
+
+
+def test_ages_from_span_parses_late_archean():
+    assert_ages_from_span_parses_span("Late Archean")
+
+
 def test_ages_from_span_parses_middle_dash_upper_ordovician():
     assert_ages_from_span_parses_span("Middle - Upper Ordovician")
 
