@@ -497,7 +497,7 @@ def test_make_water_can_take_waterways_and_flow_from_osm_instead_of_the_sources(
         lambda sources, **kwargs: steps.append(("make_pmtiles", sources)))
 
     water.make_water(["fake_source"], bbox=bbox, osm_pbf_url="http://example.com/x.osm",
-                     osm_waterways=True)
+                     osm_hydrography=True)
 
     assert steps == [
         ("load_waterways", []),
@@ -527,11 +527,11 @@ def test_make_water_cites_osm_even_if_it_only_names_waterways(monkeypatch):
     assert cited == ["osm"]
 
 
-def test_make_water_needs_an_osm_extract_to_take_waterways_from_osm(monkeypatch):
+def test_make_water_needs_an_osm_extract_to_take_hydrography_from_osm(monkeypatch):
     """Without one it would make a pack with no waterways at all"""
     captured = _stub_make_water_steps(monkeypatch)
 
     with pytest.raises(ValueError):
         water.make_water(["fake_source"], bbox={"left": 0, "bottom": 0, "right": 1, "top": 1},
-                         osm_waterways=True)
+                         osm_hydrography=True)
     assert "cleandb" not in captured

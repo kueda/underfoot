@@ -73,7 +73,7 @@ def test_make_water_for_pack_names_waterways_from_the_packs_osm_extract(build_di
     assert captured["osm_pbf_url"] == "http://example.com/region-latest.osm.pbf"
 
 
-def test_make_water_for_pack_can_use_osm_waterways(build_dir, monkeypatch):
+def test_make_water_for_pack_can_use_osm_hydrography(build_dir, monkeypatch):
     pack = {
         "water": ["fake_source"],
         "bbox": {"left": 0, "bottom": 0, "right": 1, "top": 1},
@@ -84,42 +84,42 @@ def test_make_water_for_pack_can_use_osm_waterways(build_dir, monkeypatch):
     monkeypatch.setitem(packs.PACKS, "fake-pack", pack)
     monkeypatch.setattr(packs, "make_water", lambda *args, **kwargs: captured.update(kwargs))
 
-    packs.make_water_for_pack("fake-pack", osm_waterways=True)
+    packs.make_water_for_pack("fake-pack", osm_hydrography=True)
 
-    assert captured["osm_waterways"] is True
+    assert captured["osm_hydrography"] is True
 
 
-@pytest.mark.parametrize("waterways, flag, expected", [
+@pytest.mark.parametrize("hydrography, flag, expected", [
     ("osm", False, True),
     (None, False, False),
     (None, True, True),
 ])
-def test_make_water_for_pack_takes_waterways_from_osm_if_the_pack_says_to(
-        build_dir, monkeypatch, waterways, flag, expected):
+def test_make_water_for_pack_takes_hydrography_from_osm_if_the_pack_says_to(
+        build_dir, monkeypatch, hydrography, flag, expected):
     pack = {
         "water": ["fake_source"],
         "bbox": {"left": 0, "bottom": 0, "right": 1, "top": 1},
         "geojson_path": None,
         "osm": "http://example.com/region-latest.osm.pbf",
     }
-    if waterways:
-        pack["waterways"] = waterways
+    if hydrography:
+        pack["hydrography"] = hydrography
     captured = {}
     monkeypatch.setitem(packs.PACKS, "fake-pack", pack)
     monkeypatch.setattr(packs, "make_water", lambda *args, **kwargs: captured.update(kwargs))
 
-    packs.make_water_for_pack("fake-pack", osm_waterways=flag)
+    packs.make_water_for_pack("fake-pack", osm_hydrography=flag)
 
-    assert captured["osm_waterways"] is expected
+    assert captured["osm_hydrography"] is expected
 
 
-def test_make_pack_passes_osm_waterways_to_the_water_build(build_dir, monkeypatch):
+def test_make_pack_passes_osm_hydrography_to_the_water_build(build_dir, monkeypatch):
     calls = {}
     for layer in ("rocks", "ways", "context", "contours"):
         monkeypatch.setattr(packs, f"make_{layer}_for_pack", lambda *args, **kwargs: None)
     monkeypatch.setattr(
         packs, "make_water_for_pack", lambda pack_id, **kwargs: calls.update(kwargs))
 
-    packs.make_pack(PACK_ID, osm_waterways=True)
+    packs.make_pack(PACK_ID, osm_hydrography=True)
 
-    assert calls["osm_waterways"] is True
+    assert calls["osm_hydrography"] is True

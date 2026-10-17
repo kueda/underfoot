@@ -196,12 +196,12 @@ def test_create_pack_specifies_water_sources_by_identifier_without_source_files(
     }
 
 
-def test_create_pack_can_take_waterways_from_osm(tmp_path):
+def test_create_pack_can_take_hydrography_from_osm(tmp_path):
     set_up_create_pack(tmp_path)
 
-    pack = run_create_pack(tmp_path, "--osm-waterways")
+    pack = run_create_pack(tmp_path, "--osm-hydrography")
 
-    assert pack["waterways"] == "osm"
+    assert pack["hydrography"] == "osm"
 
 
 class StopDownload(Exception):

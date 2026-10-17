@@ -54,5 +54,5 @@
         "tiger_water_06067",
         "tiger_water_06095"
     ],
-    "waterways": "osm"
+    "hydrography": "osm"
 }

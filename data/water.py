@@ -700,7 +700,7 @@ def make_pmtiles(sources, path="./water.pmtiles", bbox=None, geojson_path=None, 
 def make_water(
         sources, clean=False, cleandb=False, cleanfiles=False, bbox=None,
         path="./water.pmtiles", procs=NUM_PROCESSES, debug=False, geojson_path=None,
-        osm_pbf_url=None, osm_waterways=False):
+        osm_pbf_url=None, osm_hydrography=False):
     """Process and load all water sources and write them to a PMTiles file
 
     If osm_pbf_url is given, waterways within bbox take their names from the OSM
@@ -708,12 +708,12 @@ def make_water(
     and waterways that end short of where they go continue along OSM waterways (see
     waterway_gaps.py).
 
-    If osm_waterways is also true, the waterways, their flow, and the waterbodies come from
-    OSM, with the sea from the water polygons made from its coastline (see
-    osm_waterways.py), and the sources only provide watersheds.
+    If osm_hydrography is also true, the hydrography (the waterways, their flow, and the
+    waterbodies) comes from OSM, with the sea from the water polygons made from its
+    coastline (see osm_waterways.py), and the sources only provide watersheds.
     """
-    if osm_waterways and not osm_pbf_url:
-        raise ValueError("Taking waterways from OSM needs osm_pbf_url")
+    if osm_hydrography and not osm_pbf_url:
+        raise ValueError("Taking hydrography from OSM needs osm_pbf_url")
     if debug:
         util.log("water: making database")
     make_database()
@@ -723,16 +723,16 @@ def make_water(
     # process_source skipping the reload because the old rows are still there
     process_sources(
         sources, cleandb=(clean or cleandb), cleanfiles=cleanfiles, procs=procs, debug=debug)
-    waterway_sources = [] if osm_waterways else sources
+    waterway_sources = [] if osm_hydrography else sources
     load_waterways(waterway_sources, debug=debug)
     if osm_pbf_url:
         pbf_path = fetch_data(osm_pbf_url)
         osm_ways = read_osm_waterways(
             pbf_path, widen_bbox(bbox, OSM_BBOX_MARGIN_DEG),
-            kinds=OSM_WATERWAY_KINDS if osm_waterways else OSM_WATERWAYS)
-        if not osm_waterways:
+            kinds=OSM_WATERWAY_KINDS if osm_hydrography else OSM_WATERWAYS)
+        if not osm_hydrography:
             apply_osm_names(osm_ways, bbox, debug=debug)
-    if osm_waterways:
+    if osm_hydrography:
         # OSM's lakes line up with its waterways, since they're mapped together
         load_waterbodies([], debug=debug)
         apply_osm_waterbodies(
@@ -743,7 +743,7 @@ def make_water(
     load_watersheds(sources, debug=debug)
     load_flow(waterway_sources, debug=debug)
     if osm_pbf_url:
-        if osm_waterways:
+        if osm_hydrography:
             apply_osm_network(osm_ways, bbox, debug=debug)
         else:
             apply_osm_gap_fills(osm_ways, bbox, debug=debug)
