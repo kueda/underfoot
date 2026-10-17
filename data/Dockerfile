@@ -121,7 +121,10 @@ COPY --from=builder /out/bin/imposm  /usr/local/bin/imposm
 COPY --from=builder /out/bin/e00conv /usr/local/bin/e00conv
 COPY --from=pydeps  /opt/venv        /opt/venv
 
+# Units in large sources like sim3340 exceed GDAL's default 200 MB limit on
+# GeoJSON features, which applies to ogr2ogr and Fiona alike
 ENV PATH=/opt/venv/bin:$PATH \
+    OGR_GEOJSON_MAX_OBJ_SIZE=0 \
     LANG=en_US.UTF-8 \
     LC_ALL=en_US.UTF-8 \
     PGHOST=db \
