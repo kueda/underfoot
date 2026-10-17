@@ -55,11 +55,37 @@ def remove_polygon_overlaps(source_table_name):
         ADD COLUMN area float
     """)
     util.run_sql(f"UPDATE {dumped_source_table_name} SET area = ST_Area(geom)")
-    # Now we iterate over each polygon order by size, and use it to cut a hole
-    # out of all the other polygons that intersect it
-    polygons = util.run_sql_with_retries(
-        f"SELECT id, ST_Area(geom) FROM {dumped_source_table_name} ORDER BY ST_Area(geom) ASC"
-    )
+    # Split polygons into pieces of few vertices so the spatial index can find
+    # neighbors and each cut stays cheap. Otherwise one huge polygon, like all
+    # the water in Alaska, makes every cut take seconds. Pieces keep the id and
+    # area of the polygon they came from.
+    util.log("\tSubdividing polygons...")
+    pieces_table_name = f"pieces_{source_table_name}"
+    util.run_sql(f"DROP TABLE IF EXISTS \"{pieces_table_name}\"", dbname=DBNAME)
+    util.run_sql(f"""
+      CREATE TABLE {pieces_table_name} AS
+      SELECT {', '.join(rocks.METADATA_COLUMN_NAMES)}, id, area, ST_Subdivide(geom, 256) AS geom
+      FROM {dumped_source_table_name}
+    """)
+    util.run_sql(f"CREATE INDEX ON {pieces_table_name} USING GIST (geom)")
+    util.run_sql(f"CREATE INDEX ON {pieces_table_name} (id)")
+    util.run_sql(f"ANALYZE {pieces_table_name}")
+    # Only polygons whose interiors overlap a polygon at least as large need to
+    # cut anything. Polygons that merely share a boundary don't, and in most
+    # sources that's nearly all of them. Cutting only removes area, so no new
+    # overlaps can arise later.
+    polygons = util.run_sql_with_retries(f"""
+        SELECT DISTINCT a.id, a.area
+        FROM {pieces_table_name} a
+          JOIN {pieces_table_name} b
+            ON ST_Intersects(a.geom, b.geom)
+            AND a.id != b.id
+            AND b.area >= a.area
+            AND ST_Relate(a.geom, b.geom, 'T********')
+        ORDER BY a.area ASC
+    """)
+    # Now we iterate over each overlapping polygon order by size, and use it to
+    # cut a hole out of all the larger polygons whose interiors it overlaps
     for idx, row in enumerate(polygons):
         progress = round(idx / len(polygons) * 100, 2)
         if progress % 10 < 0.01:
@@ -70,13 +96,16 @@ def remove_polygon_overlaps(source_table_name):
         poly_id = row[0]
         area = row[1]
         sql = f"""
-          UPDATE {dumped_source_table_name}
-          SET geom = ST_Multi(
-              ST_Difference(geom, (SELECT geom FROM {dumped_source_table_name} WHERE id = {poly_id})))
+          UPDATE {pieces_table_name} pieces
+          SET geom = ST_Multi(ST_Difference(pieces.geom, poly.geom))
+          FROM (
+            SELECT ST_Union(geom) AS geom FROM {pieces_table_name} WHERE id = {poly_id}
+          ) poly
           WHERE
-            ST_Intersects(geom, (SELECT geom FROM {dumped_source_table_name} WHERE id = {poly_id}))
-            AND id != {poly_id}
-            AND area >= {area}
+            ST_Intersects(pieces.geom, poly.geom)
+            AND ST_Relate(pieces.geom, poly.geom, 'T********')
+            AND pieces.id != {poly_id}
+            AND pieces.area >= {area}
         """
         util.run_sql_with_retries(sql, dbname=DBNAME, quiet=True)
     util.log()
@@ -86,7 +115,7 @@ def remove_polygon_overlaps(source_table_name):
         SELECT
             {', '.join(rocks.METADATA_COLUMN_NAMES)},
             ST_Multi(ST_Union(geom)) AS geom
-        FROM {dumped_source_table_name}
+        FROM {pieces_table_name}
         GROUP BY {', '.join(rocks.METADATA_COLUMN_NAMES)}
     """)
     util.run_sql(
@@ -293,6 +322,10 @@ def load_units(sources, clean=False, procs=NUM_PROCESSES):
               SELECT {col_names}, '{source_identifier}', s.geom
               FROM {work_source_table_name} s
             """)
+        # The mask only clips the sources after this one, and unioning a large
+        # source can run the database out of memory
+        if idx == len(sources) - 1:
+            break
         util.log(f"Updating {MASK_TABLE_NAME}...")
         # Remove slivers and make it valid
         if idx == 0:
