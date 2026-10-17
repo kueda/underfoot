@@ -3,6 +3,8 @@
 import os
 import sys
 
+import pytest
+
 import water
 from sources import util
 
@@ -217,6 +219,7 @@ def _stub_make_water_steps(monkeypatch):
         "apply_osm_gap_fills",
         "apply_osm_network",
         "apply_osm_waterbodies",
+        "cite_osm",
     ):
         monkeypatch.setattr(water, step, lambda *args, **kwargs: None)
     return captured
@@ -509,3 +512,26 @@ def test_make_water_can_take_waterways_and_flow_from_osm_instead_of_the_sources(
         ("make_pmtiles", ["fake_source", "osm"]),
     ]
     assert "cleandb" in captured
+
+
+def test_make_water_cites_osm_even_if_it_only_names_waterways(monkeypatch):
+    """OSM names waterways even where no dead ends continue along it"""
+    _stub_make_water_steps(monkeypatch)
+    cited = []
+    monkeypatch.setattr(water, "fetch_data", lambda url: f"{url}.pbf")
+    monkeypatch.setattr(water, "cite_osm", lambda: cited.append("osm"))
+
+    water.make_water(["fake_source"], bbox={"left": 0, "bottom": 0, "right": 1, "top": 1},
+                     osm_pbf_url="http://example.com/x.osm")
+
+    assert cited == ["osm"]
+
+
+def test_make_water_needs_an_osm_extract_to_take_waterways_from_osm(monkeypatch):
+    """Without one it would make a pack with no waterways at all"""
+    captured = _stub_make_water_steps(monkeypatch)
+
+    with pytest.raises(ValueError):
+        water.make_water(["fake_source"], bbox={"left": 0, "bottom": 0, "right": 1, "top": 1},
+                         osm_waterways=True)
+    assert "cleandb" not in captured

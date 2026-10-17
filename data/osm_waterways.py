@@ -30,19 +30,17 @@ import osmium
 import psycopg2
 from psycopg2.extras import execute_values
 from shapely import wkb
-from shapely.geometry import LineString, Point, box, shape
+from shapely.geometry import LineString, MultiPolygon, Point, box, shape
 from shapely.strtree import STRtree
 
 from database import DBNAME, SRID
 from sources import util
-from sources.util.citations import CITATIONS_TABLE_NAME, create_table as create_citations_table
-from waterway_gaps import NEAR_WATER_M, OSM_BBOX_MARGIN_DEG, OSM_CITATION, OSM_SOURCE
-from waterway_names import Projection, widen_bbox
+from waterway_gaps import (
+    NEAR_WATER_M, OSM_BBOX_MARGIN_DEG, OSM_SOURCE, insert_osm_waterways, osm_attributes)
+from waterway_names import Projection, normalize, widen_bbox
 
-# Same tables water.py loads
-WATERWAYS_TABLE_NAME = "waterways"
+# Same table water.py loads
 WATERBODIES_TABLE_NAME = "waterbodies"
-WATERWAYS_FLOW_TABLE_NAME = "waterways_flow"
 OSM_WATERWAY_KINDS = ("river", "stream", "canal", "ditch", "drain")
 # OSM only implies the sea with its coastline, so the sea comes from the water polygons
 # osmdata.openstreetmap.de makes from it every day
@@ -86,19 +84,6 @@ NEAR_LAKE_M = 50
 MAX_LAKE_KM2 = 20
 
 
-def osm_waterway_attributes(way):
-    natural = way["waterway"] in ("river", "stream")
-    # Culverts and other tunnels are man-made even when the stream isn't
-    tunnel = way["tunnel"] not in (None, "no")
-    return {
-        "name": way["name"],
-        "type": "stream" if natural else "canal/ditch",
-        "is_natural": 1 if natural and not tunnel else 0,
-        "permanence": {"yes": "intermittent", "no": "perennial"}.get(way["intermittent"]),
-        "surface": "underground" if tunnel else "surface",
-    }
-
-
 def turn(line, other):
     """Angle between the end of line and the start of other, in radians"""
     a, b = line.coords[-2], line.coords[-1]
@@ -136,7 +121,7 @@ def build_network(osm_ways):
                 "coords": coords,
                 "hydroseq": len(network) + 1,
                 "dnhydroseq": 0,
-                **osm_waterway_attributes(way),
+                **osm_attributes(way),
                 # Used to build the flow, not stored
                 "way": way["id"],
                 "kind": way["waterway"],
@@ -151,14 +136,27 @@ def build_network(osm_ways):
         options = [w for w in leaving[waterway["to"]] if w is not waterway]
         if not options:
             continue
-        name = waterway["name"].lower() if waterway["name"] else None
+        name = normalize(waterway["name"])
         downstream = min(options, key=lambda w: (
             w["way"] != waterway["way"],
-            not name or (w["name"] or "").lower() != name,
+            not name or normalize(w["name"]) != name,
             KIND_RANK[w["kind"]],
             turn(waterway["line"], w["line"]),
         ))
         waterway["dnhydroseq"] = downstream["hydroseq"]
+    # Flow around a loop, like a ring of ditches, would have no outlet, leaving the loop
+    # and everything upstream of it out of the flow tree, so it ends where the loop
+    # would close
+    by_hydroseq = {w["hydroseq"]: w for w in network}
+    walked = {}
+    for waterway in network:
+        path, hydroseq = [], waterway["hydroseq"]
+        while hydroseq and hydroseq not in walked:
+            walked[hydroseq] = waterway["hydroseq"]
+            path.append(hydroseq)
+            hydroseq = by_hydroseq[hydroseq]["dnhydroseq"]
+        if hydroseq and walked[hydroseq] == waterway["hydroseq"]:
+            by_hydroseq[path[-1]]["dnhydroseq"] = 0
     return network
 
 
@@ -237,12 +235,12 @@ def link_lakes(network, waterbodies, bbox=None):
                    if waterway["hydroseq"] not in downstream(w["hydroseq"])]
         if not options:
             continue
-        name = waterway["name"].lower() if waterway["name"] else None
+        name = normalize(waterway["name"])
         # Water leaves by the outflow that goes somewhere, preferring the same name as
         # it came in by, then streams over canals, then the longest way downstream
         waterway["dnhydroseq"] = min(options, key=lambda w: (
             ends[w["hydroseq"]][0],
-            not name or (w["name"] or "").lower() != name,
+            not name or normalize(w["name"]) != name,
             KIND_RANK[w["kind"]],
             -ends[w["hydroseq"]][1],
         ))["hydroseq"]
@@ -266,8 +264,8 @@ def read_waterbodies(bbox):
 
 def osm_waterbody_attributes(tags):
     """Name, type, is_natural, and permanence of an OSM area, like the sources'
-    waterbodies, or None if it isn't water we show. Bays are left out, since the sources
-    provide the sea, which OSM only implies with its coastline."""
+    waterbodies, or None if it isn't water we show. Bays are left out, since the sea
+    comes from the water polygons made from OSM's coastline (see read_osm_sea)."""
     natural, water, landuse = tags.get("natural"), tags.get("water"), tags.get("landuse")
     if natural == "wetland":
         kind, is_natural = OSM_WETLAND_TYPES.get(tags.get("wetland"), None), 1
@@ -296,10 +294,13 @@ def read_osm_waterbodies(pbf_path, bbox):
     osm_waterbody_attributes"""
     waterbodies = []
     factory = osmium.geom.WKBFactory()
+    keys = ("natural", "water", "landuse")
     processor = (
         osmium.FileProcessor(pbf_path)
-        .with_areas()
-        .with_filter(osmium.filter.KeyFilter("natural", "water", "landuse"))
+        # Only build areas from the relations that could be water, not every one in the
+        # extract
+        .with_areas(osmium.filter.KeyFilter(*keys))
+        .with_filter(osmium.filter.KeyFilter(*keys))
     )
     for obj in processor:
         if not obj.is_area():
@@ -334,6 +335,10 @@ def read_osm_sea(zip_path, bbox):
     with fiona.open(f"/vsizip/{zip_path}/{OSM_WATER_POLYGONS_SHP}") as polygons:
         for feature in polygons.filter(bbox=clip.bounds):
             geom = shape(feature["geometry"]).intersection(clip)
+            # Water that also runs along the bbox's edge outside it adds that edge as a
+            # line, which the waterbodies table can't hold
+            if geom.geom_type == "GeometryCollection":
+                geom = MultiPolygon([part for part in geom.geoms if part.geom_type == "Polygon"])
             if geom.is_empty or geom.area == 0:
                 continue
             sea.append({"source_id": None, "source_id_attr": None, "geom": geom,
@@ -343,7 +348,7 @@ def read_osm_sea(zip_path, bbox):
 
 
 def write_waterbodies(waterbodies):
-    """Add the waterbodies to the database; OSM is cited by write_network"""
+    """Add the waterbodies to the database"""
     con = psycopg2.connect(f"dbname={DBNAME}")
     with con, con.cursor() as cur:
         execute_values(
@@ -364,33 +369,11 @@ def write_waterbodies(waterbodies):
 
 
 def write_network(network):
-    """Add the waterways and their flow to the database, and cite OSM"""
-    create_citations_table()
+    """Add the waterways and their flow to the database"""
     con = psycopg2.connect(f"dbname={DBNAME}")
     with con, con.cursor() as cur:
-        execute_values(
-            cur,
-            f"""
-                INSERT INTO {WATERWAYS_TABLE_NAME} (
-                    name, source, source_id, source_id_attr, type, is_natural, permanence,
-                    surface, geom)
-                VALUES %s
-            """,
-            [
-                (w["name"], OSM_SOURCE, w["source_id"], "OSM way", w["type"], w["is_natural"],
-                 w["permanence"], w["surface"], LineString(w["coords"]).wkt)
-                for w in network
-            ],
-            template=f"(%s, %s, %s, %s, %s, %s, %s, %s, ST_Multi(ST_GeomFromText(%s, {SRID})))")
-        execute_values(
-            cur,
-            f"INSERT INTO {WATERWAYS_FLOW_TABLE_NAME} (source, source_id, hydroseq, dnhydroseq) "
-            "VALUES %s",
-            [(OSM_SOURCE, w["source_id"], w["hydroseq"], w["dnhydroseq"]) for w in network])
-        cur.execute(f"DELETE FROM {CITATIONS_TABLE_NAME} WHERE source = %s", (OSM_SOURCE,))
-        cur.execute(
-            f"INSERT INTO {CITATIONS_TABLE_NAME} (source, citation) VALUES (%s, %s)",
-            (OSM_SOURCE, OSM_CITATION))
+        insert_osm_waterways(
+            cur, network, [(w["source_id"], w["hydroseq"], w["dnhydroseq"]) for w in network])
     con.close()
 
 

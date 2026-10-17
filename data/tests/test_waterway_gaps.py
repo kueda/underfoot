@@ -163,6 +163,23 @@ def test_continuation_follows_osm_ways_that_share_a_node():
     assert result["relinks"] == {("nhd", "a"): -1}
 
 
+def test_dead_end_where_an_osm_way_ends_can_join_a_waterway_right_there():
+    """All that's left of the OSM way past the dead end is a point, which can still be
+    beside a waterway"""
+    ways = [
+        osm_way(7, [1, 2], [(0, -100), (0, 0)]),
+        osm_way(8, [2, 3], [(0, 0), (0, 450)]),
+    ]
+    beside = waterway("s", [(-100, 8), (100, 8)], hydroseq=30, dnhydroseq=0)
+
+    result = fill([DEAD_END, beside, THROUGH_RESERVOIR], ways)
+
+    [piece] = result["waterways"]
+    assert meters(piece["coords"]) == [(0, 0), (0, 8)]
+    assert result["flow"] == [(piece["source_id"], -1, 30)]
+    assert result["relinks"] == {("nhd", "a"): -1}
+
+
 def test_continuation_follows_a_way_it_joins_partway_along():
     ways = [
         osm_way(7, [1, 2], [(0, 0), (0, 150)]),

@@ -9,6 +9,7 @@ import pytest
 from shapely.geometry import Point, Polygon, box as shapely_box, mapping
 
 import osm_waterways
+import water
 from osm_waterways import build_network, link_lakes, read_osm_waterbodies
 from tests.test_waterway_names import lonlat
 
@@ -85,6 +86,21 @@ def test_flow_prefers_the_straightest_way_where_it_forks():
     ])
 
     assert flows_into(network, "1-1") == "3-1"
+
+
+def test_flow_around_a_loop_still_reaches_an_outlet():
+    """Like a ring of ditches with another running into it, which would otherwise go
+    around forever, leaving the ring and everything upstream of it without flow labels"""
+    network = build_network([
+        osm_way(1, [1, 2, 3, 4, 1], [(0, 0), (100, 0), (100, 100), (0, 100), (0, 0)],
+                waterway="ditch"),
+        osm_way(2, [5, 3], [(200, 200), (100, 100)], waterway="ditch"),
+    ])
+
+    labels = water.label_flow_tree(
+        (w["source_id"], w["hydroseq"], w["dnhydroseq"]) for w in network)
+
+    assert sorted(labels) == ["1-1", "1-2", "2-1"]
 
 
 def test_osm_tags_map_to_waterway_attributes():
@@ -312,7 +328,7 @@ def square(nodes, first_id, left, bottom, size):
     ({"natural": "water", "water": "fountain"}, None),
     ({"natural": "water", "water": "reflecting_pool"}, None),
     ({"natural": "water", "water": "pool"}, None),
-    # The sources' sea water covers bays
+    # The sea made from OSM's coastline covers bays
     ({"natural": "bay"}, None),
     ({"landuse": "residential"}, None),
 ])
@@ -397,26 +413,46 @@ def test_read_osm_waterbodies_skips_areas_too_broken_to_build(tmp_path):
     assert [(w["source_id_attr"], w["source_id"]) for w in waterbodies] == [("OSM way", "1")]
 
 
-def test_read_osm_sea_clips_the_water_polygons_to_the_bbox(tmp_path):
+def water_polygons_zip(tmp_path, polygons):
+    """Path to a zip like a download of OSM_WATER_POLYGONS_URL with polygons in it"""
     shp_dir = tmp_path / os.path.dirname(osm_waterways.OSM_WATER_POLYGONS_SHP)
     shp_dir.mkdir()
     schema = {"geometry": "Polygon", "properties": {"x": "int"}}
     with fiona.open(tmp_path / osm_waterways.OSM_WATER_POLYGONS_SHP, "w", driver="ESRI Shapefile",
                     crs="EPSG:4326", schema=schema) as shp:
-        shp.write({"geometry": mapping(shapely_box(-122.3, 37.7, -122.0, 37.9)),
-                   "properties": {"x": 1}})
-        shp.write({"geometry": mapping(shapely_box(-100.0, 40.0, -99.0, 41.0)),
-                   "properties": {"x": 2}})
+        for i, polygon in enumerate(polygons):
+            shp.write({"geometry": mapping(polygon), "properties": {"x": i}})
     zip_path = tmp_path / "water-polygons.zip"
     with zipfile.ZipFile(zip_path, "w") as archive:
         for path in shp_dir.iterdir():
             archive.write(path, path.relative_to(tmp_path))
+    return str(zip_path)
+
+
+def test_read_osm_sea_clips_the_water_polygons_to_the_bbox(tmp_path):
+    zip_path = water_polygons_zip(tmp_path, [
+        shapely_box(-122.3, 37.7, -122.0, 37.9),
+        shapely_box(-100.0, 40.0, -99.0, 41.0),
+    ])
     bbox = {"left": -122.1, "bottom": 37.8, "right": -121.9, "top": 38.0}
 
-    [sea] = osm_waterways.read_osm_sea(str(zip_path), bbox)
+    [sea] = osm_waterways.read_osm_sea(zip_path, bbox)
 
     assert (sea["type"], sea["name"], sea["is_natural"]) == ("ocean/sea", None, 1)
     assert sea["geom"].equals(shapely_box(-122.1, 37.8, -122.0, 37.9))
+
+
+def test_read_osm_sea_leaves_out_where_water_only_touches_the_bbox(tmp_path):
+    """Clipping water that also runs along the bbox's edge outside it adds that edge as a
+    line, which the waterbodies table can't hold"""
+    bbox = {"left": -122.1, "bottom": 37.8, "right": -121.9, "top": 38.0}
+    touching = shapely_box(-122.0, 37.85, -121.8, 38.1).union(
+        shapely_box(-122.05, 38.0, -122.0, 38.1))
+
+    [sea] = osm_waterways.read_osm_sea(water_polygons_zip(tmp_path, [touching]), bbox)
+
+    assert sea["geom"].geom_type in ("Polygon", "MultiPolygon")
+    assert sea["geom"].equals(shapely_box(-122.0, 37.85, -121.9, 38.0))
 
 
 def test_apply_osm_waterbodies_adds_water_areas_and_sea_where_the_ways_were_read(monkeypatch):

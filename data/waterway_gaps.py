@@ -63,7 +63,10 @@ CONNECTOR_ATTRIBUTES = {
 
 
 def earliest_distance(line, geom):
-    """Distance along line of the first point where it meets geom, or None"""
+    """Distance along line of the first point where it meets geom, or None. line can be
+    a point, which is all that's left of a line at its end."""
+    if line.geom_type == "Point":
+        return 0 if line.intersects(geom) else None
     hit = line.intersection(geom)
     if hit.is_empty:
         return None
@@ -73,6 +76,11 @@ def earliest_distance(line, geom):
 
 def nearest_point(line, point):
     return line.interpolate(line.project(point))
+
+
+def point_along(line, distance):
+    """Point distance along line, or line itself if it's a point"""
+    return line if line.geom_type == "Point" else line.interpolate(distance)
 
 
 def without_repeats(coords):
@@ -85,14 +93,15 @@ def without_repeats(coords):
 
 
 def osm_attributes(way):
-    canal = way["waterway"] == "canal"
+    """Name, type, is_natural, permanence, and surface of a waterway from an OSM way"""
+    natural = way["waterway"] in ("river", "stream")
     # Culverts and other tunnels are man-made even when the stream isn't
     tunnel = way["tunnel"] not in (None, "no")
     return {
         "name": way["name"],
-        "type": "canal/ditch" if canal else "stream",
-        "is_natural": 0 if canal or tunnel else 1,
-        "permanence": "intermittent" if way["intermittent"] == "yes" else None,
+        "type": "stream" if natural else "canal/ditch",
+        "is_natural": 1 if natural and not tunnel else 0,
+        "permanence": {"yes": "intermittent", "no": "perennial"}.get(way["intermittent"]),
         "surface": "underground" if tunnel else "surface",
     }
 
@@ -211,19 +220,19 @@ class GapFiller:
             # Another dead end ending here would flow into nothing
             end = Point(waterway["line"].coords[-1])
             if self.is_outlet(waterway) \
-                    and end.distance(piece.interpolate(distance)) <= 2 * JOIN_M:
+                    and end.distance(point_along(piece, distance)) <= 2 * JOIN_M:
                 continue
             events.append((distance, waterway["hydroseq"], None,
-                           nearest_point(waterway["line"], piece.interpolate(distance))))
+                           nearest_point(waterway["line"], point_along(piece, distance))))
         for added in self.added:
             if added["line"].distance(piece) <= JOIN_M:
                 distance = earliest_distance(piece, added["line"].buffer(JOIN_M))
                 events.append((distance, added["hydroseq"], None,
-                               nearest_point(added["line"], piece.interpolate(distance))))
+                               nearest_point(added["line"], point_along(piece, distance))))
         for i in self.waterbody_tree.query(piece):
             distance = earliest_distance(piece, self.waterbodies[i])
             if distance is not None:
-                point = piece.interpolate(distance)
+                point = point_along(piece, distance)
                 events.append((
                     distance, *self.waterbody_target(self.waterbodies[i], point, dead_end),
                     None))
@@ -257,7 +266,8 @@ class GapFiller:
         # OSM ways often stop at the shore without entering the water
         end = Point(way["line"].coords[-1])
         if self.near_water(end):
-            waterbody = min(self.waterbodies, key=end.distance)
+            # The first of the nearest, since STRtree.nearest picks among ties unpredictably
+            waterbody = self.waterbodies[min(self.waterbody_tree.query_nearest(end))]
             target, connector = self.waterbody_target(waterbody, end, dead_end)
             if self.flows_into(target, dead_end):
                 return None
@@ -373,30 +383,47 @@ def read_network(bbox):
     return waterways, waterbodies, downstream
 
 
-def write_gap_fills(result):
-    """Add the new waterways and their flow, relink the dead ends, and cite OSM"""
+def insert_osm_waterways(cur, waterways, flow):
+    """Insert waterways from OSM, dicts of source_id, coords, and osm_attributes, and their
+    flow, as (source_id, hydroseq, dnhydroseq)"""
+    execute_values(
+        cur,
+        f"""
+            INSERT INTO {WATERWAYS_TABLE_NAME} (
+                name, source, source_id, source_id_attr, type, is_natural, permanence,
+                surface, geom)
+            VALUES %s
+        """,
+        [
+            (w["name"], OSM_SOURCE, w["source_id"], "OSM way", w["type"], w["is_natural"],
+             w["permanence"], w["surface"], LineString(w["coords"]).wkt)
+            for w in waterways
+        ],
+        template=f"(%s, %s, %s, %s, %s, %s, %s, %s, ST_Multi(ST_GeomFromText(%s, {SRID})))")
+    execute_values(
+        cur,
+        f"INSERT INTO {WATERWAYS_FLOW_TABLE_NAME} (source, source_id, hydroseq, dnhydroseq) "
+        "VALUES %s",
+        [(OSM_SOURCE, source_id, hydroseq, dn) for source_id, hydroseq, dn in flow])
+
+
+def cite_osm():
+    """Cite OSM for the water taken from it"""
     create_citations_table()
     con = psycopg2.connect(f"dbname={DBNAME}")
     with con, con.cursor() as cur:
-        execute_values(
-            cur,
-            f"""
-                INSERT INTO {WATERWAYS_TABLE_NAME} (
-                    name, source, source_id, source_id_attr, type, is_natural, permanence,
-                    surface, geom)
-                VALUES %s
-            """,
-            [
-                (w["name"], OSM_SOURCE, w["source_id"], "OSM way", w["type"], w["is_natural"],
-                 w["permanence"], w["surface"], LineString(w["coords"]).wkt)
-                for w in result["waterways"]
-            ],
-            template=f"(%s, %s, %s, %s, %s, %s, %s, %s, ST_Multi(ST_GeomFromText(%s, {SRID})))")
-        execute_values(
-            cur,
-            f"INSERT INTO {WATERWAYS_FLOW_TABLE_NAME} (source, source_id, hydroseq, dnhydroseq) "
-            "VALUES %s",
-            [(OSM_SOURCE, source_id, hydroseq, dn) for source_id, hydroseq, dn in result["flow"]])
+        cur.execute(f"DELETE FROM {CITATIONS_TABLE_NAME} WHERE source = %s", (OSM_SOURCE,))
+        cur.execute(
+            f"INSERT INTO {CITATIONS_TABLE_NAME} (source, citation) VALUES (%s, %s)",
+            (OSM_SOURCE, OSM_CITATION))
+    con.close()
+
+
+def write_gap_fills(result):
+    """Add the new waterways and their flow, and relink the dead ends"""
+    con = psycopg2.connect(f"dbname={DBNAME}")
+    with con, con.cursor() as cur:
+        insert_osm_waterways(cur, result["waterways"], result["flow"])
         execute_values(
             cur,
             f"""
@@ -407,10 +434,6 @@ def write_gap_fills(result):
             """,
             [(source, source_id, dn) for (source, source_id), dn in result["relinks"].items()],
             template="(%s, %s, %s::bigint)")
-        cur.execute(f"DELETE FROM {CITATIONS_TABLE_NAME} WHERE source = %s", (OSM_SOURCE,))
-        cur.execute(
-            f"INSERT INTO {CITATIONS_TABLE_NAME} (source, citation) VALUES (%s, %s)",
-            (OSM_SOURCE, OSM_CITATION))
     con.close()
 
 
