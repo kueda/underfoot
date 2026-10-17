@@ -1,0 +1,19 @@
+[
+  {
+    "type": "map",
+    "publisher": "U.S. Geological Survey",
+    "scale": "1:1584000",
+    "title": "Geologic map of Alaska (Scientific Investigations Map 3340)",
+    "URL": "https://pubs.usgs.gov/sim/3340/",
+    "DOI": "10.3133/sim3340",
+    "author": [
+      {"family": "Wilson", "given": "F.H."},
+      {"family": "Hults", "given": "C.P."},
+      {"family": "Mull", "given": "C.G."},
+      {"family": "Karl", "given": "S.M."}
+    ],
+    "issued": {
+      "date-parts": [["2015"]]
+    }
+  }
+]
