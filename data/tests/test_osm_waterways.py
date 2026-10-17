@@ -376,6 +376,27 @@ def test_apply_osm_network_writes_the_linked_network(monkeypatch):
     assert read == [osm_waterways.widen_bbox(bbox, osm_waterways.OSM_BBOX_MARGIN_DEG)]
 
 
+def test_read_osm_waterbodies_skips_areas_too_broken_to_build(tmp_path):
+    """Like a lake relation whose outer ring someone left open"""
+    nodes = {}
+    lake = square(nodes, 10, -122.0, 37.9, 0.01)
+    open_ring = square(nodes, 20, -121.98, 37.9, 0.01)[:-1]
+    pbf = tmp_path / "test.osm.pbf"
+    with osmium.SimpleWriter(str(pbf)) as writer:
+        for node_id, location in nodes.items():
+            writer.add_node(osmium.osm.mutable.Node(id=node_id, location=location))
+        writer.add_way(osmium.osm.mutable.Way(id=1, nodes=lake, tags={"natural": "water"}))
+        writer.add_way(osmium.osm.mutable.Way(id=2, nodes=open_ring, tags={}))
+        writer.add_relation(osmium.osm.mutable.Relation(
+            id=1, members=[("w", 2, "outer")],
+            tags={"type": "multipolygon", "natural": "water"}))
+    bbox = {"left": -122.1, "bottom": 37.8, "right": -121.9, "top": 38.0}
+
+    waterbodies = read_osm_waterbodies(str(pbf), bbox)
+
+    assert [(w["source_id_attr"], w["source_id"]) for w in waterbodies] == [("OSM way", "1")]
+
+
 def test_read_osm_sea_clips_the_water_polygons_to_the_bbox(tmp_path):
     shp_dir = tmp_path / os.path.dirname(osm_waterways.OSM_WATER_POLYGONS_SHP)
     shp_dir.mkdir()

@@ -307,7 +307,11 @@ def read_osm_waterbodies(pbf_path, bbox):
         attributes = osm_waterbody_attributes(obj.tags)
         if attributes is None:
             continue
-        geom = wkb.loads(factory.create_multipolygon(obj), hex=True)
+        try:
+            geom = wkb.loads(factory.create_multipolygon(obj), hex=True)
+        except RuntimeError:
+            # Broken in OSM, like a relation with an open ring
+            continue
         left, bottom, right, top = geom.bounds
         if right < bbox["left"] or left > bbox["right"] or top < bbox["bottom"] \
                 or bottom > bbox["top"]:
