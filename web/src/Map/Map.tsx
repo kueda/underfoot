@@ -563,7 +563,7 @@ export default function UnderfootMap() {
               onClick={() => toggleTrace(direction)}
             />
           ))}
-          <MapBottomSheet feature={underfootFeature} mapType={mapType} />
+          <MapBottomSheet feature={underfootFeature} mapType={mapType} map={map.current} />
         </>
       ) }
       { !loadedPackId && !packLoading && (
