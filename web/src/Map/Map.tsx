@@ -459,7 +459,7 @@ export default function UnderfootMap() {
       }
 
       log(`Calling loadMapFromPackData for ${mapType}`);
-      loadMapFromPackData(
+      await loadMapFromPackData(
         packData,
         protocol,
         map.current,

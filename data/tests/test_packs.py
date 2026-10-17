@@ -123,3 +123,18 @@ def test_make_pack_passes_osm_hydrography_to_the_water_build(build_dir, monkeypa
     packs.make_pack(PACK_ID, osm_hydrography=True)
 
     assert calls["osm_hydrography"] is True
+
+
+@pytest.mark.parametrize("rock_maxzoom, expected", [(10, 10), (None, 14)])
+def test_make_rocks_for_pack_uses_the_packs_rock_maxzoom(
+        build_dir, monkeypatch, rock_maxzoom, expected):
+    pack = dict(PACK_DEFINITION)
+    if rock_maxzoom:
+        pack["rock_maxzoom"] = rock_maxzoom
+    captured = {}
+    monkeypatch.setitem(packs.PACKS, PACK_ID, pack)
+    monkeypatch.setattr(packs, "make_rocks", lambda *args, **kwargs: captured.update(kwargs))
+
+    packs.make_rocks_for_pack(PACK_ID)
+
+    assert captured["maxzoom"] == expected

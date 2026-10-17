@@ -24,6 +24,9 @@ NUM_PROCESSES = 4
 
 FINAL_TABLE_NAME = "rock_units"
 MASK_TABLE_NAME = "rock_units_masks"
+# Packs from small-scale sources can tile to a lower zoom and let the map
+# overzoom, which is far faster for sources with huge units
+MAXZOOM = 14
 
 
 def remove_polygon_overlaps(source_table_name):
@@ -343,7 +346,13 @@ def clean_sources(sources):
         shutil.rmtree(work_path)
 
 
-def make_pmtiles(sources, path="./rocks.pmtiles", bbox=None, geojson_path=None):
+def make_pmtiles(
+    sources,
+    path="./rocks.pmtiles",
+    bbox=None,
+    geojson_path=None,
+    maxzoom=MAXZOOM
+):
     """Export rock units into am PMTiles file"""
     pmtiles_cmd = [
         "ogr2ogr",
@@ -353,7 +362,7 @@ def make_pmtiles(sources, path="./rocks.pmtiles", bbox=None, geojson_path=None):
         "-nln", FINAL_TABLE_NAME,
         "-dsco", "MAX_SIZE=5000000",
         "-dsco", "MINZOOM=7",
-        "-dsco", "MAXZOOM=14",
+        "-dsco", f"MAXZOOM={maxzoom}",
         "-dsco", "DESCRIPTION=\"Geological units\""
     ]
     if geojson_path:
@@ -391,7 +400,8 @@ def make_rocks(
     path="./rocks.pmtiles",
     procs=NUM_PROCESSES,
     bbox=None,
-    geojson_path=None
+    geojson_path=None,
+    maxzoom=MAXZOOM
 ):
     """Make rocks PMTiles from a collection of sources"""
     make_database()
@@ -402,7 +412,8 @@ def make_rocks(
         sources,
         path=path,
         bbox=bbox,
-        geojson_path=geojson_path)
+        geojson_path=geojson_path,
+        maxzoom=maxzoom)
     return pmtiles_path
 
 

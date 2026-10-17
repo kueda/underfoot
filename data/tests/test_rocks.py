@@ -110,3 +110,25 @@ def test_load_units_masks_every_source_but_the_last(monkeypatch):
     assert mask_calls(monkeypatch, ["first", "second", "third"]) == [
         ("init", "first"), ("update", "second")
     ]
+
+
+def test_make_pmtiles_tiles_to_the_given_maxzoom(monkeypatch, tmp_path):
+    commands = []
+    monkeypatch.setattr(rocks.util, "call_cmd", lambda cmd, **kwargs: commands.append(cmd))
+    monkeypatch.setattr(rocks.util, "add_table_from_query_to_pmtiles", lambda **kwargs: None)
+
+    rocks.make_pmtiles(["fake_source"], path=str(tmp_path / "rocks.pmtiles"), maxzoom=10)
+
+    assert "MAXZOOM=10" in commands[0]
+    assert "MAXZOOM=14" not in commands[0]
+
+
+def test_make_rocks_passes_the_maxzoom_to_make_pmtiles(monkeypatch):
+    captured = {}
+    monkeypatch.setattr(rocks, "make_database", lambda: None)
+    monkeypatch.setattr(rocks, "load_units", lambda *args, **kwargs: None)
+    monkeypatch.setattr(rocks, "make_pmtiles", lambda *args, **kwargs: captured.update(kwargs))
+
+    rocks.make_rocks(["fake_source"], maxzoom=10)
+
+    assert captured["maxzoom"] == 10
