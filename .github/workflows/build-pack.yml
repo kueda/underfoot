@@ -110,6 +110,40 @@ jobs:
             cache-source-work-water-4-${{ inputs.pack }}/${{ hashFiles(format('data/packs/{0}.json', inputs.pack)) }}/
             cache-source-work-water-4-${{ inputs.pack }}/
 
+      # Water reads the OSM extract for waterway names and gap fills, so share
+      # the ways & context job's cache of it
+      - name: Get current year week
+        id: calc-year-week
+        run: echo "year-week=$(date +'%Y-%U')" >> $GITHUB_OUTPUT
+
+      - name: Get OSM URL
+        id: get-osm-url
+        run: echo "osm-url=$(jq -c -r .osm packs/${{ inputs.pack }}.json)" >> $GITHUB_OUTPUT
+
+      - name: Cache OSM download
+        uses: actions/cache@v5
+        with:
+          path: "data/*.osm.pbf"
+          key: cache-osm-${{ steps.get-osm-url.outputs.osm-url }}-${{ steps.calc-year-week.outputs.year-week }}
+
+      # Packs with waterways from OSM take the sea from osmdata's water
+      # polygons, a 900 MB download that changes slowly
+      - name: Get waterways source
+        id: get-waterways
+        run: echo "waterways=$(jq -r '.waterways // empty' packs/${{ inputs.pack }}.json)" >> $GITHUB_OUTPUT
+
+      - name: Get current year month
+        if: steps.get-waterways.outputs.waterways == 'osm'
+        id: calc-year-month
+        run: echo "year-month=$(date +'%Y-%m')" >> $GITHUB_OUTPUT
+
+      - name: Cache OSM water polygons download
+        if: steps.get-waterways.outputs.waterways == 'osm'
+        uses: actions/cache@v5
+        with:
+          path: data/water-polygons-split-4326.zip
+          key: cache-osm-water-polygons-${{ steps.calc-year-month.outputs.year-month }}
+
       - name: Build water
         run: python packs.py ${{ inputs.pack }} --only water
 
