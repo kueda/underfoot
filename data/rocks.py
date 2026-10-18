@@ -11,6 +11,7 @@ import re
 import time
 from multiprocessing import Pool
 import subprocess
+import tempfile
 import traceback
 
 import psycopg2
@@ -25,7 +26,7 @@ NUM_PROCESSES = 4
 FINAL_TABLE_NAME = "rock_units"
 MASK_TABLE_NAME = "rock_units_masks"
 # Packs from small-scale sources can tile to a lower zoom and let the map
-# overzoom, which is far faster for sources with huge units
+# overzoom, which makes their tiles far smaller
 MAXZOOM = 14
 # When removing overlaps, a polygon split into more pieces than this cuts each
 # larger piece by just the pieces of it that piece touches instead of by the
@@ -387,29 +388,47 @@ def make_pmtiles(
     geojson_path=None,
     maxzoom=MAXZOOM
 ):
-    """Export rock units into am PMTiles file"""
-    pmtiles_cmd = [
-        "ogr2ogr",
-        path,
-        f"PG:dbname={DBNAME}",
-        "-sql", "SELECT id::text AS id, lithology, min_age, controlled_span, geom FROM rock_units",
-        "-nln", FINAL_TABLE_NAME,
-        "-dsco", "MAX_SIZE=5000000",
-        "-dsco", "MINZOOM=7",
-        "-dsco", f"MAXZOOM={maxzoom}",
-        "-dsco", "DESCRIPTION=\"Geological units\""
-    ]
-    if geojson_path:
-        pmtiles_cmd += ["-clipdst", geojson_path]
-    elif bbox:
-        pmtiles_cmd += [
-            "-clipdst",
-            str(bbox["left"]),
-            str(bbox["bottom"]),
-            str(bbox["right"]),
-            str(bbox["top"])
+    """Export rock units into am PMTiles file
+
+    Tiles with tippecanoe, which clips each zoom's tiles out of the zoom
+    below, instead of GDAL's MVT driver, which clips every feature to every
+    tile it touches and takes days for sources with huge units like sim3340.
+    """
+    with tempfile.TemporaryDirectory() as tmpdir:
+        units_path = os.path.join(tmpdir, "rock_units.geojsons")
+        export_cmd = [
+            "ogr2ogr",
+            "-f", "GeoJSONSeq", units_path,
+            f"PG:dbname={DBNAME}",
+            "-sql",
+            "SELECT id::text AS id, lithology, min_age, controlled_span, geom FROM rock_units"
         ]
-    util.call_cmd(pmtiles_cmd)
+        if geojson_path:
+            export_cmd += ["-clipdst", geojson_path]
+        elif bbox:
+            export_cmd += [
+                "-clipdst",
+                str(bbox["left"]),
+                str(bbox["bottom"]),
+                str(bbox["right"]),
+                str(bbox["top"])
+            ]
+        util.call_cmd(export_cmd, check=True)
+        util.call_cmd([
+            "tippecanoe",
+            f"--output={path}",
+            "--force",
+            f"--layer={FINAL_TABLE_NAME}",
+            "--description=Geological units",
+            "--minimum-zoom=7",
+            f"--maximum-zoom={maxzoom}",
+            # Simplify the borders units share the same way on both sides, so
+            # simplification at low zooms doesn't open gaps between them
+            "--detect-shared-borders",
+            "--read-parallel",
+            "--no-progress-indicator",
+            units_path
+        ], check=True)
     columns = ["id"] + rocks.METADATA_COLUMN_NAMES + ["source"]
     util.add_table_from_query_to_pmtiles(
         table_name=f"{FINAL_TABLE_NAME}_attrs",

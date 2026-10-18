@@ -1,6 +1,7 @@
 # pylint: disable=missing-function-docstring
 """Tests for rocks.py against a real PostGIS database"""
 
+import os
 import uuid
 
 import psycopg2
@@ -131,15 +132,49 @@ def test_load_units_masks_every_source_but_the_last(monkeypatch):
     ]
 
 
-def test_make_pmtiles_tiles_to_the_given_maxzoom(monkeypatch, tmp_path):
+def make_pmtiles_commands(monkeypatch, tmp_path, **kwargs):
+    """Run make_pmtiles with stubbed commands, writing the files they would"""
     commands = []
-    monkeypatch.setattr(rocks.util, "call_cmd", lambda cmd, **kwargs: commands.append(cmd))
+
+    def fake_call_cmd(cmd, **_kwargs):
+        commands.append(cmd)
+        if cmd[0] == "ogr2ogr":
+            with open(cmd[cmd.index("GeoJSONSeq") + 1], "w", encoding="utf-8") as outfile:
+                outfile.write("{}\n")
+
+    monkeypatch.setattr(rocks.util, "call_cmd", fake_call_cmd)
     monkeypatch.setattr(rocks.util, "add_table_from_query_to_pmtiles", lambda **kwargs: None)
+    rocks.make_pmtiles(["fake_source"], path=str(tmp_path / "rocks.pmtiles"), **kwargs)
+    export_cmd, tile_cmd = commands
+    return export_cmd, tile_cmd
 
-    rocks.make_pmtiles(["fake_source"], path=str(tmp_path / "rocks.pmtiles"), maxzoom=10)
 
-    assert "MAXZOOM=10" in commands[0]
-    assert "MAXZOOM=14" not in commands[0]
+def test_make_pmtiles_tiles_the_clipped_units_with_tippecanoe(monkeypatch, tmp_path):
+    export_cmd, tile_cmd = make_pmtiles_commands(
+        monkeypatch, tmp_path, geojson_path="/packs/pack.geojson")
+
+    assert export_cmd[export_cmd.index("-clipdst") + 1] == "/packs/pack.geojson"
+    exported_path = export_cmd[export_cmd.index("GeoJSONSeq") + 1]
+    assert tile_cmd[0] == "tippecanoe"
+    assert tile_cmd[-1] == exported_path
+    assert f"--output={tmp_path / 'rocks.pmtiles'}" in tile_cmd
+    assert "--layer=rock_units" in tile_cmd
+    # Simplify the borders units share the same way on both sides, so
+    # simplification at low zooms doesn't open gaps between them
+    assert "--detect-shared-borders" in tile_cmd
+
+
+def test_make_pmtiles_tiles_to_the_given_maxzoom(monkeypatch, tmp_path):
+    _, tile_cmd = make_pmtiles_commands(monkeypatch, tmp_path, maxzoom=10)
+
+    assert "--maximum-zoom=10" in tile_cmd
+    assert "--minimum-zoom=7" in tile_cmd
+
+
+def test_make_pmtiles_removes_the_exported_units(monkeypatch, tmp_path):
+    export_cmd, _ = make_pmtiles_commands(monkeypatch, tmp_path)
+
+    assert not os.path.exists(export_cmd[export_cmd.index("GeoJSONSeq") + 1])
 
 
 def test_make_rocks_passes_the_maxzoom_to_make_pmtiles(monkeypatch):

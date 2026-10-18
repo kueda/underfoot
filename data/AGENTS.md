@@ -34,6 +34,8 @@ image and selected via the `UNDERFOOT_IMPOSM` / `UNDERFOOT_E00CONV` env vars
 (their defaults keep bare-metal use working). `numpy` is pinned `<2.0` for GDAL
 and Fiona compatibility. `pdftotext` (poppler, for source pamphlets) and `7z`
 (for ArcGIS `.mpk` map packages, which are 7z archives) are in the image.
+`tippecanoe` (felt's fork, built from source) tiles the rocks layer; the other
+layers still use GDAL's MVT driver.
 
 On-disk caches (`sources/work-<name>/`, `elevation-tiles/`, `*.osm.pbf`,
 `imposm-cache/`, `build/`) live in the bind-mounted tree, so they persist and
@@ -50,7 +52,9 @@ PACK=us-ca-oakland`, `make test`, `make psql`.
 The pipeline runs on any Linux host with PostgreSQL/PostGIS 16 and GDAL >= 3.8:
 install the apt packages from the `Dockerfile` `runtime` stage plus `golang-go
 libleveldb-dev libgeos-dev build-essential` to build `bin/imposm` and
-`bin/e00compr`, make a venv from `requirements.txt`, and export
+`bin/e00compr`, build and install
+[tippecanoe](https://github.com/felt/tippecanoe) (`libsqlite3-dev zlib1g-dev`),
+make a venv from `requirements.txt`, and export
 `PGHOST`/`PGUSER`/`PGPASSWORD`. Not supported directly on macOS.
 
 ## Building packs
