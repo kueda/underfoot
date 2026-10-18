@@ -1,0 +1,29 @@
+{
+    "id": "us-ak-arctic",
+    "name": "Arctic Alaska, USA",
+    "description": "North Slope, Northwest Arctic, and Nome, including the Brooks Range, the Arctic Coastal Plain, and the Seward Peninsula",
+    "admin1": "United States",
+    "admin2": "Alaska",
+    "rock": [
+        "sim3340"
+    ],
+    "geojson": {
+        "$ref": "file://./us-ak-arctic.geojson"
+    },
+    "bbox": {
+        "bottom": 62.91767034881698,
+        "left": -171.8662981172247,
+        "right": -140.98070571688388,
+        "top": 71.40587062178437
+    },
+    "osm": "https://download.geofabrik.de/north-america/us/alaska-latest.osm.pbf",
+    "water": [
+        "tiger_water_02290",
+        "tiger_water_02180",
+        "tiger_water_02185",
+        "tiger_water_02188",
+        "tiger_water_02158"
+    ],
+    "hydrography": "osm",
+    "rock_maxzoom": 10
+}

@@ -1,0 +1,35 @@
+{
+    "id": "us-ak-interior",
+    "name": "Interior Alaska, USA",
+    "description": "Yukon-Koyukuk, Fairbanks North Star, Denali, and Southeast Fairbanks, including the Yukon and Tanana valleys and the north side of the Alaska Range",
+    "admin1": "United States",
+    "admin2": "Alaska",
+    "rock": [
+        "sim3340"
+    ],
+    "geojson": {
+        "$ref": "file://./us-ak-interior.geojson"
+    },
+    "bbox": {
+        "bottom": 61.88495163712726,
+        "left": -161.06817599987465,
+        "right": -140.9816030004803,
+        "top": 68.51990369242047
+    },
+    "osm": "https://download.geofabrik.de/north-america/us/alaska-latest.osm.pbf",
+    "water": [
+        "tiger_water_02290",
+        "tiger_water_02180",
+        "tiger_water_02185",
+        "tiger_water_02170",
+        "tiger_water_02066",
+        "tiger_water_02188",
+        "tiger_water_02240",
+        "tiger_water_02090",
+        "tiger_water_02050",
+        "tiger_water_02158",
+        "tiger_water_02068"
+    ],
+    "hydrography": "osm",
+    "rock_maxzoom": 10
+}
