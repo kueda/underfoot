@@ -21,7 +21,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       libgeos-dev \
       libleveldb-dev \
       libsnappy-dev \
+      libsqlite3-dev \
       make \
+      zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # imposm3 publishes only linux-x86-64 release binaries, so build from source
@@ -38,6 +40,15 @@ COPY vendor/e00compr-1.0.1.tar.gz /src/
 RUN tar xzf /src/e00compr-1.0.1.tar.gz -C /src \
     && make -C /src/e00compr-1.0.1 e00conv \
     && install -Dm755 /src/e00compr-1.0.1/e00conv /out/bin/e00conv
+
+# tippecanoe tiles large polygons far faster than GDAL's MVT driver, since it
+# clips each zoom from the one below instead of clipping whole features to
+# every tile. There's no Ubuntu package of felt's fork, so build from source.
+ARG TIPPECANOE_REF=2.79.0
+RUN git clone --branch "$TIPPECANOE_REF" --depth 1 \
+      https://github.com/felt/tippecanoe.git /src/tippecanoe \
+    && make -C /src/tippecanoe -j"$(nproc)" tippecanoe \
+    && install -Dm755 /src/tippecanoe/tippecanoe /out/bin/tippecanoe
 
 
 # ---- pydeps: build the Python virtualenv ----
@@ -119,6 +130,7 @@ RUN set -eu; \
 
 COPY --from=builder /out/bin/imposm  /usr/local/bin/imposm
 COPY --from=builder /out/bin/e00conv /usr/local/bin/e00conv
+COPY --from=builder /out/bin/tippecanoe /usr/local/bin/tippecanoe
 COPY --from=pydeps  /opt/venv        /opt/venv
 
 ENV PATH=/opt/venv/bin:$PATH \
