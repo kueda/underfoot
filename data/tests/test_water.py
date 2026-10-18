@@ -1,5 +1,6 @@
 """Tests for water.py source dispatch."""
 
+import json
 import os
 import sys
 
@@ -11,31 +12,91 @@ from sources import util
 SOURCES_PATH = os.path.join(os.path.dirname(os.path.realpath(water.__file__)), "sources")
 
 
-def test_make_pmtiles_cleans_up_intermediate_gpkg(monkeypatch, tmp_path):
-    """Regression test: make_pmtiles used to write its intermediate
-    GeoPackage next to water.py (i.e. data/water.gpkg) and never delete it,
-    leaving a dangling multi-megabyte file after every pack build. It should
-    write that intermediate file to a temporary directory that's removed
-    once the PMTiles file has been built.
-    """
-    captured_gpkg_dirs = []
+def water_pmtiles_commands(monkeypatch, tmp_path, **kwargs):
+    """Run make_pmtiles with stubbed commands, writing the files they would.
+    Returns the export command for each layer of the tiles, by layer name,
+    and the tippecanoe commands."""
+    exports = {}
+    tile_cmds = []
 
-    def fake_call_cmd(cmd, **kwargs):
-        args = cmd.split() if isinstance(cmd, str) else cmd
-        for arg in args:
-            if isinstance(arg, str) and arg.endswith(".gpkg"):
-                captured_gpkg_dirs.append(os.path.dirname(os.path.realpath(arg)))
+    def fake_call_cmd(cmd, **_kwargs):
+        if cmd[0] == "ogr2ogr":
+            export_path = cmd[cmd.index("GeoJSONSeq") + 1]
+            exports[export_path] = cmd
+            with open(export_path, "w", encoding="utf-8") as outfile:
+                outfile.write("{}\n")
+        elif cmd[0] == "tippecanoe":
+            tile_cmds.append(cmd)
 
     monkeypatch.setattr(water.util, "call_cmd", fake_call_cmd)
     monkeypatch.setattr(water.util, "add_table_from_query_to_pmtiles", lambda **kwargs: None)
+    water.make_pmtiles(["fake_source"], path=str(tmp_path / "water.pmtiles"), **kwargs)
+    layers = {}
+    for cmd in tile_cmds:
+        for arg in cmd:
+            if arg.startswith("--named-layer="):
+                layer, export_path = arg.split("=", 1)[1].split(":", 1)
+                layers[layer] = exports[export_path]
+    return layers, tile_cmds
 
-    water.make_pmtiles(["fake_source"], path=str(tmp_path / "water.pmtiles"))
+
+def test_make_pmtiles_cleans_up_intermediate_files(monkeypatch, tmp_path):
+    """Regression test: make_pmtiles used to write its intermediate
+    GeoPackage next to water.py (i.e. data/water.gpkg) and never delete it,
+    leaving a dangling multi-megabyte file after every pack build. It should
+    write its intermediate files to a temporary directory that's removed
+    once the PMTiles file has been built.
+    """
+    layers, _ = water_pmtiles_commands(monkeypatch, tmp_path)
 
     water_py_dir = os.path.dirname(os.path.realpath(water.__file__))
-    assert captured_gpkg_dirs, "expected ogr2ogr calls referencing a .gpkg path"
-    for gpkg_dir in captured_gpkg_dirs:
-        assert gpkg_dir != water_py_dir
-        assert not os.path.isdir(gpkg_dir)
+    assert layers
+    for cmd in layers.values():
+        export_path = cmd[cmd.index("GeoJSONSeq") + 1]
+        assert os.path.dirname(os.path.realpath(export_path)) != water_py_dir
+        assert not os.path.exists(export_path)
+
+
+def test_make_pmtiles_tiles_every_water_layer_with_tippecanoe(monkeypatch, tmp_path):
+    layers, tile_cmds = water_pmtiles_commands(monkeypatch, tmp_path)
+
+    assert set(layers) == {
+        water.WATERWAYS_TABLE_NAME,
+        water.WATERBODIES_TABLE_NAME,
+        water.WATERSHEDS_TABLE_NAME,
+        f"{water.WATERWAYS_TABLE_NAME}_overview",
+        f"{water.WATERBODIES_TABLE_NAME}_overview",
+    }
+    [tile_cmd] = tile_cmds
+    assert f"--output={tmp_path / 'water.pmtiles'}" in tile_cmd
+    assert "--minimum-zoom=7" in tile_cmd
+    assert "--maximum-zoom=14" in tile_cmd
+    # Watersheds cover the pack like rock units, so simplify their shared
+    # borders the same way on both sides
+    assert "--detect-shared-borders" in tile_cmd
+
+
+def test_make_pmtiles_shows_overview_layers_below_the_detailed_ones(monkeypatch, tmp_path):
+    _, [tile_cmd] = water_pmtiles_commands(monkeypatch, tmp_path)
+
+    [filter_arg] = [arg for arg in tile_cmd if arg.startswith("--feature-filter=")]
+    assert json.loads(filter_arg.split("=", 1)[1]) == {
+        water.WATERWAYS_TABLE_NAME: [">=", "$zoom", 9],
+        water.WATERBODIES_TABLE_NAME: [">=", "$zoom", 9],
+        f"{water.WATERWAYS_TABLE_NAME}_overview": ["<=", "$zoom", 8],
+        f"{water.WATERBODIES_TABLE_NAME}_overview": ["<=", "$zoom", 8],
+    }
+
+
+def test_make_pmtiles_clips_everything_but_the_waterways(monkeypatch, tmp_path):
+    """Unclipped waterways show connectivity across the whole watershed"""
+    layers, _ = water_pmtiles_commands(monkeypatch, tmp_path, geojson_path="/packs/pack.geojson")
+
+    for layer, cmd in layers.items():
+        if layer == water.WATERWAYS_TABLE_NAME:
+            assert "-clipdst" not in cmd
+        else:
+            assert cmd[cmd.index("-clipdst") + 1] == "/packs/pack.geojson"
 
 
 def exported_fields(cmd):
@@ -53,25 +114,11 @@ def exported_fields(cmd):
 def test_make_pmtiles_leaves_waterway_source_id_out_of_tiles(monkeypatch, tmp_path):
     """The app doesn't use a waterway's source_id, and a unique string on
     every waterway makes the tiles much bigger"""
-    cmds = []
+    layers, _ = water_pmtiles_commands(monkeypatch, tmp_path)
 
-    def fake_call_cmd(cmd, **kwargs):
-        if isinstance(cmd, list):
-            cmds.append(cmd)
-
-    monkeypatch.setattr(water.util, "call_cmd", fake_call_cmd)
-    monkeypatch.setattr(water.util, "add_table_from_query_to_pmtiles", lambda **kwargs: None)
-
-    water.make_pmtiles(["fake_source"], path=str(tmp_path / "water.pmtiles"))
-
-    waterways_cmds = [
-        cmd for cmd in cmds
-        if water.WATERWAYS_TABLE_NAME in cmd or f"{water.WATERWAYS_TABLE_NAME}_overview" in cmd
-    ]
-    assert len(waterways_cmds) == 2
-    for cmd in waterways_cmds:
-        fields = exported_fields(cmd)
-        assert fields is not None, f"expected {cmd} to select fields"
+    for layer in [water.WATERWAYS_TABLE_NAME, f"{water.WATERWAYS_TABLE_NAME}_overview"]:
+        fields = exported_fields(layers[layer])
+        assert fields is not None, f"expected {layers[layer]} to select fields"
         assert "source_id" not in fields
         assert "flow_pre" in fields
         assert "flow_upstream" in fields
@@ -81,27 +128,15 @@ def test_make_pmtiles_leaves_waterbody_and_watershed_source_id_out_of_tiles(monk
     """The app doesn't use a waterbody's or watershed's source_id or
     source_id_attr, and they stay in the database, so they're just dead weight
     in the tiles"""
-    cmds = []
+    layers, _ = water_pmtiles_commands(monkeypatch, tmp_path)
 
-    def fake_call_cmd(cmd, **kwargs):
-        if isinstance(cmd, list):
-            cmds.append(cmd)
-
-    monkeypatch.setattr(water.util, "call_cmd", fake_call_cmd)
-    monkeypatch.setattr(water.util, "add_table_from_query_to_pmtiles", lambda **kwargs: None)
-
-    water.make_pmtiles(["fake_source"], path=str(tmp_path / "water.pmtiles"))
-
-    layers = [
+    for layer in [
         water.WATERBODIES_TABLE_NAME,
         f"{water.WATERBODIES_TABLE_NAME}_overview",
         water.WATERSHEDS_TABLE_NAME,
-    ]
-    for layer in layers:
-        layer_cmds = [cmd for cmd in cmds if layer in cmd]
-        assert len(layer_cmds) == 1, f"expected one ogr2ogr command for {layer}"
-        fields = exported_fields(layer_cmds[0])
-        assert fields is not None, f"expected {layer_cmds[0]} to select fields"
+    ]:
+        fields = exported_fields(layers[layer])
+        assert fields is not None, f"expected {layers[layer]} to select fields"
         assert "*" not in fields
         assert "source_id" not in fields
         assert "source_id_attr" not in fields
