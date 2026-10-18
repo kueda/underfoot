@@ -1,0 +1,45 @@
+{
+    "id": "us-ak-south",
+    "name": "Southcentral and Southeast Alaska, USA",
+    "description": "Anchorage, Matanuska-Susitna, the Kenai Peninsula, Chugach, Copper River, and the Southeast panhandle, including the Chugach, Wrangell, and Coast mountains",
+    "admin1": "United States",
+    "admin2": "Alaska",
+    "rock": [
+        "sim3340"
+    ],
+    "geojson": {
+        "$ref": "file://./us-ak-south.geojson"
+    },
+    "bbox": {
+        "bottom": 54.64458486072747,
+        "left": -154.76876498273404,
+        "right": -129.95444085401445,
+        "top": 63.49760899999921
+    },
+    "osm": "https://download.geofabrik.de/north-america/us/alaska-latest.osm.pbf",
+    "water": [
+        "tiger_water_02230",
+        "tiger_water_02110",
+        "tiger_water_02195",
+        "tiger_water_02290",
+        "tiger_water_02220",
+        "tiger_water_02170",
+        "tiger_water_02150",
+        "tiger_water_02130",
+        "tiger_water_02105",
+        "tiger_water_02063",
+        "tiger_water_02066",
+        "tiger_water_02198",
+        "tiger_water_02100",
+        "tiger_water_02282",
+        "tiger_water_02240",
+        "tiger_water_02275",
+        "tiger_water_02164",
+        "tiger_water_02050",
+        "tiger_water_02020",
+        "tiger_water_02068",
+        "tiger_water_02122"
+    ],
+    "hydrography": "osm",
+    "rock_maxzoom": 10
+}

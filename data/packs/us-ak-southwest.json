@@ -1,0 +1,36 @@
+{
+    "id": "us-ak-southwest",
+    "name": "Southwest Alaska, USA",
+    "description": "Bethel, Kusilvak, Dillingham, Bristol Bay, Lake and Peninsula, Kodiak Island, and the Aleutians, including the Yukon-Kuskokwim Delta and the Alaska Peninsula",
+    "admin1": "United States",
+    "admin2": "Alaska",
+    "rock": [
+        "sim3340"
+    ],
+    "geojson": {
+        "$ref": "file://./us-ak-southwest.geojson"
+    },
+    "bbox": {
+        "bottom": 51.19598289657464,
+        "left": -179.1655731906061,
+        "right": -151.77000359124239,
+        "top": 63.29181599992403
+    },
+    "osm": "https://download.geofabrik.de/north-america/us/alaska-latest.osm.pbf",
+    "water": [
+        "tiger_water_02060",
+        "tiger_water_02290",
+        "tiger_water_02180",
+        "tiger_water_02013",
+        "tiger_water_02170",
+        "tiger_water_02150",
+        "tiger_water_02016",
+        "tiger_water_02164",
+        "tiger_water_02050",
+        "tiger_water_02158",
+        "tiger_water_02070",
+        "tiger_water_02122"
+    ],
+    "hydrography": "osm",
+    "rock_maxzoom": 10
+}
