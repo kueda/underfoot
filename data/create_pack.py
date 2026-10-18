@@ -248,6 +248,10 @@ def choose_osm_url(geojson_path, interactive=False):
             return choice
 
 
+# USGS never made NHDPlus HR for Alaska (region 19), so its HU4s have no sources
+NHDPLUS_HR_MISSING_REGIONS = ["19"]
+
+
 def find_nhd_hu4_sources(geojson_path):
     """Finds relevant NHD HU4 sources"""
     simplified_wbd_hu4_geojson_path = "simplified_wbd_hu4.geojson"
@@ -279,6 +283,7 @@ def find_nhd_hu4_sources(geojson_path):
         intersecting_features = [
             feature for feature in wbdhu4
             if shape(feature.geometry).intersects(pack_geom)
+            and feature.properties["huc4"][:2] not in NHDPLUS_HR_MISSING_REGIONS
         ]
     return [f"nhdplus_h_{feature.properties['huc4']}_hu4" for feature in intersecting_features]
 
