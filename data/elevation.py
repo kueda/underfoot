@@ -6,6 +6,7 @@ from multiprocessing import Pool
 from subprocess import CalledProcessError, run
 import argparse
 import asyncio
+import glob
 import json
 import os
 import random
@@ -193,70 +194,76 @@ def make_contours_for_tile(tile, clean=False):
     # If for some reason no files exist for this tile or its buffer, just give up
     if len(merge_file_paths) == 0:
         return
-    merge_path = tile_file_path(tile.x, tile.y, tile.z, "merge.tif")
+    # The merged DEM alone is about 9 MB, so remove it and its contours once
+    # they're imported, or tens of thousands of tiles can fill the disk
     try:
-        run(["gdal_merge.py", "-q", "-o", merge_path, *merge_file_paths], check=True)
-    except CalledProcessError:
-        util.log("gdal_merge.py not working, trying another path")
-        run(["/usr/bin/gdal_merge.py", "-q", "-o", merge_path, *merge_file_paths], check=True)
+        merge_path = tile_file_path(tile.x, tile.y, tile.z, "merge.tif")
+        try:
+            run(["gdal_merge.py", "-q", "-o", merge_path, *merge_file_paths], check=True)
+        except CalledProcessError:
+            util.log("gdal_merge.py not working, trying another path")
+            run(["/usr/bin/gdal_merge.py", "-q", "-o", merge_path, *merge_file_paths], check=True)
 
-    try:
-        run([
-            "gdal_contour", "-q", "-i", str(interval), "-a", "elevation", merge_path,
-            merge_contours_path
-        ], check=True)
-    except CalledProcessError:
-        util.log("gdal_contour not working, trying another path")
-        run([
-            "/usr/bin/gdal_contour", "-q", "-i", str(interval), "-a", "elevation", merge_path,
-            merge_contours_path
-        ], check=True)
-    # Get the bounding box of this tile in lat/lon, project into the source
-    # coordinate system (Pseudo Mercator) so we can clip to it before
-    # importing into PostGIS
-    bounds = mercantile.bounds(tile.x, tile.y, tile.z)
-    bounds_x, bounds_y = transform(
-        'EPSG:4326',
-        'EPSG:3857',
-        [bounds.west, bounds.east],
-        [bounds.south, bounds.north]
-    )
-    clip_minx, clip_miny, clip_maxx, clip_maxy = (
-        bounds_x[0], bounds_y[0], bounds_x[1], bounds_y[1]
-    )
-    # Clip to the tile boundaries and keep only the line parts of the result
-    # with ST_CollectionExtract, all within one SQLite/Spatialite-dialect
-    # query. Clipping with plain "-clipsrc" can leave stray Points alongside
-    # the LineStrings, turning the clipped geometry into a GeometryCollection
-    # that fails to COPY into the MULTILINESTRING contours column (issue #18).
-    layer_name = util.extless_basename(merge_contours_path)
-    clip_mbr = f"BuildMBR({clip_minx}, {clip_miny}, {clip_maxx}, {clip_maxy})"
-    clip_sql = (
-        f"SELECT id, elevation, "
-        f"ST_CollectionExtract(ST_Intersection(geometry, {clip_mbr}), 2) AS geometry "
-        f"FROM \"{layer_name}\" WHERE ST_Intersects(geometry, {clip_mbr})"
-    )
-    # Do a bunch of stuff, including clipping the lines back to the original
-    # tile boundaries, projecting them into 4326, and loading them into a
-    # PostGIS table
-    try:
-        run([
-            "ogr2ogr",
-            "-append",
-            "-skipfailures",
-            "-nln", TABLE_NAME,
-            "-nlt", "MULTILINESTRING",
-            "-dialect", "sqlite",
-            "-sql", clip_sql,
-            "-f", "PostgreSQL", f"PG:dbname={DBNAME}",
-            "-t_srs", f"EPSG:{SRID}",
-            "--config", "PG_USE_COPY", "YES",
-            merge_contours_path
-        ], check=True)
-    except CalledProcessError as ogrerror:
-        util.log(f"Could not extract contours for {merge_contours_path}: {ogrerror}")
-        return tile
-    return None
+        try:
+            run([
+                "gdal_contour", "-q", "-i", str(interval), "-a", "elevation", merge_path,
+                merge_contours_path
+            ], check=True)
+        except CalledProcessError:
+            util.log("gdal_contour not working, trying another path")
+            run([
+                "/usr/bin/gdal_contour", "-q", "-i", str(interval), "-a", "elevation", merge_path,
+                merge_contours_path
+            ], check=True)
+        # Get the bounding box of this tile in lat/lon, project into the source
+        # coordinate system (Pseudo Mercator) so we can clip to it before
+        # importing into PostGIS
+        bounds = mercantile.bounds(tile.x, tile.y, tile.z)
+        bounds_x, bounds_y = transform(
+            'EPSG:4326',
+            'EPSG:3857',
+            [bounds.west, bounds.east],
+            [bounds.south, bounds.north]
+        )
+        clip_minx, clip_miny, clip_maxx, clip_maxy = (
+            bounds_x[0], bounds_y[0], bounds_x[1], bounds_y[1]
+        )
+        # Clip to the tile boundaries and keep only the line parts of the result
+        # with ST_CollectionExtract, all within one SQLite/Spatialite-dialect
+        # query. Clipping with plain "-clipsrc" can leave stray Points alongside
+        # the LineStrings, turning the clipped geometry into a GeometryCollection
+        # that fails to COPY into the MULTILINESTRING contours column (issue #18).
+        layer_name = util.extless_basename(merge_contours_path)
+        clip_mbr = f"BuildMBR({clip_minx}, {clip_miny}, {clip_maxx}, {clip_maxy})"
+        clip_sql = (
+            f"SELECT id, elevation, "
+            f"ST_CollectionExtract(ST_Intersection(geometry, {clip_mbr}), 2) AS geometry "
+            f"FROM \"{layer_name}\" WHERE ST_Intersects(geometry, {clip_mbr})"
+        )
+        # Do a bunch of stuff, including clipping the lines back to the original
+        # tile boundaries, projecting them into 4326, and loading them into a
+        # PostGIS table
+        try:
+            run([
+                "ogr2ogr",
+                "-append",
+                "-skipfailures",
+                "-nln", TABLE_NAME,
+                "-nlt", "MULTILINESTRING",
+                "-dialect", "sqlite",
+                "-sql", clip_sql,
+                "-f", "PostgreSQL", f"PG:dbname={DBNAME}",
+                "-t_srs", f"EPSG:{SRID}",
+                "--config", "PG_USE_COPY", "YES",
+                merge_contours_path
+            ], check=True)
+        except CalledProcessError as ogrerror:
+            util.log(f"Could not extract contours for {merge_contours_path}: {ogrerror}")
+            return tile
+        return None
+    finally:
+        for path in glob.glob(tile_file_path(tile.x, tile.y, tile.z, "merge*")):
+            os.remove(path)
 
 
 def make_contours_table(tiles, procs=2):
