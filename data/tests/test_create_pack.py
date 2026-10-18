@@ -196,6 +196,18 @@ def test_create_pack_specifies_water_sources_by_identifier_without_source_files(
     }
 
 
+def test_find_nhd_hu4_sources_skips_alaska_which_nhdplus_hr_does_not_cover(
+        tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    write_feature_collection(tmp_path / "simplified_wbd_hu4.geojson", [
+        box_feature(0, 0, 1, 1, {"huc4": "1802"}),
+        box_feature(1, 0, 2, 1, {"huc4": "1901"})
+    ])
+    write_feature_collection(tmp_path / "pack.geojson", [box_feature(0, 0, 2, 1)])
+
+    assert create_pack.find_nhd_hu4_sources("pack.geojson") == ["nhdplus_h_1802_hu4"]
+
+
 def test_create_pack_can_take_hydrography_from_osm(tmp_path):
     set_up_create_pack(tmp_path)
 
