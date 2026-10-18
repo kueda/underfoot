@@ -4,7 +4,6 @@ import argparse
 import io
 import json
 import os
-import re
 import shutil
 import tempfile
 from collections import defaultdict
@@ -588,30 +587,61 @@ def make_pmtiles(sources, path="./water.pmtiles", bbox=None, geojson_path=None, 
         util.log(f"water: making pmtiles for sources: {sources}")
     if os.path.exists(path):
         os.remove(path)
-    table_names = [
-        WATERWAYS_TABLE_NAME,
-        WATERBODIES_TABLE_NAME,
-        WATERSHEDS_TABLE_NAME
-    ]
-    # Write ways, bodies, and sheds to separate layers of a single GeoPackage
-    # file in a temporary dir, since it's just an intermediate step towards
-    # the PMTiles file and doesn't need to stick around after this returns
+    waterways_fields = ", ".join(WATERWAYS_TILE_FIELDS)
+    waterbodies_fields = ", ".join(WATERBODIES_TILE_FIELDS)
+    # Each layer's features, the zooms it shows at, and whether to clip it to
+    # the pack. Don't clip the waterways, useful to see connectivity across
+    # the entire watershed. The overview layers have just the perennial ways
+    # and large bodies for the zooms below the detailed layers.
+    layers = {
+        WATERWAYS_TABLE_NAME: {
+            "sql": f"SELECT {waterways_fields}, geom FROM {WATERWAYS_TABLE_NAME}",
+            "minzoom": 9,
+            "clip": False
+        },
+        WATERBODIES_TABLE_NAME: {
+            "sql": f"SELECT {waterbodies_fields}, geom FROM {WATERBODIES_TABLE_NAME}",
+            "minzoom": 9
+        },
+        WATERSHEDS_TABLE_NAME: {
+            "sql": f"SELECT {', '.join(WATERSHEDS_TILE_FIELDS)}, geom FROM {WATERSHEDS_TABLE_NAME}"
+        },
+        f"{WATERWAYS_TABLE_NAME}_overview": {
+            "sql": f"""
+                SELECT {waterways_fields}, geom
+                FROM {WATERWAYS_TABLE_NAME}
+                WHERE
+                    name IS NOT NULL
+                    AND is_natural = 1
+                    -- Leave out waterways known to be dry some of the year
+                    AND COALESCE(permanence, 'perennial') = 'perennial'
+            """,
+            "maxzoom": 8
+        },
+        f"{WATERBODIES_TABLE_NAME}_overview": {
+            "sql": f"""
+                SELECT {waterbodies_fields}, geom
+                FROM {WATERBODIES_TABLE_NAME}
+                WHERE name IS NOT NULL AND ST_Area(geom) > 0.00001
+            """,
+            "maxzoom": 8
+        }
+    }
+    # Export each layer to a file in a temporary dir, since they're just an
+    # intermediate step towards the PMTiles file and don't need to stick
+    # around after this returns
     with tempfile.TemporaryDirectory() as tmpdir:
-        gpkg_path = os.path.join(tmpdir, f"{util.extless_basename(path)}.gpkg")
-        for idx, table_name in enumerate(table_names):
-            cmd = ["ogr2ogr"]
-            if idx > 0:
-                cmd += ["-update"]
-            cmd += [
-                gpkg_path,
+        feature_filter = {}
+        named_layers = []
+        for layer_name, layer in layers.items():
+            export_path = os.path.join(tmpdir, f"{layer_name}.geojsons")
+            cmd = [
+                "ogr2ogr",
+                "-f", "GeoJSONSeq", export_path,
                 f"PG:dbname={DBNAME}",
-                table_name,
-                "-a_srs", f"EPSG:{SRID}",
-                "-select", ",".join(TILE_FIELDS[table_name]),
+                "-sql", layer["sql"]
             ]
-            # Don't clip the waterways, useful to see connectivity across the
-            # entire watershed
-            if table_name != WATERWAYS_TABLE_NAME:
+            if layer.get("clip", True):
                 if geojson_path:
                     cmd += ["-clipdst", geojson_path]
                 elif bbox:
@@ -623,98 +653,29 @@ def make_pmtiles(sources, path="./water.pmtiles", bbox=None, geojson_path=None, 
                         str(bbox["top"])
                     ]
             util.call_cmd(cmd, check=True)
-        # 1. Write additional overview layers of perennial ways and large bodies
-        waterways_overview_table_name = f"{WATERWAYS_TABLE_NAME}_overview"
-        waterbodies_overview_table_name = f"{WATERBODIES_TABLE_NAME}_overview"
-        cmd = [
-            "ogr2ogr",
-            "-update",
-            gpkg_path,
-            f"PG:dbname={DBNAME}",
-            "-sql", f"""
-                SELECT {", ".join(WATERWAYS_TILE_FIELDS)}, geom
-                FROM {WATERWAYS_TABLE_NAME}
-                WHERE
-                    name IS NOT NULL
-                    AND is_natural = 1
-                    -- Leave out waterways known to be dry some of the year
-                    AND COALESCE(permanence, 'perennial') = 'perennial'
-            """,
-            "-nln", waterways_overview_table_name,
-            "-a_srs", f"EPSG:{SRID}"
-        ]
-        if geojson_path:
-            cmd += ["-clipdst", geojson_path]
-        elif bbox:
-            cmd += [
-                "-clipdst",
-                str(bbox["left"]),
-                str(bbox["bottom"]),
-                str(bbox["right"]),
-                str(bbox["top"])
-            ]
-        util.call_cmd(cmd, check=True)
-        cmd = [
-            "ogr2ogr",
-            "-update",
-            gpkg_path,
-            f"PG:dbname={DBNAME}",
-            "-sql", f"""
-                SELECT {", ".join(WATERBODIES_TILE_FIELDS)}, geom
-                FROM {WATERBODIES_TABLE_NAME}
-                WHERE name IS NOT NULL AND ST_Area(geom) > 0.00001
-            """,
-            "-nln", waterbodies_overview_table_name,
-            "-a_srs", f"EPSG:{SRID}"
-        ]
-        if geojson_path:
-            cmd += ["-clipdst", geojson_path]
-        elif bbox:
-            cmd += [
-                "-clipdst",
-                str(bbox["left"]),
-                str(bbox["bottom"]),
-                str(bbox["right"]),
-                str(bbox["top"])
-            ]
-        util.call_cmd(cmd, check=True)
-        # 1. Use `-dsco CONF` to write all these layers to the pmtiles in one fell
-        # swoop
-        conf = {
-            WATERWAYS_TABLE_NAME: {
-                "target_name": WATERWAYS_TABLE_NAME,
-                "minzoom": 9,
-                "maxzoom": 14
-            },
-            WATERBODIES_TABLE_NAME: {
-                "target_name": WATERBODIES_TABLE_NAME,
-                "minzoom": 9,
-                "maxzoom": 14
-            },
-            WATERSHEDS_TABLE_NAME: {
-                "target_name": WATERSHEDS_TABLE_NAME,
-                "minzoom": 7,
-                "maxzoom": 14
-            },
-            waterways_overview_table_name: {
-                "target_name": waterways_overview_table_name,
-                "minzoom": 7,
-                "maxzoom": 8
-            },
-            waterbodies_overview_table_name: {
-                "target_name": waterbodies_overview_table_name,
-                "minzoom": 7,
-                "maxzoom": 8
-            }
-        }
-        cmd = f"""
-          ogr2ogr {path} {gpkg_path}
-            -dsco MAX_SIZE=5000000
-            -dsco MINZOOM=7
-            -dsco MAXZOOM=14
-            -dsco CONF='{json.dumps(conf)}'
-        """
-        util.call_cmd(re.sub(r'\s+', " ", cmd).strip(), shell=True)
+            named_layers.append(f"--named-layer={layer_name}:{export_path}")
+            if "minzoom" in layer:
+                feature_filter[layer_name] = [">=", "$zoom", layer["minzoom"]]
+            if "maxzoom" in layer:
+                feature_filter[layer_name] = ["<=", "$zoom", layer["maxzoom"]]
+        # Tile with tippecanoe, which clips each zoom's tiles out of the zoom
+        # below instead of clipping every feature to every tile it touches,
+        # like GDAL's MVT driver
+        util.call_cmd([
+            "tippecanoe",
+            f"--output={path}",
+            "--force",
+            "--minimum-zoom=7",
+            "--maximum-zoom=14",
+            # tippecanoe has no zoom range per layer, so filter by zoom
+            f"--feature-filter={json.dumps(feature_filter)}",
+            # Watersheds cover the pack like rock units, so simplify their
+            # shared borders the same way on both sides
+            "--detect-shared-borders",
+            "--read-parallel",
+            "--no-progress-indicator",
+            *named_layers
+        ], check=True)
     sources_sql = ",".join([f"'{s}'" for s in sources])
     util.add_table_from_query_to_pmtiles(
         table_name=CITATIONS_TABLE_NAME,
