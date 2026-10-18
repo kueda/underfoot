@@ -1,5 +1,6 @@
 """Tests for elevation.py contour generation helpers (issue #18)."""
 
+import pathlib
 from subprocess import CalledProcessError
 
 import mercantile
@@ -73,6 +74,36 @@ def test_make_contours_for_tile_returns_tile_on_import_failure(monkeypatch):
 def test_make_contours_for_tile_returns_none_on_success(monkeypatch):
     _run_calls(monkeypatch)
     assert elevation.make_contours_for_tile(TILE) is None
+
+
+@pytest.mark.parametrize("import_error", [None, CalledProcessError(1, "ogr2ogr")])
+def test_make_contours_for_tile_removes_its_intermediate_files(
+        monkeypatch, tmp_path, import_error):
+    """Each tile's merged DEM is about 9 MB, which across tens of thousands of
+    tiles filled the disk of a CI runner"""
+    monkeypatch.setattr(elevation, "CACHE_DIR", str(tmp_path))
+    monkeypatch.setattr(elevation.os.path, "exists", lambda path: pathlib.Path(path).exists())
+    for x in range(TILE.x - 1, TILE.x + 2):
+        for y in range(TILE.y - 1, TILE.y + 2):
+            tile_path = pathlib.Path(elevation.tile_file_path(x, y, TILE.z))
+            tile_path.parent.mkdir(parents=True, exist_ok=True)
+            tile_path.touch()
+
+    def fake_run(cmd, **_kwargs):
+        if cmd[0] == "gdal_merge.py":
+            pathlib.Path(cmd[cmd.index("-o") + 1]).touch()
+        elif cmd[0] == "gdal_contour":
+            shp_path = pathlib.Path(cmd[-1])
+            for ext in ["shp", "shx", "dbf", "prj"]:
+                shp_path.with_suffix(f".{ext}").touch()
+        elif import_error:
+            raise import_error
+
+    monkeypatch.setattr(elevation, "run", fake_run)
+    elevation.make_contours_for_tile(TILE)
+
+    assert not list(tmp_path.rglob("*.merge*"))
+    assert pathlib.Path(elevation.tile_file_path(TILE.x, TILE.y, TILE.z)).exists()
 
 
 class _FakePool:
