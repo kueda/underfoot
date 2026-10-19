@@ -13,6 +13,7 @@ export async function loadMapFromPackData(
   mapType: string,
   setFeatures: React.Dispatch<React.SetStateAction<UnderfootFeatures>>,
   setCitations: React.Dispatch<React.SetStateAction<Citations>>,
+  contoursMaxZoom: number,
 ) {
   let pmtilesBlob: Blob | undefined;
   let featuresBlob: Blob | undefined;
@@ -37,10 +38,19 @@ export async function loadMapFromPackData(
   );
   protocol.add(pmtilesData);
   // Packs from small-scale sources may stop short of the style's maxzoom, so
-  // overzoom past whatever their tiles reach
+  // overzoom past whatever their tiles reach. Contours stop at the zoom of
+  // the elevation tiles they came from.
   const { maxZoom } = await pmtilesData.getHeader();
   const source = style.sources[mapType] as VectorSourceSpecification;
-  map.setStyle({ ...style, sources: { ...style.sources, [mapType]: { ...source, maxzoom: maxZoom } } });
+  const contoursSource = style.sources.contours as VectorSourceSpecification;
+  map.setStyle({
+    ...style,
+    sources: {
+      ...style.sources,
+      [mapType]: { ...source, maxzoom: maxZoom },
+      contours: { ...contoursSource, maxzoom: contoursMaxZoom },
+    },
+  });
   if (featuresBlob) {
     Papa.parse(new File([featuresBlob], `${mapType}_metadata`), {
       header: true,

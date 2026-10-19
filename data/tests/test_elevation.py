@@ -1,12 +1,17 @@
 """Tests for elevation.py contour generation helpers (issue #18)."""
 
+import json
 import pathlib
+import uuid
 from subprocess import CalledProcessError
 
 import mercantile
+import psycopg2
 import pytest
 
 import elevation
+from database import DBNAME
+from sources import util
 
 
 @pytest.fixture(autouse=True)
@@ -168,8 +173,8 @@ def test_make_contours_table_reports_failed_tiles(monkeypatch, capsys):
 
 
 def _stub_make_contours_pmtiles_pipeline(monkeypatch):
-    """Stub out everything make_contours_pmtiles does before it builds the
-    final ogr2ogr export command, so a test can inspect just that command.
+    """Stub out everything make_contours_pmtiles does before it tiles the
+    contours, so a test can inspect the export and tippecanoe command.
     """
     monkeypatch.setattr(elevation, "make_database", lambda: None)
     monkeypatch.setattr(elevation.os.path, "exists", lambda path: False)
@@ -179,37 +184,42 @@ def _stub_make_contours_pmtiles_pipeline(monkeypatch):
 
     monkeypatch.setattr(elevation, "cache_tiles", fake_cache_tiles)
     monkeypatch.setattr(elevation, "make_contours_table", lambda tiles, procs=2: None)
+    exports = []
+    monkeypatch.setattr(
+        elevation, "export_contours",
+        lambda path, minor_minzoom: exports.append(minor_minzoom))
     calls = []
     monkeypatch.setattr(elevation.util, "call_cmd", lambda cmd: calls.append(cmd))
-    return calls
+    return calls, exports
 
 
 def test_make_contours_pmtiles_honors_separate_minzoom(monkeypatch, tmp_path):
     """A caller can pass a lower pmtiles_minzoom than pmtiles_zoom so the
     exported PMTiles carries a real zoom pyramid (e.g. minzoom 10, maxzoom
-    14) instead of a single fixed zoom. This is what lets a lower-zoom style
+    12) instead of a single fixed zoom. This is what lets a lower-zoom style
     layer show a subset of contours (e.g. just the 100m ones) starting well
     before the pack's usual max zoom.
     """
-    calls = _stub_make_contours_pmtiles_pipeline(monkeypatch)
+    calls, _exports = _stub_make_contours_pmtiles_pipeline(monkeypatch)
     path = str(tmp_path / "contours.pmtiles")
 
     elevation.make_contours(
         12, swlon=-122.4, swlat=37.6, nelon=-122.0, nelat=38.0,
-        pmtiles_zoom=14, pmtiles_minzoom=10, path=path
+        pmtiles_zoom=12, pmtiles_minzoom=10, path=path
     )
 
-    export_cmd = calls[-1]
-    assert export_cmd[0] == "ogr2ogr"
-    assert "MINZOOM=10" in export_cmd
-    assert "MAXZOOM=14" in export_cmd
+    tile_cmd = calls[-1]
+    assert tile_cmd[0] == "tippecanoe"
+    assert f"--output={path}" in tile_cmd
+    assert "--minimum-zoom=10" in tile_cmd
+    assert "--maximum-zoom=12" in tile_cmd
 
 
 def test_make_contours_pmtiles_defaults_minzoom_to_maxzoom(monkeypatch, tmp_path):
     """Without an explicit pmtiles_minzoom, behavior is unchanged from before
     it existed: a single fixed zoom, since existing callers rely on this.
     """
-    calls = _stub_make_contours_pmtiles_pipeline(monkeypatch)
+    calls, _exports = _stub_make_contours_pmtiles_pipeline(monkeypatch)
     path = str(tmp_path / "contours.pmtiles")
 
     elevation.make_contours(
@@ -217,6 +227,62 @@ def test_make_contours_pmtiles_defaults_minzoom_to_maxzoom(monkeypatch, tmp_path
         pmtiles_zoom=14, path=path
     )
 
-    export_cmd = calls[-1]
-    assert "MINZOOM=14" in export_cmd
-    assert "MAXZOOM=14" in export_cmd
+    tile_cmd = calls[-1]
+    assert "--minimum-zoom=14" in tile_cmd
+    assert "--maximum-zoom=14" in tile_cmd
+
+
+@pytest.mark.parametrize("pmtiles_zoom, expected", [(12, 12), (14, 12), (10, 10)])
+def test_make_contours_pmtiles_starts_minor_contours_where_the_style_shows_them(
+        monkeypatch, tmp_path, pmtiles_zoom, expected):
+    """Minor contours start at the zoom the web app's style shows them from,
+    or the max zoom if that's lower, since the map overzooms its tiles"""
+    _calls, exports = _stub_make_contours_pmtiles_pipeline(monkeypatch)
+
+    elevation.make_contours(
+        12, swlon=-122.4, swlat=37.6, nelon=-122.0, nelat=38.0,
+        pmtiles_zoom=pmtiles_zoom, pmtiles_minzoom=8,
+        path=str(tmp_path / "contours.pmtiles")
+    )
+
+    assert exports == [expected]
+
+
+@pytest.fixture(name="contours_table")
+def fixture_contours_table(monkeypatch):
+    try:
+        psycopg2.connect(f"dbname={DBNAME}").close()
+    except psycopg2.OperationalError:
+        pytest.skip("needs a PostGIS database")
+    name = f"test_contours_{uuid.uuid4().hex[:8]}"
+    monkeypatch.setattr(elevation, "TABLE_NAME", name)
+    util.run_sql(f"""
+        CREATE TABLE {name} (
+            elevation NUMERIC(23,15),
+            wkb_geometry geometry(MULTILINESTRING, 4326)
+        )
+    """)
+    yield name
+    util.run_sql(f"DROP TABLE IF EXISTS {name}")
+
+
+def test_export_contours_starts_minor_contours_at_minor_minzoom(contours_table, tmp_path):
+    for elevation_m in (100, 125):
+        util.run_sql(
+            f"""
+                INSERT INTO {contours_table} VALUES (
+                    %s, ST_GeomFromText('MULTILINESTRING((0 0, 1 1))', 4326)
+                )
+            """,
+            interpolations=(elevation_m,)
+        )
+    path = tmp_path / "contours.geojsons"
+
+    elevation.export_contours(str(path), 12)
+
+    features = [json.loads(line) for line in path.read_text().splitlines()]
+    by_elevation = {f["properties"]["elevation"]: f for f in features}
+    assert set(by_elevation) == {100, 125}
+    assert "tippecanoe" not in by_elevation[100]
+    assert by_elevation[125]["tippecanoe"] == {"minzoom": 12}
+    assert by_elevation[125]["geometry"]["coordinates"] == [[[0, 0], [1, 1]]]
