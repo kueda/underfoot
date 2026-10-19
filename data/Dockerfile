@@ -89,6 +89,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       gdal-bin \
       git \
       gzip \
+      jq \
       libgeos-c1t64 \
       libleveldb1d \
       libpq5 \
@@ -110,6 +111,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 #   SQLite/Spatialite dialect, GEOS, OpenFileGDB).
 # python3-gdal: /usr/bin/gdal_merge.py (the hardcoded fallback in elevation.py).
 # 7zip: 7z, for ArcGIS map packages (.mpk), which are 7z archives.
+# jq: build-pack.yml reads pack JSON with it to key the OSM caches.
 # Nothing in the Python source imports osgeo, so there is no pip GDAL build.
 
 # GDAL's ODBC driver auto-registers MDB Tools by searching only the amd64
