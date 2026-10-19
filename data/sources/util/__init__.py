@@ -117,8 +117,9 @@ def make_work_dir(path):
     dirpath = os.path.dirname(os.path.realpath(__file__))
     basename = basename_for_path(path)
     work_path = os.path.join(dirpath, "..", f"work-{basename}")
-    if not os.path.isdir(work_path):
-        os.makedirs(work_path)
+    # exist_ok because parallel workers can share a work dir, like
+    # work-tiger_water, and race to make it
+    os.makedirs(work_path, exist_ok=True)
     return work_path
 
 
