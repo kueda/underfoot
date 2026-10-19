@@ -101,3 +101,24 @@ def test_download_file_retries_when_rate_limited(tmp_path):
         assert len(requests) == 2
     finally:
         server.shutdown()
+
+
+def test_make_work_dir_tolerates_another_process_making_it_first(tmp_path, monkeypatch):
+    # Parallel water workers share work-tiger_water, so another one can make it
+    # between this one's check and its makedirs
+    util_dir = tmp_path / "util"
+    util_dir.mkdir()
+    monkeypatch.setattr(util, "__file__", str(util_dir / "__init__.py"))
+    isdir = util.os.path.isdir
+    checks = []
+
+    def isdir_made_by_another_worker_after_first_check(path):
+        checks.append(path)
+        if len(checks) == 1:
+            (tmp_path / "work-tiger_water").mkdir()
+            return False
+        return isdir(path)
+
+    monkeypatch.setattr(util.os.path, "isdir", isdir_made_by_another_worker_after_first_check)
+    work_path = util.make_work_dir("tiger_water.py")
+    assert pathlib.Path(work_path).resolve() == tmp_path / "work-tiger_water"
