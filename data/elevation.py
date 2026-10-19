@@ -11,7 +11,6 @@ import json
 import os
 import random
 import tempfile
-import time
 
 import aiofiles
 from fiona.transform import transform
@@ -139,7 +138,9 @@ async def cache_tile(tile, client, clean=False, max_retries=3, debug=False):
 async def cache_tiles(tiles, clean=False):
     """Cache multiple tiles"""
     async with httpx.AsyncClient() as client:
-        # Break it into chunks
+        # Break it into chunks, since requesting every tile at once leads to
+        # connection timeouts. cache_tile retries the occasional one that
+        # still times out.
         chunk_size = 200
         for i in range(0, len(tiles), chunk_size):
             idx = i
@@ -156,7 +157,6 @@ async def cache_tiles(tiles, clean=False):
             )
             for task in pbar:
                 await task
-            time.sleep(10)
 
 
 def make_contours_for_tile(tile, clean=False):
@@ -332,6 +332,8 @@ def export_contours(path, minor_minzoom):
                     )
                 END
             FROM {TABLE_NAME}
+            -- Clipping a tile's contours to it can leave some with nothing
+            WHERE wkb_geometry IS NOT NULL
         ) TO STDOUT
     """
     con = psycopg2.connect(f"dbname={DBNAME}")
