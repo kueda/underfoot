@@ -310,6 +310,7 @@ def test_cache_tiles_caches_every_chunk_without_pausing(monkeypatch):
 
     async def fake_cache_tile(tile, client, clean=False, debug=False):
         cached.append(tile)
+        return f"{tile.x}.tif"
 
     monkeypatch.setattr(elevation, "cache_tile", fake_cache_tile)
     sleeps = []
@@ -320,3 +321,88 @@ def test_cache_tiles_caches_every_chunk_without_pausing(monkeypatch):
 
     assert sorted(cached) == sorted(tiles)
     assert not sleeps
+
+
+def _cache_tile_with_responses(monkeypatch, tmp_path, statuses):
+    """Run cache_tile against fake S3 responses with these status codes, in
+    order, without actually waiting between retries"""
+    monkeypatch.setattr(
+        elevation, "tile_file_path",
+        lambda x, y, z, ext="tif": str(tmp_path / f"{z}-{x}-{y}.{ext}"))
+    # Undo the autouse stub that makes every tile look cached
+    monkeypatch.setattr(elevation.os.path, "exists", lambda path: pathlib.Path(path).exists())
+
+    async def no_wait(_seconds):
+        return None
+
+    monkeypatch.setattr(elevation.asyncio, "sleep", no_wait)
+    requests = []
+
+    def respond(request):
+        requests.append(request)
+        return elevation.httpx.Response(statuses[len(requests) - 1], content=b"tif")
+
+    async def cache():
+        transport = elevation.httpx.MockTransport(respond)
+        async with elevation.httpx.AsyncClient(transport=transport) as client:
+            return await elevation.cache_tile(TILE, client)
+
+    return elevation.asyncio.run(cache()), requests
+
+
+@pytest.mark.parametrize("status", [429, 500, 503])
+def test_cache_tile_retries_when_s3_is_briefly_unavailable(monkeypatch, tmp_path, status):
+    path, requests = _cache_tile_with_responses(monkeypatch, tmp_path, [status, 200])
+    assert len(requests) == 2
+    assert pathlib.Path(path).read_bytes() == b"tif"
+
+
+def test_cache_tile_does_not_retry_a_missing_tile(monkeypatch, tmp_path):
+    path, requests = _cache_tile_with_responses(monkeypatch, tmp_path, [404, 200])
+    assert len(requests) == 1
+    assert path is None
+
+
+def test_cache_tile_skips_a_tile_that_keeps_timing_out(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        elevation, "tile_file_path",
+        lambda x, y, z, ext="tif": str(tmp_path / f"{z}-{x}-{y}.{ext}"))
+    monkeypatch.setattr(elevation.os.path, "exists", lambda path: pathlib.Path(path).exists())
+
+    async def no_wait(_seconds):
+        return None
+
+    monkeypatch.setattr(elevation.asyncio, "sleep", no_wait)
+    requests = []
+
+    def time_out(request):
+        requests.append(request)
+        raise elevation.httpx.ConnectTimeout("timed out", request=request)
+
+    async def cache():
+        transport = elevation.httpx.MockTransport(time_out)
+        async with elevation.httpx.AsyncClient(transport=transport) as client:
+            return await elevation.cache_tile(TILE, client)
+
+    assert elevation.asyncio.run(cache()) is None
+    assert len(requests) == 3
+
+
+def test_cache_tiles_fails_after_downloading_if_any_tile_failed(monkeypatch):
+    tiles = [mercantile.Tile(x=x, y=0, z=12) for x in range(450)]
+    failing = {tiles[3], tiles[401]}
+    cached = []
+
+    async def fake_cache_tile(tile, client, clean=False, debug=False):
+        cached.append(tile)
+        return None if tile in failing else f"{tile.x}.tif"
+
+    monkeypatch.setattr(elevation, "cache_tile", fake_cache_tile)
+
+    with pytest.raises(RuntimeError) as error:
+        elevation.asyncio.run(elevation.cache_tiles(tiles))
+
+    assert len(cached) == len(tiles)
+    assert "2 of 450" in str(error.value)
+    for tile in failing:
+        assert str(tile) in str(error.value)
