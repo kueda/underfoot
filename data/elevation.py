@@ -29,6 +29,7 @@ TABLE_NAME = "contours"
 # The web app's style only shows minor contours, the ones that aren't
 # multiples of 100 m, from this zoom on, so lower zooms' tiles leave them out
 MINOR_CONTOURS_MINZOOM = 12
+RETRYABLE_STATUSES = (429, 500, 502, 503, 504)
 CACHE_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "elevation-tiles")
 
 
@@ -81,6 +82,14 @@ async def async_range(start, stop):
         yield i
         await asyncio.sleep(0.0)
 
+async def wait_to_retry(try_num, debug=False):
+    """Wait longer after each failed try, with a little randomness"""
+    sleepytime = (try_num ** 3) + random.randrange(5, 20)
+    if debug:
+        util.log(f"Sleeping for {sleepytime}s...")
+    await asyncio.sleep(sleepytime)
+
+
 async def cache_tile(tile, client, clean=False, max_retries=3, debug=False):
     """Caches a tile"""
     tile_path = f"{tile.z}/{tile.x}/{tile.y}.tif"
@@ -101,6 +110,12 @@ async def cache_tile(tile, client, clean=False, max_retries=3, debug=False):
             if debug:
                 util.log(f"getting {url}")
             download = await client.get(url)
+            # S3 answers with a 503 when it wants us to slow down, and 5xx
+            # errors are usually brief, so those are worth another try
+            if download.status_code in RETRYABLE_STATUSES and try_num < max_retries:
+                util.log(f"Request for {url} failed with {download.status_code}")
+                await wait_to_retry(try_num, debug=debug)
+                continue
             if download.status_code != 200:
                 util.log(
                     f"Request for {url} failed with {download.status_code}, "
@@ -118,25 +133,28 @@ async def cache_tile(tile, client, clean=False, max_retries=3, debug=False):
             httpcore.ConnectTimeout
         ) as timeout_error:
             util.log(f"Caught timeout error: {type(timeout_error).__name__}")
-            if try_num > max_retries:
+            if try_num >= max_retries:
                 util.log(
                     f"Request for {url} timed out {max_retries} times, "
                     "skipping..."
                 )
             else:
-                # Wait to retry, with a little randomness
-                sleepytime = (try_num ** 3) + random.randrange(5, 20)
-                if debug:
-                    util.log(f"Sleeping for {sleepytime}s...")
-                await asyncio.sleep(sleepytime)
+                await wait_to_retry(try_num, debug=debug)
     if os.path.exists(file_path):
         return file_path
-    raise FileNotFoundError(f"Failed to download {url}")
+    return None
 
 
 # Cache DEM tiles using asyncio for this presumably IO-bound process
 async def cache_tiles(tiles, clean=False):
-    """Cache multiple tiles"""
+    """Cache multiple tiles, failing once they're done if any couldn't be
+    downloaded, since making contours needs all of them"""
+    failed_tiles = []
+
+    async def cache_or_note_failure(tile, client):
+        if await cache_tile(tile, client, clean=clean, debug=True) is None:
+            failed_tiles.append(tile)
+
     async with httpx.AsyncClient() as client:
         # Break it into chunks, since requesting every tile at once leads to
         # connection timeouts. cache_tile retries the occasional one that
@@ -146,7 +164,7 @@ async def cache_tiles(tiles, clean=False):
             idx = i
             # using as_completed with tqdm (https://stackoverflow.com/a/37901797)
             tasks = [
-                cache_tile(tile, client, clean=clean, debug=True)
+                cache_or_note_failure(tile, client)
                 for tile in tiles[idx:idx+chunk_size]
             ]
             pbar = tqdm(
@@ -157,6 +175,11 @@ async def cache_tiles(tiles, clean=False):
             )
             for task in pbar:
                 await task
+    if failed_tiles:
+        raise RuntimeError(
+            f"Failed to download {len(failed_tiles)} of {len(tiles)} DEM tile(s): "
+            f"{failed_tiles}"
+        )
 
 
 def make_contours_for_tile(tile, clean=False):
