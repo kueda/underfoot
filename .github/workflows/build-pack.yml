@@ -193,11 +193,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Cache elevation tiles
-        uses: actions/cache@v5
-        with:
-          path: data/elevation-tiles
-          key: cache-elevation-${{ inputs.pack }}-${{ hashFiles(format('data/packs/{0}.json', inputs.pack)) }}
+      # Elevation tiles aren't cached: they download from S3 in minutes, even
+      # for the biggest packs, and caching them took gigabytes of the repo's
+      # 10 GB cache limit away from slower sources
 
       # Public repos' runners have 4 CPUs, and making contours is CPU-bound
       - name: Build contours
