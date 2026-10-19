@@ -19,7 +19,7 @@ function mockTilesMaxZoom(maxZoom: number) {
   });
 }
 
-async function loadRocks() {
+async function loadRocksStyle(contoursMaxZoom = 14) {
   const setStyle = vi.fn();
   await loadMapFromPackData(
     {
@@ -31,9 +31,13 @@ async function loadRocks() {
     'rocks',
     vi.fn(),
     vi.fn(),
+    contoursMaxZoom,
   );
-  const style = setStyle.mock.calls[0][0] as StyleSpecification;
-  return style.sources.rocks as VectorSourceSpecification;
+  return setStyle.mock.calls[0][0] as StyleSpecification;
+}
+
+async function loadRocks() {
+  return (await loadRocksStyle()).sources.rocks as VectorSourceSpecification;
 }
 
 describe('loadMapFromPackData', () => {
@@ -46,5 +50,11 @@ describe('loadMapFromPackData', () => {
     mockTilesMaxZoom(10);
     await loadRocks();
     expect((ROCK_STYLE.sources.rocks as VectorSourceSpecification).maxzoom).toBe(14);
+  });
+
+  it('overzooms contours past the maxzoom of the pack\'s contour tiles', async () => {
+    mockTilesMaxZoom(10);
+    const style = await loadRocksStyle(12);
+    expect((style.sources.contours as VectorSourceSpecification).maxzoom).toBe(12);
   });
 });

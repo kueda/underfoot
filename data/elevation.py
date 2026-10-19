@@ -10,7 +10,7 @@ import glob
 import json
 import os
 import random
-# import tempfile
+import tempfile
 import time
 
 import aiofiles
@@ -18,6 +18,7 @@ from fiona.transform import transform
 import httpcore
 import httpx
 import mercantile
+import psycopg2
 from supermercado import burntiles, super_utils
 from tqdm import tqdm
 
@@ -26,6 +27,9 @@ from sources import util
 
 
 TABLE_NAME = "contours"
+# The web app's style only shows minor contours, the ones that aren't
+# multiples of 100 m, from this zoom on, so lower zooms' tiles leave them out
+MINOR_CONTOURS_MINZOOM = 12
 CACHE_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "elevation-tiles")
 
 
@@ -308,6 +312,36 @@ def make_contours_table(tiles, procs=2):
         )
 
 
+def export_contours(path, minor_minzoom):
+    """Write the contours table to a GeoJSONSeq file for tippecanoe. Minor
+    contours, the ones that aren't multiples of 100 m, start at minor_minzoom
+    """
+    # ogr2ogr can't write the tippecanoe member that sets a feature's minzoom,
+    # so build each feature in PostGIS
+    sql = f"""
+        COPY (
+            SELECT
+                jsonb_build_object(
+                    'type', 'Feature',
+                    'properties', jsonb_build_object('elevation', elevation::int),
+                    'geometry', ST_AsGeoJSON(wkb_geometry)::jsonb
+                ) || CASE
+                    WHEN elevation % 100 = 0 THEN '{{}}'::jsonb
+                    ELSE jsonb_build_object(
+                        'tippecanoe', jsonb_build_object('minzoom', {int(minor_minzoom)})
+                    )
+                END
+            FROM {TABLE_NAME}
+        ) TO STDOUT
+    """
+    con = psycopg2.connect(f"dbname={DBNAME}")
+    try:
+        with con.cursor() as cur, open(path, "w", encoding="utf-8") as f:
+            cur.copy_expert(sql, f)
+    finally:
+        con.close()
+
+
 async def make_contours_pmtiles(
     zoom,
     swlon=None,
@@ -349,16 +383,23 @@ async def make_contours_pmtiles(
     # TODO make pmtiles_zoom into pmtiles_zooms which is a mapping between the
     # desired zooms in the pmtiles and what zoom-level table in the database to
     # fill it with (i.e. what contour resolution)
-    cmd = [
-        "ogr2ogr",
-        path,
-        f"PG:dbname={DBNAME}",
-        TABLE_NAME,
-        "-dsco", f"MINZOOM={pmtiles_minzoom}",
-        "-dsco", f"MAXZOOM={pmtiles_zoom}",
-        "-dsco", "DESCRIPTION=\"Elevation contours, 25m interval\""
-    ]
-    util.call_cmd(cmd)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        export_path = os.path.join(tmpdir, f"{TABLE_NAME}.geojsons")
+        # The map overzooms tiles past pmtiles_zoom, so minor contours have to
+        # be in its tiles even if that's below the zoom the style shows them at
+        export_contours(export_path, min(MINOR_CONTOURS_MINZOOM, pmtiles_zoom))
+        util.call_cmd([
+            "tippecanoe",
+            f"--output={path}",
+            "--force",
+            f"--layer={TABLE_NAME}",
+            "--description=Elevation contours, 25m interval",
+            f"--minimum-zoom={pmtiles_minzoom}",
+            f"--maximum-zoom={pmtiles_zoom}",
+            "--read-parallel",
+            "--no-progress-indicator",
+            export_path
+        ])
     return path
 
 

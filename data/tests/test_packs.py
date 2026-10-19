@@ -138,3 +138,18 @@ def test_make_rocks_for_pack_uses_the_packs_rock_maxzoom(
     packs.make_rocks_for_pack(PACK_ID)
 
     assert captured["maxzoom"] == expected
+
+
+@pytest.mark.parametrize("zoom, expected", [(None, (10, 12)), (10, (8, 10))])
+def test_make_contours_for_pack_tiles_contours_to_the_zoom_of_their_dem(
+        build_dir, monkeypatch, zoom, expected):
+    pack = dict(PACK_DEFINITION)
+    if zoom:
+        pack["zoom"] = zoom
+    captured = {}
+    monkeypatch.setitem(packs.PACKS, PACK_ID, pack)
+    monkeypatch.setattr(packs, "make_contours", lambda *args, **kwargs: captured.update(kwargs))
+
+    packs.make_contours_for_pack(PACK_ID)
+
+    assert (captured["pmtiles_minzoom"], captured["pmtiles_zoom"]) == expected

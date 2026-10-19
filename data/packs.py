@@ -205,7 +205,9 @@ def make_contours_for_pack(pack_id, clean=False, procs=2):
         return
     pack = get_pack(pack_id)
     zoom = pack.get("zoom", 12)
-    pmtiles_zoom = zoom + 2
+    # Contours come from DEM tiles at this zoom, so tiles past it would add no
+    # detail, just size. The map overzooms these instead.
+    pmtiles_zoom = zoom
     # A lower minzoom than maxzoom gives the pmtiles a real zoom pyramid
     # instead of a single fixed zoom, so a style can show a subset of
     # contours (e.g. just the 100m ones) well before pmtiles_zoom.
