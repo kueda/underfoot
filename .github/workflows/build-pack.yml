@@ -150,8 +150,9 @@ jobs:
           path: data/water-polygons-split-4326.zip
           key: cache-osm-water-polygons-${{ steps.calc-year-month.outputs.year-month }}
 
+      # Public repos' runners have 4 CPUs, and water sources are processed in parallel
       - name: Build water
-        run: python packs.py ${{ inputs.pack }} --only water
+        run: python packs.py ${{ inputs.pack }} --only water --procs 4
 
       - name: Save source work for water
         if: always()
@@ -198,8 +199,9 @@ jobs:
           path: data/elevation-tiles
           key: cache-elevation-${{ inputs.pack }}-${{ hashFiles(format('data/packs/{0}.json', inputs.pack)) }}
 
+      # Public repos' runners have 4 CPUs, and making contours is CPU-bound
       - name: Build contours
-        run: python packs.py ${{ inputs.pack }} --only contours
+        run: python packs.py ${{ inputs.pack }} --only contours --procs 4
 
       - name: Upload contours
         uses: actions/upload-artifact@v7
