@@ -2,6 +2,7 @@
 
 import json
 import pathlib
+import time
 import uuid
 from subprocess import CalledProcessError
 
@@ -286,3 +287,36 @@ def test_export_contours_starts_minor_contours_at_minor_minzoom(contours_table, 
     assert "tippecanoe" not in by_elevation[100]
     assert by_elevation[125]["tippecanoe"] == {"minzoom": 12}
     assert by_elevation[125]["geometry"]["coordinates"] == [[[0, 0], [1, 1]]]
+
+
+def test_export_contours_skips_contours_without_geometry(contours_table, tmp_path):
+    util.run_sql(
+        f"""
+            INSERT INTO {contours_table} VALUES
+                (100, ST_GeomFromText('MULTILINESTRING((0 0, 1 1))', 4326)),
+                (200, NULL)
+        """
+    )
+    path = tmp_path / "contours.geojsons"
+
+    elevation.export_contours(str(path), 12)
+
+    features = [json.loads(line) for line in path.read_text().splitlines()]
+    assert [f["properties"]["elevation"] for f in features] == [100]
+
+
+def test_cache_tiles_caches_every_chunk_without_pausing(monkeypatch):
+    cached = []
+
+    async def fake_cache_tile(tile, client, clean=False, debug=False):
+        cached.append(tile)
+
+    monkeypatch.setattr(elevation, "cache_tile", fake_cache_tile)
+    sleeps = []
+    monkeypatch.setattr(time, "sleep", sleeps.append)
+    tiles = [mercantile.Tile(x=x, y=0, z=12) for x in range(450)]
+
+    elevation.asyncio.run(elevation.cache_tiles(tiles))
+
+    assert sorted(cached) == sorted(tiles)
+    assert not sleeps
