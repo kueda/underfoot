@@ -417,6 +417,7 @@ export default function UnderfootMap() {
       // Load contours
       if (!packData.contours_pmtiles) throw new Error(`Pack ${currentPackId} did not have contours data`);
       let contoursPmtiles;
+      let contoursHeader;
       try {
         contoursPmtiles = new pmtiles.PMTiles(
           new pmtiles.FileSource(
@@ -427,7 +428,7 @@ export default function UnderfootMap() {
         );
         protocol.add(contoursPmtiles);
         // Validate that PMTiles is actually accessible
-        await contoursPmtiles.getHeader();
+        contoursHeader = await contoursPmtiles.getHeader();
         log(`Successfully loaded contours PMTiles for pack ${currentPackId}`);
       }
       catch (contoursError) {
@@ -466,6 +467,7 @@ export default function UnderfootMap() {
         mapType,
         setUnderfootFeatures,
         setCitations,
+        contoursHeader.maxZoom,
       );
 
       // Track style loading completion
