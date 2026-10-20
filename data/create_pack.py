@@ -427,6 +427,13 @@ if __name__ == "__main__":
         help="Highest zoom to tile the rocks to, for small-scale sources whose detail doesn't "
              "need zoom 14; the map overzooms past it")
     parser.add_argument(
+        "--zoom",
+        type=int,
+        metavar="ZOOM",
+        help="Zoom of the elevation tiles to make contours from, 12 by default. Tiles cover "
+             "less ground toward the poles, so far-north packs like Alaska's can use 11 for "
+             "about the same detail as 12 elsewhere, at about a quarter of the build time")
+    parser.add_argument(
         "--default-center",
         type=float,
         nargs=2,
@@ -471,6 +478,8 @@ if __name__ == "__main__":
         data["hydrography"] = "osm"
     if args.rock_maxzoom:
         data["rock_maxzoom"] = args.rock_maxzoom
+    if args.zoom:
+        data["zoom"] = args.zoom
     if args.default_center:
         data["default_center"] = dict(zip(["lon", "lat"], args.default_center))
     if args.default_zoom is not None:

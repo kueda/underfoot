@@ -25,5 +25,6 @@
         "tiger_water_02158"
     ],
     "hydrography": "osm",
-    "rock_maxzoom": 10
+    "rock_maxzoom": 10,
+    "zoom": 11
 }

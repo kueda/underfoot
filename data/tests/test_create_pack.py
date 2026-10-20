@@ -230,6 +230,20 @@ def test_create_pack_leaves_out_the_rock_maxzoom_by_default(tmp_path):
     assert "rock_maxzoom" not in run_create_pack(tmp_path)
 
 
+def test_create_pack_can_lower_the_contour_zoom(tmp_path):
+    set_up_create_pack(tmp_path)
+
+    pack = run_create_pack(tmp_path, "--zoom", "11")
+
+    assert pack["zoom"] == 11
+
+
+def test_create_pack_leaves_out_the_contour_zoom_by_default(tmp_path):
+    set_up_create_pack(tmp_path)
+
+    assert "zoom" not in run_create_pack(tmp_path)
+
+
 def test_create_pack_can_set_the_default_view(tmp_path):
     set_up_create_pack(tmp_path)
 
