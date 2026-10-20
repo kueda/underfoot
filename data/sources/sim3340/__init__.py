@@ -30,8 +30,8 @@ def prepare_polygons():
     antimeridian would otherwise make the source span the globe. Also label
     the glaciers, which the source leaves unlabeled even though the unit
     descriptions include them, and drop the parts of Canada the source
-    includes. Drop water too: it's mostly the sea, cut into quadrangles, with
-    more vertices than many units combined, and the water layer covers it.
+    includes. Label water too, which is also unlabeled, so the sea and lakes
+    show as water on the rocks map like they do in other packs.
     """
     if os.path.isfile(POLYGONS_PATH):
         return
@@ -44,9 +44,9 @@ def prepare_polygons():
         "-makevalid",
         "-dialect", "sqlite",
         "-sql",
-        "SELECT CASE STATE_UNIT WHEN 'Glaciers' THEN 'g' ELSE STATE_LA_1 "
-        "END AS STATE_LA_1, geometry FROM AKStategeol_poly "
-        "WHERE STATE_LA_1 IS NOT 'Canada' AND STATE_UNIT IS NOT 'Water'",
+        "SELECT CASE STATE_UNIT WHEN 'Glaciers' THEN 'g' WHEN 'Water' THEN 'w' "
+        "ELSE STATE_LA_1 END AS STATE_LA_1, geometry FROM AKStategeol_poly "
+        "WHERE STATE_LA_1 IS NOT 'Canada'",
         "-overwrite",
         POLYGONS_PATH,
         f"{SHP_DIR}/AKStategeol_poly.shp"
