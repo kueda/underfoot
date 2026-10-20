@@ -35,7 +35,7 @@ import { nearestLineFeature } from './nearestLineFeature';
 import { Citations, UnderfootFeatures } from './types';
 import { MARSH_PATTERNS, NO_STYLE, TRACE_FADING_PAINT } from './mapStyles';
 import { loadMarshTufts, MARSH_PATTERN_PIXEL_RATIO } from './marshPattern';
-import { loadMapFromPackData } from './util';
+import { loadMapFromPackData, packStartView } from './util';
 
 // Wrap native fetch to monitor all network requests and log failures
 const originalFetch = window.fetch;
@@ -492,8 +492,7 @@ export default function UnderfootMap() {
         }
         else {
           const waysHeader = await waysPmtiles.getHeader();
-          map.current.setZoom(waysHeader.maxZoom - 2);
-          map.current.setCenter([waysHeader.centerLon, waysHeader.centerLat]);
+          map.current.jumpTo(packStartView(currentPack, waysHeader));
         }
       }
       setLoadedPackId(currentPackId);

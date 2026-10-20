@@ -2,9 +2,27 @@ import type { Map, StyleSpecification, VectorSourceSpecification } from 'maplibr
 import Papa from 'papaparse';
 import * as pmtiles from 'pmtiles';
 
+import type { Pack } from '../packs/Pack';
 import { RockUnit, UnzippedPackData } from '../packs/types';
 import { Citation, Citations, UnderfootFeatures } from './types';
 import { ROCK_STYLE, WATER_STYLE } from './mapStyles';
+
+// Where the map starts when a pack loads: the pack's default view if it has
+// one, otherwise the center of its ways tiles, zoomed out a bit from their
+// maxzoom
+export function packStartView(
+  pack: Pick<Pack, 'defaultCenter' | 'defaultZoom'>,
+  waysHeader: Pick<pmtiles.Header, 'centerLat' | 'centerLon' | 'maxZoom'>,
+): { center: [number, number]; zoom: number } {
+  const center = pack.defaultCenter || {
+    lat: waysHeader.centerLat,
+    lon: waysHeader.centerLon,
+  };
+  return {
+    center: [center.lon, center.lat],
+    zoom: pack.defaultZoom ?? waysHeader.maxZoom - 2,
+  };
+}
 
 export async function loadMapFromPackData(
   packData: UnzippedPackData,

@@ -262,6 +262,26 @@ jobs:
           name: ${{ inputs.pack }}-context
           path: "data/build/${{ inputs.pack }}.pmtiles/"
 
+  metadata:
+    name: Write pack.json
+    runs-on: ubuntu-24.04
+    container:
+      image: ${{ inputs.image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Write pack.json
+        run: python packs.py ${{ inputs.pack }} --only metadata
+
+      - name: Upload pack.json
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.pack }}-metadata
+          path: "data/build/${{ inputs.pack }}.pmtiles/"
+
   upload-pack:
     name: Archive and upload pack
     runs-on: ubuntu-24.04
@@ -270,6 +290,7 @@ jobs:
       - water
       - contours
       - osm
+      - metadata
     steps:
       - uses: actions/checkout@v7
 
@@ -287,6 +308,7 @@ jobs:
           mv ${{ inputs.pack }}-water/* build/${{ inputs.pack }}/
           mv ${{ inputs.pack }}-ways/* build/${{ inputs.pack }}/
           mv ${{ inputs.pack }}-context/* build/${{ inputs.pack }}/
+          mv ${{ inputs.pack }}-metadata/* build/${{ inputs.pack }}/
           cd build/
           zip ${{ inputs.pack }}.pmtiles.zip ${{ inputs.pack }}/*
           cd ../

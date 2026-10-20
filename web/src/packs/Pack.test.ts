@@ -50,6 +50,30 @@ describe('Pack', () => {
         updatedAt: '2026-01-01T00:00:00.000Z',
       });
     });
+
+    it('takes the default view from the zip\'s pack.json', async () => {
+      const zip = await packZip({
+        'us-ak-southwest/pack.json': JSON.stringify({
+          default_center: { lat: 60.79, lon: -161.76 },
+          default_zoom: 10,
+        }),
+      });
+      const pack = await Pack.fromZip(packMetadata(), zip);
+      expect(pack.defaultCenter).toEqual({ lat: 60.79, lon: -161.76 });
+      expect(pack.defaultZoom).toBe(10);
+    });
+
+    it.each([
+      ['has no default view', {}],
+      ['has a center without a lat', { default_center: { lon: -161.76 } }],
+      ['has a center that isn\'t numbers', { default_center: { lat: '60', lon: '-161' } }],
+      ['has a zoom that isn\'t a number', { default_zoom: '10' }],
+    ])('leaves out the default view when pack.json %s', async (_case, packJson) => {
+      const zip = await packZip({ 'us-ak-southwest/pack.json': JSON.stringify(packJson) });
+      const pack = await Pack.fromZip(packMetadata(), zip);
+      expect(pack.defaultCenter).toBeUndefined();
+      expect(pack.defaultZoom).toBeUndefined();
+    });
   });
 
   describe('fromLocalZip', () => {
@@ -111,6 +135,18 @@ describe('Pack', () => {
         name: 'Oakland, CA, USA',
       });
     });
+
+    it('takes the default view from the zip\'s pack.json', async () => {
+      const zip = await packZip({
+        'us-ca-oakland.pmtiles/pack.json': JSON.stringify({
+          default_center: { lat: 37.8, lon: -122.27 },
+          default_zoom: 12,
+        }),
+      });
+      const pack = await Pack.fromLocalZip(FILE_NAME, zip);
+      expect(pack.defaultCenter).toEqual({ lat: 37.8, lon: -122.27 });
+      expect(pack.defaultZoom).toBe(12);
+    });
   });
 
   describe('fromPack', () => {
@@ -133,6 +169,19 @@ describe('Pack', () => {
       const original = await Pack.fromLocalZip('us-ca-oakland.pmtiles.zip', zip);
       const pack = Pack.fromPack(structuredClone(original));
       expect(pack.sourceFileName).toBe('us-ca-oakland.pmtiles.zip');
+    });
+
+    it('keeps the default view', async () => {
+      const zip = await packZip({
+        'us-ca-oakland/pack.json': JSON.stringify({
+          default_center: { lat: 37.8, lon: -122.27 },
+          default_zoom: 12,
+        }),
+      });
+      const original = await Pack.fromZip(packMetadata(), zip);
+      const pack = Pack.fromPack(structuredClone(original));
+      expect(pack.defaultCenter).toEqual({ lat: 37.8, lon: -122.27 });
+      expect(pack.defaultZoom).toBe(12);
     });
   });
 

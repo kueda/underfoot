@@ -218,6 +218,25 @@ def test_create_pack_leaves_out_the_rock_maxzoom_by_default(tmp_path):
     assert "rock_maxzoom" not in run_create_pack(tmp_path)
 
 
+def test_create_pack_can_set_the_default_view(tmp_path):
+    set_up_create_pack(tmp_path)
+
+    pack = run_create_pack(
+        tmp_path, "--default-center", "-0.5", "0.25", "--default-zoom", "9")
+
+    assert pack["default_center"] == {"lon": -0.5, "lat": 0.25}
+    assert pack["default_zoom"] == 9
+
+
+def test_create_pack_leaves_out_the_default_view_by_default(tmp_path):
+    set_up_create_pack(tmp_path)
+
+    pack = run_create_pack(tmp_path)
+
+    assert "default_center" not in pack
+    assert "default_zoom" not in pack
+
+
 class StopDownload(Exception):
     pass
 
