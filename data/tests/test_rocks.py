@@ -69,6 +69,25 @@ def test_remove_polygon_overlaps_cuts_units_with_many_vertices(table_name):
     assert util.run_sql(f"SELECT count(*) FROM {table_name}")[0][0] == 2
 
 
+# Cut both by the whole circle and by just the pieces of it each larger piece
+# touches
+@pytest.mark.parametrize("max_pieces_to_cut_whole", [64, 1])
+def test_remove_polygon_overlaps_cuts_with_units_with_many_vertices(
+        table_name, monkeypatch, max_pieces_to_cut_whole):
+    monkeypatch.setattr(rocks, "MAX_PIECES_TO_CUT_WHOLE", max_pieces_to_cut_whole)
+    # The circle is the smaller unit this time, so it's the one split into
+    # pieces that does the cutting
+    insert_unit(table_name, "square", "ST_MakeEnvelope(-2, -2, 2, 2, 4326)")
+    insert_unit(table_name, "circle", "ST_Buffer(ST_SetSRID(ST_Point(0, 0), 4326), 1, 200)")
+    circle_area = util.run_sql(
+        "SELECT ST_Area(ST_Buffer(ST_SetSRID(ST_Point(0, 0), 4326), 1, 200))"
+    )[0][0]
+    rocks.remove_polygon_overlaps(table_name)
+    result = areas(table_name)
+    assert result["square"] == pytest.approx(16 - circle_area)
+    assert result["circle"] == pytest.approx(circle_area)
+
+
 class InlinePool:
     """Stands in for multiprocessing.Pool, which can't pickle stubs"""
     def __init__(self, **_kwargs):
