@@ -21,7 +21,7 @@ export default function WaterHeader({ feature }: { feature?: WaterFeature }) {
   return (
     <>
       <h3>
-        {feature?.title || 'Unknown'}
+        {feature?.title || (feature?.type === 'ocean/sea' ? 'Ocean' : 'Unknown')}
       </h3>
       <div className="MapBottomSheetHeaderPreview">
         <div>{displayLayer}</div>

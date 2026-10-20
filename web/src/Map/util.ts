@@ -5,7 +5,7 @@ import * as pmtiles from 'pmtiles';
 import type { Pack } from '../packs/Pack';
 import { RockUnit, UnzippedPackData } from '../packs/types';
 import { Citation, Citations, UnderfootFeatures } from './types';
-import { ROCK_STYLE, WATER_STYLE } from './mapStyles';
+import { ROCK_STYLE, SEA_LAYER_ID, WATER_STYLE } from './mapStyles';
 
 // Where the map starts when a pack loads: the pack's default view if it has
 // one, otherwise the center of its ways tiles, zoomed out a bit from their
@@ -37,11 +37,32 @@ export async function loadMapFromPackData(
   let featuresBlob: Blob | undefined;
   let citationsBlob: Blob | undefined;
   let style: StyleSpecification;
+  // Citations of other tiles the style draws from, like the sea's on the rocks
+  // map
+  const extraCitationsBlobs: Record<string, Blob> = {};
   if (mapType === 'rocks') {
     pmtilesBlob = packData.rocks_pmtiles;
     featuresBlob = packData.rocks_units_csv;
     citationsBlob = packData.rocks_citations_csv;
     style = ROCK_STYLE;
+    // The rocks map draws the sea from the water tiles, if the pack has them
+    if (packData.water_pmtiles) {
+      protocol.add(new pmtiles.PMTiles(
+        new pmtiles.FileSource(new File([packData.water_pmtiles], 'water')),
+      ));
+      if (packData.water_citations_csv) {
+        extraCitationsBlobs.water = packData.water_citations_csv;
+      }
+    }
+    else {
+      const sources = { ...style.sources };
+      delete sources.water;
+      style = {
+        ...style,
+        sources,
+        layers: style.layers.filter(l => l.id !== SEA_LAYER_ID),
+      };
+    }
   }
   else {
     pmtilesBlob = packData.water_pmtiles;
@@ -85,8 +106,9 @@ export async function loadMapFromPackData(
       },
     });
   }
-  if (citationsBlob) {
-    Papa.parse(new File([citationsBlob], `${mapType}_citations`), {
+  const citationsBlobs = { [mapType]: citationsBlob, ...extraCitationsBlobs };
+  for (const [type, blob] of Object.entries(citationsBlobs)) {
+    Papa.parse(new File([blob], `${type}_citations`), {
       header: true,
       dynamicTyping: true,
       complete: results => {
