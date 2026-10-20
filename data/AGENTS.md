@@ -88,10 +88,14 @@ Packs with `"hydrography": "osm"` (written by `create_pack.py --osm-hydrography`
 `packs.py --osm-hydrography` forces it for any pack) skip all that and take their
 waterways and flow from the OSM extract alone (`osm_hydrography.py`), along with their
 waterbodies, which line up with OSM's waterways better than NHD's do; their water sources
-still provide watersheds. That suits places OSM maps waterways well, like the Bay Area. OSM only implies the sea
-with its coastline, so those packs take the sea from the water polygons
-osmdata.openstreetmap.de makes from it, a 900 MB download cached as
-`water-polygons-split-4326.zip`.
+still provide watersheds. That suits places OSM maps waterways well, like the Bay Area.
+
+NHD and TIGER don't map the open sea, and OSM only implies it with its coastline, so every
+pack takes the sea from the water polygons osmdata.openstreetmap.de makes from it, a 900 MB
+download cached as `water-polygons-split-4326.zip`. The sea fills the pack's bbox instead of
+stopping at its boundary, which often follows the shore, so the sea between islands isn't
+blank, and it's in the water tiles at every zoom. The web app also draws it under the rocks, where
+geologic sources usually stop at the shore.
 
 ## Working on a single source
 
