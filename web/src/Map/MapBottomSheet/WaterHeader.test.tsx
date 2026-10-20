@@ -26,4 +26,9 @@ describe('WaterHeader', () => {
     render(<WaterHeader feature={{ layer: 'waterways', source: 'tiger_water_35001' }} />);
     expect(screen.getByText('Waterway')).toBeTruthy();
   });
+
+  it('calls the sea the ocean, since it has no name', () => {
+    render(<WaterHeader feature={{ layer: 'waterbodies', source: 'osm', type: 'ocean/sea' }} />);
+    expect(screen.getByText('Ocean')).toBeTruthy();
+  });
 });

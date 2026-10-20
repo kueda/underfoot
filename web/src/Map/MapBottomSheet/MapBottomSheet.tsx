@@ -31,6 +31,9 @@ function MapBottomSheet({ feature, mapType, map }: Props) {
   // show content
   const scrollable = (descRef?.current?.clientHeight || 0) >= (bodyRef?.current?.clientHeight || 0) / 2;
 
+  // The rocks map also shows the sea from the water tiles
+  const isRockUnit = mapType === 'rocks' && !(feature && 'layer' in feature);
+
   return (
     <Vaul.Root
       open
@@ -60,7 +63,7 @@ function MapBottomSheet({ feature, mapType, map }: Props) {
               style={{ height: CLOSED_HEIGHT }}
             >
               <div className="MapBottomSheetHeaderContent">
-                { mapType === 'rocks'
+                { isRockUnit
                   ? <RocksHeader feature={feature as RockUnit} />
                   : <WaterHeader feature={feature as WaterFeature} />}
               </div>
@@ -76,7 +79,7 @@ function MapBottomSheet({ feature, mapType, map }: Props) {
               </div>
             </div>
             <div className="MapBottomSheetBody" ref={bodyRef}>
-              { mapType === 'rocks'
+              { isRockUnit
                 ? <RocksBody feature={feature as RockUnit} descRef={descRef} />
                 : <WaterBody feature={feature as WaterFeature} />}
               <OsmEditLink feature={feature} map={map} />

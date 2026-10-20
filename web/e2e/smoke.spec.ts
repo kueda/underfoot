@@ -10,7 +10,7 @@ const PACK_ZIP = path.join(import.meta.dirname, 'fixtures', 'us-ca-oakland.pmtil
 const ROCK_UNIT_PIXELS = [
   { x: 250, y: 470, lithology: 'artificial', rgb: [255, 192, 203] },
   { x: 350, y: 400, lithology: 'sand', rgb: [255, 203, 35] },
-  { x: 230, y: 560, lithology: 'water', rgb: [0, 15, 33] },
+  { x: 230, y: 560, lithology: 'water', rgb: [31, 120, 180] },
 ];
 // Leeway per color channel, in case another platform's renderer blends slightly differently
 const COLOR_TOLERANCE = 8;

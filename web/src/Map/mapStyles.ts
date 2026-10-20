@@ -435,6 +435,18 @@ const COMMON_SOURCES = {
   context: CONTEXT_SOURCE,
 };
 
+const WATER_SOURCE: SourceSpecification = {
+  type: 'vector',
+  // this is pmtiles://[[protocol key]]/{z}/{x}/{y}, so the file name we declared earlier gets used here
+  tiles: ['pmtiles://water/{z}/{x}/{y}'],
+  attribution: 'See details water source attribution',
+  maxzoom: 14,
+};
+
+// Geologic sources usually stop at the shore, so the rocks map draws the sea
+// from the water tiles under the units instead of leaving it blank
+const SEA_LAYER_ID = 'sea';
+
 const ROCK_STYLE: StyleSpecification = {
   ...COMMON_STYLE,
   sources: {
@@ -445,9 +457,20 @@ const ROCK_STYLE: StyleSpecification = {
       attribution: 'See details for rock source attribution',
       maxzoom: 14,
     },
+    water: WATER_SOURCE,
     ...COMMON_SOURCES,
   },
   layers: [
+    {
+      'id': SEA_LAYER_ID,
+      'source': 'water',
+      'source-layer': 'waterbodies',
+      'type': 'fill',
+      'filter': ['==', ['get', 'type'], 'ocean/sea'],
+      'paint': {
+        'fill-color': COLORS.water,
+      },
+    },
     {
       'id': 'units',
       // Here we're using the key delcared in sources
@@ -670,7 +693,7 @@ const ROCK_STYLE: StyleSpecification = {
           ['volcanic carbonatite'], 'rgb(110,37,0)',
           ['volcanic rock'], 'rgb(255,183,222)',
           ['wacke'], 'rgb(189,219,241)',
-          ['water'], 'rgb(0,15,33)',
+          ['water'], COLORS.water,
           ['welded tuff'], 'rgb(255,243,201)',
 
           // default
@@ -980,13 +1003,7 @@ function traceArrowsLayer(direction: TraceDirection): LayerSpecification {
 const WATER_STYLE: StyleSpecification = {
   ...COMMON_STYLE,
   sources: {
-    water: {
-      type: 'vector',
-      // this is pmtiles://[[protocol key]]/{z}/{x}/{y}, so the file name we declared earlier gets used here
-      tiles: ['pmtiles://water/{z}/{x}/{y}'],
-      attribution: 'See details water source attribution',
-      maxzoom: 14,
-    },
+    water: WATER_SOURCE,
     ...COMMON_SOURCES,
   },
   layers: [
@@ -1139,6 +1156,7 @@ export {
   NO_STYLE,
   PATTERNS,
   ROCK_STYLE,
+  SEA_LAYER_ID,
   TRACE_FADING_PAINT,
   WATER_STYLE,
   WATERWAY_ARROWS_LAYER_ID,

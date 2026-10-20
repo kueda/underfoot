@@ -33,7 +33,7 @@ import {
 } from './flowTrace';
 import { nearestLineFeature } from './nearestLineFeature';
 import { Citations, UnderfootFeatures } from './types';
-import { NO_STYLE, PATTERNS, TRACE_FADING_PAINT } from './mapStyles';
+import { NO_STYLE, PATTERNS, SEA_LAYER_ID, TRACE_FADING_PAINT } from './mapStyles';
 import { loadPattern, PATTERN_PIXEL_RATIO } from './pattern';
 import { loadMapFromPackData, packStartView } from './util';
 
@@ -188,6 +188,7 @@ export default function UnderfootMap() {
     }
     const feature = type === 'rocks'
       ? features.find(f => f.sourceLayer === 'rock_units')
+      || features.find(f => f.layer.id === SEA_LAYER_ID)
       : features.find(f => f.sourceLayer === 'waterbodies')
         || features.find(f => f.sourceLayer === 'watersheds');
     setMapFeature(feature);
@@ -325,7 +326,9 @@ export default function UnderfootMap() {
       setUnderfootFeature(undefined);
       return;
     }
-    if (loadedMapType === 'rocks') {
+    // The sea on the rocks map comes from the water tiles, so it's described
+    // like it is on the water map
+    if (loadedMapType === 'rocks' && mapFeature.sourceLayer === 'rock_units') {
       if (underfootFeatures && mapFeature.properties.id) {
         const feature = underfootFeatures[parseInt(String(mapFeature.properties.id), 10)];
         if (citations && feature?.source && !feature.citation) {

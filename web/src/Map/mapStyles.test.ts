@@ -6,6 +6,7 @@ import { TRACE_DIRECTIONS, TRACE_LAYER_IDS } from './flowTrace';
 import {
   PATTERNS,
   ROCK_STYLE,
+  SEA_LAYER_ID,
   TRACE_FADING_PAINT,
   WATER_STYLE,
   WATERWAY_ARROWS_LAYER_ID,
@@ -264,6 +265,37 @@ describe('ice on the rocks map', () => {
     expect(lightness(color)).toBeLessThan(
       lightness(evaluateForWaterbody(paint('units', 'fill-color', ROCK_STYLE), ICE)),
     );
+  });
+});
+
+describe('sea on the rocks map', () => {
+  it('draws the sea from the water tiles under the rock units', () => {
+    const sea = layer(SEA_LAYER_ID, ROCK_STYLE) as {
+      'type': string;
+      'source': string;
+      'source-layer'?: string;
+      'filter'?: FilterSpecification;
+    };
+    expect(sea.type).toBe('fill');
+    expect(sea.source).toBe('water');
+    expect(sea['source-layer']).toBe('waterbodies');
+    if (!sea.filter) throw new Error('sea layer should have a filter');
+    const { filter: evaluate } = featureFilter(sea.filter, 'filter');
+    const draws = (properties: Record<string, unknown>) => evaluate(
+      { zoom: 14 },
+      { type: 'Polygon', properties },
+    );
+    expect(draws({ is_natural: 1, type: 'ocean/sea' })).toBe(true);
+    expect(draws(LAKE)).toBe(false);
+    const ids = ROCK_STYLE.layers.map(l => l.id);
+    expect(ids.indexOf(SEA_LAYER_ID)).toBeLessThan(ids.indexOf('units'));
+  });
+
+  it('fills the sea and water units with the water map\'s water color', () => {
+    const waterColor = evaluateForWaterbody(paint('waterbodies', 'fill-color'), LAKE);
+    expect(paint(SEA_LAYER_ID, 'fill-color', ROCK_STYLE)).toBe(waterColor);
+    expect(evaluateForWaterbody(paint('units', 'fill-color', ROCK_STYLE), { lithology: 'water' }))
+      .toBe(waterColor);
   });
 });
 
