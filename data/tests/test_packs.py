@@ -47,6 +47,21 @@ def test_write_pack_metadata_writes_descriptive_metadata(build_dir):
     assert "geojson_path" not in metadata
 
 
+def test_write_pack_metadata_includes_the_default_view(build_dir, monkeypatch):
+    pack = {
+        **PACK_DEFINITION,
+        "default_center": {"lon": -122.27, "lat": 37.8},
+        "default_zoom": 12
+    }
+    monkeypatch.setitem(packs.PACKS, PACK_ID, pack)
+    pack_dir = packs.get_pack_dir(PACK_ID)
+    packs.write_pack_metadata(PACK_ID, pack_dir)
+    with open(os.path.join(pack_dir, "pack.json"), encoding="utf-8") as metadata_f:
+        metadata = json.load(metadata_f)
+    assert metadata["default_center"] == {"lon": -122.27, "lat": 37.8}
+    assert metadata["default_zoom"] == 12
+
+
 def test_make_pack_includes_metadata_in_zip(build_dir, monkeypatch):
     for layer in ["rocks", "water", "ways", "context", "contours"]:
         monkeypatch.setattr(packs, f"make_{layer}_for_pack", lambda *args, **kwargs: None)

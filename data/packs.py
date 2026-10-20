@@ -38,6 +38,8 @@ ATTRIBUTES_FOR_METADATA = [
     "admin1",
     "admin2",
     "bbox",
+    "default_center",
+    "default_zoom",
     "description",
     "id",
     "name"
@@ -426,8 +428,11 @@ if __name__ == "__main__":
         "--only",
         type=str,
         nargs="*",
-        choices=["rocks", "water", "contours", "ways", "context"],
-        help="Only build selected PMTiles and don't generate the final pack archive")
+        choices=["rocks", "water", "contours", "ways", "context", "metadata"],
+        help="""
+            Only build selected PMTiles or pack.json and don't generate the final pack
+            archive
+        """)
     args = parser.parse_args()
 
     if args.pack == "list":
@@ -462,5 +467,7 @@ if __name__ == "__main__":
             make_context_for_pack(
                 args.pack,
                 clean=args.clean)
+        if "metadata" in args.only:
+            write_pack_metadata(args.pack, get_pack_dir(args.pack))
     else:
         make_single_pack_from_args(args)

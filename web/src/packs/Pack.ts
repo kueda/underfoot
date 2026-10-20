@@ -1,5 +1,7 @@
 import jszip from 'jszip';
-import { PackBoundingBox, PackMetadata, UnzippedPackData } from './types';
+import {
+  PackBoundingBox, PackCenter, PackMetadata, UnzippedPackData,
+} from './types';
 
 // Namespaces packs loaded from a local file so their ids can never collide
 // with a manifest pack's id (which would silently overwrite it in packStore
@@ -11,6 +13,8 @@ export class Pack {
   admin2: string;
   bbox: PackBoundingBox;
   data?: UnzippedPackData;
+  defaultCenter?: PackCenter;
+  defaultZoom?: number;
   description: string;
   downloadedAt?: string;
   id: string;
@@ -26,6 +30,8 @@ export class Pack {
     this.admin1 = metadata.admin1;
     this.admin2 = metadata.admin2;
     this.bbox = metadata.bbox;
+    this.defaultCenter = metadata.default_center;
+    this.defaultZoom = metadata.default_zoom;
     this.description = metadata.description;
     this.id = metadata.id;
     this.name = metadata.name;
@@ -40,6 +46,8 @@ export class Pack {
         admin1: pack.admin1,
         admin2: pack.admin2,
         bbox: pack.bbox,
+        default_center: pack.defaultCenter,
+        default_zoom: pack.defaultZoom,
         description: pack.description,
         id: pack.id,
         name: pack.name,
@@ -80,10 +88,16 @@ export class Pack {
 
   // Unzips a freshly-downloaded pack archive once, up front, so later reads
   // (including on subsequent page loads) are plain blob lookups instead of
-  // repeating the CPU-bound jszip decompression of the whole archive.
+  // repeating the CPU-bound jszip decompression of the whole archive. The
+  // default view comes from the zip's pack.json, since that's what the pack
+  // was built with.
   static async fromZip(metadata: PackMetadata, zipBlob: Blob): Promise<Pack> {
-    const { data } = await Pack.unzip(zipBlob);
-    return new Pack(metadata, data);
+    const { data, packJson } = await Pack.unzip(zipBlob);
+    return new Pack({
+      ...metadata,
+      default_center: packJson?.default_center,
+      default_zoom: packJson?.default_zoom,
+    }, data);
   }
 
   // Like fromZip for a pack loaded from a local file, where there's no
@@ -98,6 +112,8 @@ export class Pack {
     const metadata = Pack.metadataFromFileName(fileName);
     const pack = new Pack({
       ...metadata,
+      default_center: packJson?.default_center,
+      default_zoom: packJson?.default_zoom,
       description: packJson?.description || metadata.description,
       name: packJson?.name || metadata.name,
     }, data);
@@ -107,7 +123,9 @@ export class Pack {
 
   private static async unzip(zipBlob: Blob): Promise<{
     data: UnzippedPackData;
-    packJson?: Partial<Pick<PackMetadata, 'description' | 'name'>>;
+    packJson?: Partial<Pick<
+      PackMetadata, 'default_center' | 'default_zoom' | 'description' | 'name'
+    >>;
   }> {
     const zip = await jszip.loadAsync(zipBlob);
     const unzipped: UnzippedPackData = {};
@@ -161,9 +179,9 @@ export class Pack {
     return { data: unzipped, packJson };
   }
 
-  // Reads just the fields a local pack can use out of a pack.json, ignoring
-  // anything that isn't a non-empty string so a malformed file can't blank out
-  // the title.
+  // Reads just the fields a pack can use out of a pack.json, ignoring anything
+  // that isn't a non-empty string so a malformed file can't blank out the
+  // title, and any default view that isn't made of numbers.
   private static parsePackJson(text: string) {
     let parsed: Record<string, unknown> | null;
     try {
@@ -175,7 +193,15 @@ export class Pack {
     const stringOrUndefined = (value: unknown) => (
       typeof value === 'string' && value ? value : undefined
     );
+    const numberOrUndefined = (value: unknown) => (
+      typeof value === 'number' && Number.isFinite(value) ? value : undefined
+    );
+    const center = parsed?.default_center as Record<string, unknown> | null | undefined;
+    const lat = numberOrUndefined(center?.lat);
+    const lon = numberOrUndefined(center?.lon);
     return {
+      default_center: lat !== undefined && lon !== undefined ? { lat, lon } : undefined,
+      default_zoom: numberOrUndefined(parsed?.default_zoom),
       description: stringOrUndefined(parsed?.description),
       name: stringOrUndefined(parsed?.name),
     };

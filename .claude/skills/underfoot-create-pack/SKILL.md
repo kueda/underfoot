@@ -64,6 +64,11 @@ builds the pack's waterways, their flow, and its waterbodies from OSM instead of
 places where OSM maps waterways well, like the San Francisco Bay Area, not places like rural
 New Mexico where OSM lacks most of NHD's streams.
 
+**Default view:** When a pack loads, the map centers on its bounding box. If that lands
+somewhere empty, like the ocean in a coastal pack, pass `--default-center LON LAT` (and
+optionally `--default-zoom ZOOM`) to write `default_center` and `default_zoom`, which the web
+app starts at instead. Pick a spot on land with something to look at, like a town.
+
 **Interactive mode:** If the user hasn't provided all the info yet, you can run
 `python create_pack.py -i` to be prompted for each field interactively.
 
