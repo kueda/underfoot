@@ -15,7 +15,8 @@ import psycopg2
 from database import DBNAME, SRID, make_database
 from geometry import widen_bbox
 from osm import fetch_data
-from osm_hydrography import OSM_WATER_POLYGONS_URL, apply_osm_network, apply_osm_waterbodies
+from osm_hydrography import (
+    OSM_WATER_POLYGONS_URL, apply_osm_network, apply_osm_sea, apply_osm_waterbodies)
 from osm_waterways import (
     ENHANCING_WATERWAY_KINDS, HYDROGRAPHY_WATERWAY_KINDS, OSM_BBOX_MARGIN_DEG, OSM_SOURCE,
     cite_osm, read_osm_waterways)
@@ -600,8 +601,27 @@ def make_pmtiles(sources, path="./water.pmtiles", bbox=None, geojson_path=None, 
             "clip": False
         },
         WATERBODIES_TABLE_NAME: {
-            "sql": f"SELECT {waterbodies_fields}, geom FROM {WATERBODIES_TABLE_NAME}",
-            "minzoom": 9
+            "sql": f"""
+                SELECT {waterbodies_fields}, geom
+                FROM {WATERBODIES_TABLE_NAME}
+                WHERE type IS DISTINCT FROM 'ocean/sea'
+            """,
+            "minzoom": 9,
+            # The sea joins this layer, and shows at every zoom, since the rocks map draws
+            # it under the units, which show at every zoom
+            "minzoom_except": ["==", "type", "ocean/sea"]
+        },
+        # Pack boundaries often follow the shore, so the sea fills the pack's bbox
+        # instead of stopping at its boundary, which would leave the sea between islands
+        # blank. It only covers water, so land outside the boundary stays blank.
+        "sea": {
+            "sql": f"""
+                SELECT {waterbodies_fields}, geom
+                FROM {WATERBODIES_TABLE_NAME}
+                WHERE type = 'ocean/sea'
+            """,
+            "tile_layer": WATERBODIES_TABLE_NAME,
+            "clip_to_bbox": True
         },
         WATERSHEDS_TABLE_NAME: {
             "sql": f"SELECT {', '.join(WATERSHEDS_TILE_FIELDS)}, geom FROM {WATERSHEDS_TABLE_NAME}"
@@ -642,7 +662,7 @@ def make_pmtiles(sources, path="./water.pmtiles", bbox=None, geojson_path=None, 
                 "-sql", layer["sql"]
             ]
             if layer.get("clip", True):
-                if geojson_path:
+                if geojson_path and not (bbox and layer.get("clip_to_bbox")):
                     cmd += ["-clipdst", geojson_path]
                 elif bbox:
                     cmd += [
@@ -653,11 +673,16 @@ def make_pmtiles(sources, path="./water.pmtiles", bbox=None, geojson_path=None, 
                         str(bbox["top"])
                     ]
             util.call_cmd(cmd, check=True)
-            named_layers.append(f"--named-layer={layer_name}:{export_path}")
+            # tippecanoe merges files given the same layer name into one layer
+            tile_layer = layer.get("tile_layer", layer_name)
+            named_layers.append(f"--named-layer={tile_layer}:{export_path}")
             if "minzoom" in layer:
-                feature_filter[layer_name] = [">=", "$zoom", layer["minzoom"]]
+                zoom_filter = [">=", "$zoom", layer["minzoom"]]
+                if "minzoom_except" in layer:
+                    zoom_filter = ["any", layer["minzoom_except"], zoom_filter]
+                feature_filter[tile_layer] = zoom_filter
             if "maxzoom" in layer:
-                feature_filter[layer_name] = ["<=", "$zoom", layer["maxzoom"]]
+                feature_filter[tile_layer] = ["<=", "$zoom", layer["maxzoom"]]
         # Tile with tippecanoe, which clips each zoom's tiles out of the zoom
         # below instead of clipping every feature to every tile it touches,
         # like GDAL's MVT driver
@@ -698,6 +723,9 @@ def make_water(
     and waterways that end short of where they go continue along OSM waterways (see
     waterway_gaps.py).
 
+    The sources don't map the open sea, so if bbox is given, the sea within it comes from
+    the water polygons made from OSM's coastline (see osm_hydrography.py).
+
     If osm_hydrography is also true, the hydrography (the waterways, their flow, and the
     waterbodies) comes from OSM, with the sea from the water polygons made from its
     coastline (see osm_hydrography.py), and the sources only provide watersheds.
@@ -715,6 +743,7 @@ def make_water(
         sources, cleandb=(clean or cleandb), cleanfiles=cleanfiles, procs=procs, debug=debug)
     create_tables(debug=debug)
     load_watersheds(sources, debug=debug)
+    sea_count = 0
     if osm_hydrography:
         pbf_path = fetch_data(osm_pbf_url)
         osm_ways = read_osm_waterways(
@@ -727,6 +756,9 @@ def make_water(
         load_waterways(sources, debug=debug)
         load_waterbodies(sources, debug=debug)
         inherit_waterbody_permanence(debug=debug)
+        # Before the gap fills, so creeks that NHD stops short of the shore can reach it
+        if bbox:
+            sea_count = apply_osm_sea(fetch_data(OSM_WATER_POLYGONS_URL), bbox, debug=debug)
         load_flow(sources, debug=debug)
         if osm_pbf_url:
             osm_ways = read_osm_waterways(
@@ -734,7 +766,7 @@ def make_water(
                 kinds=ENHANCING_WATERWAY_KINDS)
             apply_osm_names(osm_ways, bbox, debug=debug)
             apply_osm_gap_fills(osm_ways, bbox, debug=debug)
-    if osm_pbf_url:
+    if osm_pbf_url or sea_count:
         # Cite OSM for the water and names it provided
         cite_osm()
         sources = sources + [OSM_SOURCE]
