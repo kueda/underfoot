@@ -28,6 +28,10 @@ MASK_TABLE_NAME = "rock_units_masks"
 # Packs from small-scale sources can tile to a lower zoom and let the map
 # overzoom, which makes their tiles far smaller
 MAXZOOM = 14
+# When removing overlaps, a polygon split into more pieces than this cuts each
+# larger piece by just the pieces of it that piece touches instead of by the
+# whole polygon
+MAX_PIECES_TO_CUT_WHOLE = 64
 
 
 def remove_polygon_overlaps(source_table_name):
@@ -71,6 +75,7 @@ def remove_polygon_overlaps(source_table_name):
       SELECT {', '.join(rocks.METADATA_COLUMN_NAMES)}, id, area, ST_Subdivide(geom, 256) AS geom
       FROM {dumped_source_table_name}
     """)
+    util.run_sql(f"ALTER TABLE {pieces_table_name} ADD COLUMN piece_id SERIAL PRIMARY KEY")
     util.run_sql(f"CREATE INDEX ON {pieces_table_name} USING GIST (geom)")
     util.run_sql(f"CREATE INDEX ON {pieces_table_name} (id)")
     util.run_sql(f"ANALYZE {pieces_table_name}")
@@ -88,6 +93,9 @@ def remove_polygon_overlaps(source_table_name):
             AND ST_Relate(a.geom, b.geom, 'T********')
         ORDER BY a.area ASC
     """)
+    piece_counts = dict(util.run_sql(
+        f"SELECT id, count(*) FROM {pieces_table_name} GROUP BY id"
+    ))
     # Now we iterate over each overlapping polygon order by size, and use it to
     # cut a hole out of all the larger polygons whose interiors it overlaps
     for idx, row in enumerate(polygons):
@@ -99,17 +107,43 @@ def remove_polygon_overlaps(source_table_name):
             )
         poly_id = row[0]
         area = row[1]
+        if piece_counts[poly_id] <= MAX_PIECES_TO_CUT_WHOLE:
+            sql = f"""
+              UPDATE {pieces_table_name} pieces
+              SET geom = ST_Multi(ST_Difference(pieces.geom, poly.geom))
+              FROM (
+                SELECT ST_Union(geom) AS geom FROM {pieces_table_name} WHERE id = {poly_id}
+              ) poly
+              WHERE
+                ST_Intersects(pieces.geom, poly.geom)
+                AND ST_Relate(pieces.geom, poly.geom, 'T********')
+                AND pieces.id != {poly_id}
+                AND pieces.area >= {area}
+            """
+            util.run_sql_with_retries(sql, dbname=DBNAME, quiet=True)
+            continue
+        # Cut each larger piece by just the pieces of this polygon it touches.
+        # Unioning all of them first would rebuild the whole polygon and
+        # compare every piece against it, which takes hours for one with
+        # millions of vertices, like a big surficial unit along a coast. For
+        # small polygons the union is cheaper than grouping by piece.
         sql = f"""
           UPDATE {pieces_table_name} pieces
-          SET geom = ST_Multi(ST_Difference(pieces.geom, poly.geom))
+          SET geom = ST_Multi(ST_Difference(pieces.geom, cuts.geom))
           FROM (
-            SELECT ST_Union(geom) AS geom FROM {pieces_table_name} WHERE id = {poly_id}
-          ) poly
+            SELECT larger.piece_id, ST_Union(poly.geom) AS geom
+            FROM {pieces_table_name} larger
+              JOIN {pieces_table_name} poly
+                ON poly.id = {poly_id}
+                AND ST_Intersects(larger.geom, poly.geom)
+            WHERE
+              larger.id != {poly_id}
+              AND larger.area >= {area}
+            GROUP BY larger.piece_id
+          ) cuts
           WHERE
-            ST_Intersects(pieces.geom, poly.geom)
-            AND ST_Relate(pieces.geom, poly.geom, 'T********')
-            AND pieces.id != {poly_id}
-            AND pieces.area >= {area}
+            pieces.piece_id = cuts.piece_id
+            AND ST_Relate(pieces.geom, cuts.geom, 'T********')
         """
         util.run_sql_with_retries(sql, dbname=DBNAME, quiet=True)
     util.log()
