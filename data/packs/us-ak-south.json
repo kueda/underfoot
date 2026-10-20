@@ -42,6 +42,7 @@
     ],
     "hydrography": "osm",
     "rock_maxzoom": 10,
+    "zoom": 11,
     "default_center": {
         "lon": -139.7326,
         "lat": 59.552

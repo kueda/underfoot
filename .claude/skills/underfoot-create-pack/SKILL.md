@@ -64,6 +64,10 @@ builds the pack's waterways, their flow, and its waterbodies from OSM instead of
 places where OSM maps waterways well, like the San Francisco Bay Area, not places like rural
 New Mexico where OSM lacks most of NHD's streams.
 
+**Contour zoom:** Contours come from elevation tiles at zoom 12 unless the pack sets `zoom`.
+Tiles cover less ground toward the poles, so for packs far north, like Alaska's, pass `--zoom 11`
+to get about the same detail as zoom 12 elsewhere at about a quarter of the build time.
+
 **Default view:** When a pack loads, the map centers on its bounding box. If that lands
 somewhere empty, like the ocean in a coastal pack, pass `--default-center LON LAT` (and
 optionally `--default-zoom ZOOM`) to write `default_center` and `default_zoom`, which the web
