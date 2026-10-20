@@ -417,6 +417,18 @@ def apply_osm_waterbodies(pbf_path, sea_path, bbox, debug=False):
     return len(waterbodies)
 
 
+def apply_osm_sea(sea_path, bbox, debug=False):
+    """Load the sea within bbox from the water polygons at sea_path (see read_osm_sea),
+    for packs whose other waterbodies come from their sources, which don't map the open
+    sea; returns how many pieces of it were loaded"""
+    sea = read_osm_sea(sea_path, bbox)
+    if debug:
+        util.log(f"water: {len(sea)} pieces of sea from OSM")
+    if sea:
+        write_waterbodies(sea)
+    return len(sea)
+
+
 def apply_osm_network(osm_ways, bbox, debug=False):
     """Load waterways and their flow from osm_ways (see read_osm_waterways, with
     HYDROGRAPHY_WATERWAY_KINDS), linking them through the lakes near bbox; returns how many

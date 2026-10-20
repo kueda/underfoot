@@ -476,6 +476,31 @@ def test_apply_osm_waterbodies_adds_water_areas_and_sea_where_the_ways_were_read
     assert read == [("x.osm.pbf", read_bbox), ("water.zip", read_bbox)]
 
 
+def test_apply_osm_sea_adds_the_sea_in_the_bbox(monkeypatch):
+    bbox = {"left": -122.1, "bottom": 37.8, "right": -121.9, "top": 38.0}
+    sea = [{"source_id": None}]
+    read, written = [], []
+    monkeypatch.setattr(
+        osm_hydrography, "read_osm_sea", lambda sea_path, b: read.append((sea_path, b)) or sea)
+    monkeypatch.setattr(osm_hydrography, "write_waterbodies", written.append)
+
+    count = osm_hydrography.apply_osm_sea("water.zip", bbox)
+
+    assert count == 1
+    assert written == [sea]
+    assert read == [("water.zip", bbox)]
+
+
+def test_apply_osm_sea_writes_nothing_inland(monkeypatch):
+    bbox = {"left": -106.1, "bottom": 35.0, "right": -105.9, "top": 35.2}
+    written = []
+    monkeypatch.setattr(osm_hydrography, "read_osm_sea", lambda sea_path, b: [])
+    monkeypatch.setattr(osm_hydrography, "write_waterbodies", written.append)
+
+    assert osm_hydrography.apply_osm_sea("water.zip", bbox) == 0
+    assert not written
+
+
 def test_apply_osm_network_knows_outflows_leaving_the_ways_it_read_go_somewhere(monkeypatch):
     ways = [
         osm_way(1, [1, 2], [(0, 0), (0, 290)]),

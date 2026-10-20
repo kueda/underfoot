@@ -9,12 +9,13 @@ import pytest
 import water
 from sources import util
 
+BBOX = {"left": -156.1, "bottom": 18.9, "right": -154.8, "top": 20.3}
 SOURCES_PATH = os.path.join(os.path.dirname(os.path.realpath(water.__file__)), "sources")
 
 
 def water_pmtiles_commands(monkeypatch, tmp_path, **kwargs):
     """Run make_pmtiles with stubbed commands, writing the files they would.
-    Returns the export command for each layer of the tiles, by layer name,
+    Returns the export commands for each layer of the tiles, by layer name,
     and the tippecanoe commands."""
     exports = {}
     tile_cmds = []
@@ -36,8 +37,16 @@ def water_pmtiles_commands(monkeypatch, tmp_path, **kwargs):
         for arg in cmd:
             if arg.startswith("--named-layer="):
                 layer, export_path = arg.split("=", 1)[1].split(":", 1)
-                layers[layer] = exports[export_path]
+                layers.setdefault(layer, []).append(exports[export_path])
     return layers, tile_cmds
+
+
+def sql_of(cmd):
+    return cmd[cmd.index("-sql") + 1]
+
+
+def is_sea_export(cmd):
+    return "type = 'ocean/sea'" in sql_of(cmd)
 
 
 def test_make_pmtiles_cleans_up_intermediate_files(monkeypatch, tmp_path):
@@ -51,7 +60,7 @@ def test_make_pmtiles_cleans_up_intermediate_files(monkeypatch, tmp_path):
 
     water_py_dir = os.path.dirname(os.path.realpath(water.__file__))
     assert layers
-    for cmd in layers.values():
+    for cmd in [cmd for cmds in layers.values() for cmd in cmds]:
         export_path = cmd[cmd.index("GeoJSONSeq") + 1]
         assert os.path.dirname(os.path.realpath(export_path)) != water_py_dir
         assert not os.path.exists(export_path)
@@ -82,21 +91,50 @@ def test_make_pmtiles_shows_overview_layers_below_the_detailed_ones(monkeypatch,
     [filter_arg] = [arg for arg in tile_cmd if arg.startswith("--feature-filter=")]
     assert json.loads(filter_arg.split("=", 1)[1]) == {
         water.WATERWAYS_TABLE_NAME: [">=", "$zoom", 9],
-        water.WATERBODIES_TABLE_NAME: [">=", "$zoom", 9],
+        # The sea shows at every zoom, so the rocks map can draw it under the units
+        water.WATERBODIES_TABLE_NAME: [
+            "any", ["==", "type", "ocean/sea"], [">=", "$zoom", 9]],
         f"{water.WATERWAYS_TABLE_NAME}_overview": ["<=", "$zoom", 8],
         f"{water.WATERBODIES_TABLE_NAME}_overview": ["<=", "$zoom", 8],
     }
 
 
-def test_make_pmtiles_clips_everything_but_the_waterways(monkeypatch, tmp_path):
+def test_make_pmtiles_clips_everything_but_the_waterways_and_the_sea(monkeypatch, tmp_path):
     """Unclipped waterways show connectivity across the whole watershed"""
-    layers, _ = water_pmtiles_commands(monkeypatch, tmp_path, geojson_path="/packs/pack.geojson")
+    layers, _ = water_pmtiles_commands(
+        monkeypatch, tmp_path, geojson_path="/packs/pack.geojson", bbox=BBOX)
 
-    for layer, cmd in layers.items():
-        if layer == water.WATERWAYS_TABLE_NAME:
-            assert "-clipdst" not in cmd
-        else:
-            assert cmd[cmd.index("-clipdst") + 1] == "/packs/pack.geojson"
+    for layer, cmds in layers.items():
+        for cmd in cmds:
+            if layer == water.WATERWAYS_TABLE_NAME:
+                assert "-clipdst" not in cmd
+            elif not is_sea_export(cmd):
+                assert cmd[cmd.index("-clipdst") + 1] == "/packs/pack.geojson"
+
+
+def test_make_pmtiles_clips_the_sea_to_the_bbox(monkeypatch, tmp_path):
+    """Pack boundaries often follow the shore, like Hawaii's, which would leave the sea
+    between islands blank. The sea only covers water, so filling the bbox with it doesn't
+    cover land outside the boundary."""
+    layers, _ = water_pmtiles_commands(
+        monkeypatch, tmp_path, geojson_path="/packs/pack.geojson", bbox=BBOX)
+
+    [sea] = [cmd for cmd in layers[water.WATERBODIES_TABLE_NAME] if is_sea_export(cmd)]
+    clip = sea.index("-clipdst")
+    assert sea[clip + 1:clip + 5] == [
+        str(BBOX["left"]), str(BBOX["bottom"]), str(BBOX["right"]), str(BBOX["top"])]
+
+
+def test_make_pmtiles_puts_the_sea_in_the_waterbodies_layer_once(monkeypatch, tmp_path):
+    layers, _ = water_pmtiles_commands(
+        monkeypatch, tmp_path, geojson_path="/packs/pack.geojson", bbox=BBOX)
+
+    sea, others = [], []
+    for cmd in layers[water.WATERBODIES_TABLE_NAME]:
+        (sea if is_sea_export(cmd) else others).append(cmd)
+    assert len(sea) == 1
+    [other] = others
+    assert "type IS DISTINCT FROM 'ocean/sea'" in sql_of(other)
 
 
 def exported_fields(cmd):
@@ -117,8 +155,9 @@ def test_make_pmtiles_leaves_waterway_source_id_out_of_tiles(monkeypatch, tmp_pa
     layers, _ = water_pmtiles_commands(monkeypatch, tmp_path)
 
     for layer in [water.WATERWAYS_TABLE_NAME, f"{water.WATERWAYS_TABLE_NAME}_overview"]:
-        fields = exported_fields(layers[layer])
-        assert fields is not None, f"expected {layers[layer]} to select fields"
+        [cmd] = layers[layer]
+        fields = exported_fields(cmd)
+        assert fields is not None, f"expected {cmd} to select fields"
         assert "source_id" not in fields
         assert "flow_pre" in fields
         assert "flow_upstream" in fields
@@ -135,13 +174,14 @@ def test_make_pmtiles_leaves_waterbody_and_watershed_source_id_out_of_tiles(monk
         f"{water.WATERBODIES_TABLE_NAME}_overview",
         water.WATERSHEDS_TABLE_NAME,
     ]:
-        fields = exported_fields(layers[layer])
-        assert fields is not None, f"expected {layers[layer]} to select fields"
-        assert "*" not in fields
-        assert "source_id" not in fields
-        assert "source_id_attr" not in fields
-        assert "name" in fields
-        assert "source" in fields
+        for cmd in layers[layer]:
+            fields = exported_fields(cmd)
+            assert fields is not None, f"expected {cmd} to select fields"
+            assert "*" not in fields
+            assert "source_id" not in fields
+            assert "source_id_attr" not in fields
+            assert "name" in fields
+            assert "source" in fields
 
 
 def test_process_source_nhdplus_fallback_uses_matching_work_dir(monkeypatch):
@@ -238,6 +278,7 @@ def _stub_make_water_steps(monkeypatch):
     monkeypatch.setattr(water, "make_database", lambda: None)
     monkeypatch.setattr(water, "clean_sources", lambda sources, debug=False: None)
     monkeypatch.setattr(water, "process_sources", fake_process_sources)
+    monkeypatch.setattr(water, "fetch_data", lambda url, **kwargs: os.path.basename(url))
     monkeypatch.setattr(
         water.util, "run_sql", lambda sql, **kwargs: captured["sql"].append(sql)
     )
@@ -255,6 +296,7 @@ def _stub_make_water_steps(monkeypatch):
         "apply_osm_gap_fills",
         "apply_osm_network",
         "apply_osm_waterbodies",
+        "apply_osm_sea",
         "cite_osm",
     ):
         monkeypatch.setattr(water, step, lambda *args, **kwargs: None)
@@ -322,6 +364,57 @@ def test_make_water_gives_artificial_paths_permanence_after_loading_waterbodies(
         "inherit_waterbody_permanence",
         "make_pmtiles",
     ]
+
+
+def test_make_water_adds_the_sea_from_osm_to_packs_with_hydrography_from_the_sources(
+        monkeypatch):
+    """NHD and TIGER don't map the open sea, which left it blank between islands, like
+    in Hawaii"""
+    _stub_make_water_steps(monkeypatch)
+    calls = []
+    monkeypatch.setattr(
+        water, "apply_osm_sea", lambda sea_path, bbox, **kwargs: calls.append((sea_path, bbox)))
+
+    water.make_water(["fake_source"], bbox=BBOX)
+
+    assert calls == [("water-polygons-split-4326.zip", BBOX)]
+
+
+def test_make_water_adds_the_sea_before_filling_gaps_so_creeks_can_reach_it(monkeypatch):
+    _stub_make_water_steps(monkeypatch)
+    steps = []
+    for step in ("inherit_waterbody_permanence", "apply_osm_sea", "apply_osm_gap_fills"):
+        monkeypatch.setattr(
+            water, step, lambda *args, step=step, **kwargs: steps.append(step))
+
+    water.make_water(["fake_source"], bbox=BBOX, osm_pbf_url="https://x/hawaii.osm.pbf")
+
+    assert steps == ["inherit_waterbody_permanence", "apply_osm_sea", "apply_osm_gap_fills"]
+
+
+def test_make_water_cites_osm_for_the_sea(monkeypatch):
+    _stub_make_water_steps(monkeypatch)
+    cited = []
+    monkeypatch.setattr(water, "apply_osm_sea", lambda *args, **kwargs: 1)
+    monkeypatch.setattr(water, "cite_osm", lambda: cited.append(True))
+    tiled = {}
+    monkeypatch.setattr(
+        water, "make_pmtiles", lambda sources, **kwargs: tiled.update(sources=sources))
+
+    water.make_water(["fake_source"], bbox=BBOX)
+
+    assert cited
+    assert water.OSM_SOURCE in tiled["sources"]
+
+
+def test_make_water_without_a_bbox_does_not_add_the_sea(monkeypatch):
+    _stub_make_water_steps(monkeypatch)
+    calls = []
+    monkeypatch.setattr(water, "apply_osm_sea", lambda *args, **kwargs: calls.append(args))
+
+    water.make_water(["fake_source"])
+
+    assert not calls
 
 
 def test_inherit_waterbody_permanence_only_joins_artificial_paths(monkeypatch):
