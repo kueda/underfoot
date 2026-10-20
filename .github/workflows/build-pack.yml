@@ -64,7 +64,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: data/sources/work-*
-          key: cache-source-work-rocks-3-${{ inputs.pack }}-${{ hashFiles(format('data/packs/{0}.json', inputs.pack)) }}
+          key: cache-source-work-rocks-4-${{ inputs.pack }}-${{ hashFiles(format('data/packs/{0}.json', inputs.pack)) }}
 
       - name: Build rocks
         run: python packs.py ${{ inputs.pack }} --only rocks
