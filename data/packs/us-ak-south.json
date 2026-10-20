@@ -41,5 +41,9 @@
         "tiger_water_02122"
     ],
     "hydrography": "osm",
-    "rock_maxzoom": 10
+    "rock_maxzoom": 10,
+    "default_center": {
+        "lon": -139.7326,
+        "lat": 59.552
+    }
 }

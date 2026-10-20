@@ -427,6 +427,18 @@ if __name__ == "__main__":
         help="Highest zoom to tile the rocks to, for small-scale sources whose detail doesn't "
              "need zoom 14; the map overzooms past it")
     parser.add_argument(
+        "--default-center",
+        type=float,
+        nargs=2,
+        metavar=("LON", "LAT"),
+        help="Where the map centers when the pack loads, for packs where the center of "
+             "their bounding box is somewhere empty, like the ocean")
+    parser.add_argument(
+        "--default-zoom",
+        type=float,
+        metavar="ZOOM",
+        help="Zoom the map starts at when the pack loads")
+    parser.add_argument(
         "-i",
         "--interactive",
         action="store_true",
@@ -459,6 +471,10 @@ if __name__ == "__main__":
         data["hydrography"] = "osm"
     if args.rock_maxzoom:
         data["rock_maxzoom"] = args.rock_maxzoom
+    if args.default_center:
+        data["default_center"] = dict(zip(["lon", "lat"], args.default_center))
+    if args.default_zoom is not None:
+        data["default_zoom"] = args.default_zoom
     outfile_path = os.path.join("packs", f"{data['id']}.json",)
     with open(outfile_path, "w", encoding="utf-8") as outfile:
         json.dump(data, outfile, indent=4)

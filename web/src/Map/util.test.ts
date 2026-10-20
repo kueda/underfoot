@@ -3,7 +3,7 @@ import * as pmtiles from 'pmtiles';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ROCK_STYLE } from './mapStyles';
-import { loadMapFromPackData } from './util';
+import { loadMapFromPackData, packStartView } from './util';
 
 // Papa can't read Files under jsdom, and parsing isn't what these test
 vi.mock('papaparse', () => ({ default: { parse: vi.fn() } }));
@@ -56,5 +56,25 @@ describe('loadMapFromPackData', () => {
     mockTilesMaxZoom(10);
     const style = await loadRocksStyle(12);
     expect((style.sources.contours as VectorSourceSpecification).maxzoom).toBe(12);
+  });
+});
+
+describe('packStartView', () => {
+  const waysHeader = { centerLat: 57.35, centerLon: -165.12, maxZoom: 13 };
+
+  it('starts at the center of the ways tiles, zoomed out from their maxzoom', () => {
+    expect(packStartView({}, waysHeader)).toEqual({ center: [-165.12, 57.35], zoom: 11 });
+  });
+
+  it('starts at the pack\'s default center and zoom', () => {
+    expect(packStartView(
+      { defaultCenter: { lat: 60.79, lon: -161.76 }, defaultZoom: 10 },
+      waysHeader,
+    )).toEqual({ center: [-161.76, 60.79], zoom: 10 });
+  });
+
+  it('starts at the pack\'s default center even without a default zoom', () => {
+    expect(packStartView({ defaultCenter: { lat: 60.79, lon: -161.76 } }, waysHeader))
+      .toEqual({ center: [-161.76, 60.79], zoom: 11 });
   });
 });

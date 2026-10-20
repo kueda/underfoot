@@ -5,6 +5,10 @@ export interface PackMetadata {
   admin1: string;
   admin2: string;
   bbox: PackBoundingBox;
+  // Where the map starts when the pack loads, for packs where the center of
+  // the bbox is somewhere empty, like the ocean
+  default_center?: PackCenter;
+  default_zoom?: number;
   description: string;
   id: string;
   name: string;
@@ -23,6 +27,11 @@ export interface PackBoundingBox {
   left: number;
   right: number;
   top: number;
+}
+
+export interface PackCenter {
+  lat: number;
+  lon: number;
 }
 
 export interface UnderfootFeature {
