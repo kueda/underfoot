@@ -13,6 +13,7 @@ import {
   TRACE_LAYER_IDS,
   TraceDirection,
 } from './flowTrace';
+import type { PatternShape } from './pattern';
 
 const COLORS = {
   artificialWater: '#FF7F00',
@@ -56,6 +57,11 @@ const WATER_MAP_COLORS = {
   road: fadedOverLand(COLORS.road, WATER_MAP_ROAD_OPACITY),
   roadLabel: fadedOverLand(COLORS.roadLabel, WATER_MAP_ROAD_OPACITY),
 };
+
+// Like the glaciers on the USGS geologic map of Alaska: very light blue with
+// blue dots
+const ICE_COLOR = 'rgb(238,247,253)';
+const ICE_DOT_COLOR = 'rgb(108,186,236)';
 
 const NO_STYLE: StyleSpecification = {
   version: 8,
@@ -543,7 +549,7 @@ const ROCK_STYLE: StyleSpecification = {
           ['hawaiite'], 'rgb(198,128,80)',
           ['hornblendite'], 'rgb(163,1,9)',
           ['hornfels'], 'rgb(234,175,255)',
-          ['ice'], 'rgb(255,255,255)',
+          ['ice'], ICE_COLOR,
           ['ignimbrite'], 'rgb(255,229,195)',
           ['intermediate metavolcanic rock'], 'rgb(255,0,0)',
           ['intermediate volcanic rock'], 'rgb(235,96,1)',
@@ -673,6 +679,16 @@ const ROCK_STYLE: StyleSpecification = {
       },
     },
     {
+      'id': 'units-ice',
+      'source': 'rocks',
+      'source-layer': 'rock_units',
+      'type': 'fill',
+      'filter': ['==', ['get', 'lithology'], 'ice'],
+      'paint': {
+        'fill-pattern': 'ice-dots',
+      },
+    },
+    {
       'id': 'units-lines',
       'source': 'rocks',
       'minzoom': 12,
@@ -746,11 +762,18 @@ const MARSH_FILTER: ExpressionFilterSpecification = ['==', ['get', 'type'], 'swa
 // without competing with the waterways drawn over it
 const MARSH_TUFT_OPACITY = 0.55;
 
-// Colors of the images Map.tsx draws for tufted marsh patterns when the map
-// asks for them, like the tufts on USGS topo maps
-const MARSH_PATTERNS: Record<string, string> = {
-  'marsh-tufts': fadedOverLand(COLORS.water, MARSH_TUFT_OPACITY),
-  'marsh-tufts-faded': fadedOverLand(COLORS.water, MARSH_TUFT_OPACITY * FADED_OPACITY),
+// Images Map.tsx draws for patterns when the map asks for them, like the
+// tufts in marshes on USGS topo maps
+const PATTERNS: Record<string, { shape: PatternShape; color: string }> = {
+  'ice-dots': { shape: 'ice-dots', color: ICE_DOT_COLOR },
+  'marsh-tufts': {
+    shape: 'marsh-tufts',
+    color: fadedOverLand(COLORS.water, MARSH_TUFT_OPACITY),
+  },
+  'marsh-tufts-faded': {
+    shape: 'marsh-tufts',
+    color: fadedOverLand(COLORS.water, MARSH_TUFT_OPACITY * FADED_OPACITY),
+  },
 };
 
 const WATERWAYS_COLOR_EXP = byWaterwayNaturalness(COLORS.water, COLORS.artificialWater);
@@ -1113,8 +1136,8 @@ const WATER_STYLE: StyleSpecification = {
 };
 
 export {
-  MARSH_PATTERNS,
   NO_STYLE,
+  PATTERNS,
   ROCK_STYLE,
   TRACE_FADING_PAINT,
   WATER_STYLE,

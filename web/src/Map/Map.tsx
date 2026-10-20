@@ -33,8 +33,8 @@ import {
 } from './flowTrace';
 import { nearestLineFeature } from './nearestLineFeature';
 import { Citations, UnderfootFeatures } from './types';
-import { MARSH_PATTERNS, NO_STYLE, TRACE_FADING_PAINT } from './mapStyles';
-import { loadMarshTufts, MARSH_PATTERN_PIXEL_RATIO } from './marshPattern';
+import { NO_STYLE, PATTERNS, TRACE_FADING_PAINT } from './mapStyles';
+import { loadPattern, PATTERN_PIXEL_RATIO } from './pattern';
 import { loadMapFromPackData, packStartView } from './util';
 
 // Wrap native fetch to monitor all network requests and log failures
@@ -255,11 +255,11 @@ export default function UnderfootMap() {
       // Patterns are drawn when the map first needs them, including after a
       // style change clears them
       map.current.setMissingStyleImageResolver(async id => {
-        const patternColor = MARSH_PATTERNS[id];
-        if (!patternColor) return;
-        const image = await loadMarshTufts(patternColor);
+        const pattern = PATTERNS[id];
+        if (!pattern) return;
+        const image = await loadPattern(pattern.shape, pattern.color);
         if (map.current?.hasImage(id)) return;
-        map.current?.addImage(id, image, { pixelRatio: MARSH_PATTERN_PIXEL_RATIO });
+        map.current?.addImage(id, image, { pixelRatio: PATTERN_PIXEL_RATIO });
       });
       map.current.on('styleimagemissing', e => {
         log(`[MapLibre] Missing style image: ${e.id}`);
