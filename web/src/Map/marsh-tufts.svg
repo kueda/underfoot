@@ -3,7 +3,7 @@
   line, like the swamp symbol on topo maps. The tile is 32 CSS pixels drawn at
   twice the size, so the tufts stay crisp on high density screens. Tufts are
   offset so the repeat doesn't read as a grid, and kept away from the edges so
-  none get cut off. marshPattern.ts swaps currentColor for the map's colors.
+  none get cut off. pattern.ts swaps currentColor for the map's colors.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
   width="64" height="64" viewBox="0 0 32 32">

@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { TRACE_DIRECTIONS, TRACE_LAYER_IDS } from './flowTrace';
 import {
-  MARSH_PATTERNS,
+  PATTERNS,
   ROCK_STYLE,
   TRACE_FADING_PAINT,
   WATER_STYLE,
@@ -193,13 +193,13 @@ describe('marsh pattern', () => {
 
   it('draws tufts lighter than open water but darker than the swamp fill', () => {
     const fill = paint('waterbodies', 'fill-color');
-    const tufts = lightness(MARSH_PATTERNS[String(paint(MARSH_LAYER_ID, 'fill-pattern'))]);
+    const tufts = lightness(PATTERNS[String(paint(MARSH_LAYER_ID, 'fill-pattern'))].color);
     expect(tufts).toBeGreaterThan(lightness(evaluateForWaterbody(fill, LAKE)));
     expect(tufts).toBeLessThan(lightness(evaluateForWaterbody(fill, SWAMP)));
   });
 
   it('uses a pattern the map knows how to draw', () => {
-    expect(Object.keys(MARSH_PATTERNS)).toContain(paint(MARSH_LAYER_ID, 'fill-pattern'));
+    expect(Object.keys(PATTERNS)).toContain(paint(MARSH_LAYER_ID, 'fill-pattern'));
   });
 
   it('swaps in lighter tufts while tracing', () => {
@@ -207,9 +207,63 @@ describe('marsh pattern', () => {
     if (!fading) throw new Error('marsh tufts should fade while tracing');
     expect(fading.property).toBe('fill-pattern');
     const { color: pattern, faded: fadedPattern } = fading;
-    expect(Object.keys(MARSH_PATTERNS)).toContain(fadedPattern);
-    expect(lightness(MARSH_PATTERNS[String(fadedPattern)]))
-      .toBeGreaterThan(lightness(MARSH_PATTERNS[String(pattern)]));
+    expect(Object.keys(PATTERNS)).toContain(fadedPattern);
+    expect(lightness(PATTERNS[String(fadedPattern)].color))
+      .toBeGreaterThan(lightness(PATTERNS[String(pattern)].color));
+  });
+});
+
+describe('ice on the rocks map', () => {
+  const ICE_LAYER_ID = 'units-ice';
+  const ICE = { lithology: 'ice' };
+  const GRANITE = { lithology: 'granite' };
+
+  function channels(color: unknown) {
+    return (String(color).match(/\d+/g) ?? []).map(Number);
+  }
+
+  it('fills ice light blue instead of white', () => {
+    const fill = paint('units', 'fill-color', ROCK_STYLE);
+    const [red, , blue] = channels(evaluateForWaterbody(fill, ICE));
+    expect(blue).toBeGreaterThan(red);
+    expect(red).toBeLessThan(255);
+    expect(lightness(evaluateForWaterbody(fill, ICE))).toBeGreaterThan(700);
+  });
+
+  it('draws dots over ice units only', () => {
+    const ice = layer(ICE_LAYER_ID, ROCK_STYLE) as {
+      'type': string;
+      'source-layer'?: string;
+      'filter'?: FilterSpecification;
+    };
+    expect(ice.type).toBe('fill');
+    expect(ice['source-layer']).toBe('rock_units');
+    if (!ice.filter) throw new Error('ice layer should have a filter');
+    const { filter: evaluate } = featureFilter(ice.filter, 'filter');
+    const draws = (properties: Record<string, unknown>) => evaluate(
+      { zoom: 14 },
+      { type: 'Polygon', properties },
+    );
+    expect(draws(ICE)).toBe(true);
+    expect(draws(GRANITE)).toBe(false);
+  });
+
+  it('draws dots over the unit fill, under the unit outlines', () => {
+    const ids = ROCK_STYLE.layers.map(l => l.id);
+    expect(ids.indexOf(ICE_LAYER_ID)).toBeGreaterThan(ids.indexOf('units'));
+    expect(ids.indexOf(ICE_LAYER_ID)).toBeLessThan(ids.indexOf('units-lines'));
+  });
+
+  it('draws blue dots darker than the ice with a pattern the map knows how to draw', () => {
+    const id = String(paint(ICE_LAYER_ID, 'fill-pattern', ROCK_STYLE));
+    expect(Object.keys(PATTERNS)).toContain(id);
+    const { shape, color } = PATTERNS[id];
+    expect(shape).toBe('ice-dots');
+    const [red, , blue] = channels(color);
+    expect(blue).toBeGreaterThan(red);
+    expect(lightness(color)).toBeLessThan(
+      lightness(evaluateForWaterbody(paint('units', 'fill-color', ROCK_STYLE), ICE)),
+    );
   });
 });
 
