@@ -144,9 +144,10 @@ def schemify_attributes(attributes_path):
                     [row['UNITDESC'], row["UNIT_COM"]]
                 )
                 row["description"] = re.sub(r"\s+", " ", row["description"])
-                row["lithology"] = row['ROCKTYPE1']
+                # Some values have stray whitespace, e.g. "basalt " in OR
+                row["lithology"] = row['ROCKTYPE1'].strip()
                 row["rock_type"] = rock_type_from_lithology(
-                    row["ROCKTYPE1"]
+                    row["lithology"]
                 )
                 row["span"] = normalize_unit_age(row["UNIT_AGE"])
                 if not row["span"]:

@@ -124,3 +124,10 @@ def test_schemify_attributes_normalizes_hierarchical_unit_age(tmp_path, monkeypa
     )
     assert row["span"] == "Late Cretaceous"
     assert row["controlled_span"] == "upper cretaceous"
+
+
+def test_schemify_attributes_strips_whitespace_from_lithology(tmp_path, monkeypatch):
+    # Oregon unit Tba in OF 2005-1305 has a ROCKTYPE1 of "basalt "
+    row = schemify_row(tmp_path, monkeypatch, ROCKTYPE1="basalt ")
+    assert row["lithology"] == "basalt"
+    assert row["rock_type"] == "igneous"
