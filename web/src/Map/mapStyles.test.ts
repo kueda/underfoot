@@ -362,45 +362,69 @@ describe('waterway permanence', () => {
 });
 
 describe('waterbody permanence', () => {
-  const INTERMITTENT_OUTLINE_LAYER_ID = 'waterbodies-intermittent-outline';
+  const OUTLINE_LAYER_ID = 'waterbodies-nonperennial-outline';
 
   const opacity = (properties: Record<string, unknown>) => evaluateForWaterway(
     paint('waterbodies', 'fill-opacity'),
     properties,
   );
 
+  const outline = () => layer(OUTLINE_LAYER_ID) as {
+    type: string;
+    filter?: FilterSpecification;
+    layout?: Record<string, unknown>;
+    paint?: Record<string, unknown>;
+  };
+
+  const outlineDasharray = (properties: Record<string, unknown>) => evaluateForWaterway(
+    outline().paint?.['line-dasharray'],
+    properties,
+  ) as number[];
+
   it('fills intermittent waterbodies lighter than perennial ones', () => {
     expect(opacity({ permanence: 'intermittent' }))
       .toBeLessThan(opacity({ permanence: 'perennial' }) as number);
+  });
+
+  it('fills ephemeral waterbodies lighter than intermittent ones', () => {
+    // Regression test for #60: washes were filled like lakes
+    expect(opacity({ permanence: 'ephemeral' }))
+      .toBeLessThan(opacity({ permanence: 'intermittent' }) as number);
   });
 
   it('fills waterbodies with unknown permanence like perennial ones', () => {
     expect(opacity({})).toEqual(opacity({ permanence: 'perennial' }));
   });
 
-  it('outlines only intermittent waterbodies with a dashed line', () => {
-    const outline = layer(INTERMITTENT_OUTLINE_LAYER_ID) as {
-      type: string;
-      filter?: FilterSpecification;
-      layout?: Record<string, unknown>;
-      paint?: Record<string, unknown>;
-    };
-    expect(outline.type).toBe('line');
-    expect(isSolid(outline.paint?.['line-dasharray'])).toBe(false);
-    // Round caps draw the dots in the intermittent dash-dot pattern
-    expect(outline.layout?.['line-cap']).toBe('round');
-    const { filter: evaluate } = featureFilter(outline.filter, 'filter');
+  it('outlines only intermittent and ephemeral waterbodies', () => {
+    expect(outline().type).toBe('line');
+    const { filter: evaluate } = featureFilter(outline().filter, 'filter');
     const draws = (properties: Record<string, unknown>) => evaluate(
       { zoom: 14 },
       { type: 'Polygon', properties },
     );
     expect(draws({ permanence: 'intermittent' })).toBe(true);
+    expect(draws({ permanence: 'ephemeral' })).toBe(true);
     expect(draws({ permanence: 'perennial' })).toBe(false);
     expect(draws({})).toBe(false);
   });
 
-  it('fades the intermittent outline while tracing', () => {
-    expect(TRACE_FADING_PAINT.map(p => p.layer)).toContain(INTERMITTENT_OUTLINE_LAYER_ID);
+  it('outlines waterbodies with the dashes of waterways that flow as often', () => {
+    const waterwayDasharray = (permanence: string) => evaluateForWaterway(
+      paint('waterways', 'line-dasharray'),
+      { ...STREAM, permanence },
+    );
+    for (const permanence of ['intermittent', 'ephemeral']) {
+      expect(isSolid(outlineDasharray({ permanence })), permanence).toBe(false);
+      expect(outlineDasharray({ permanence }), permanence)
+        .toEqual(waterwayDasharray(permanence));
+    }
+    // Round caps draw the dots in the dash patterns
+    expect(outline().layout?.['line-cap']).toBe('round');
+  });
+
+  it('fades the outline while tracing', () => {
+    expect(TRACE_FADING_PAINT.map(p => p.layer)).toContain(OUTLINE_LAYER_ID);
   });
 });
 

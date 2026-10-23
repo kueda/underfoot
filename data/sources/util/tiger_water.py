@@ -61,6 +61,8 @@ def make_gpkg(fips, dst_path, append=False):
     if os.path.isfile(gpkg_path) and not append:
         print(f"Removing {gpkg_path}")
         os.remove(gpkg_path)
+    # TIGER doesn't say how often water fills its areas, but washes are dry
+    # except right after rain
     sql = f"""
         SELECT
             HYDROID AS waterbody_id,
@@ -82,7 +84,10 @@ def make_gpkg(fips, dst_path, append=False):
             ELSE 'unknown'
             END AS type,
             1 AS is_natural,
-            CAST(NULL AS TEXT) AS permanence,
+            CASE
+            WHEN FULLNAME LIKE '% Wash' THEN 'ephemeral'
+            ELSE CAST(NULL AS TEXT)
+            END AS permanence,
             Geometry AS geom
         FROM {basename}
         WHERE

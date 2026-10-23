@@ -11,18 +11,19 @@ import pytest
 from sources.util import tiger_water
 
 
-def test_make_gpkg_leaves_permanence_unknown(tmp_path, monkeypatch):
-    """Regression test for #31: TIGER doesn't say how often water fills its
-    areas, but they used to be called perennial"""
+def make_gpkg_for(features, tmp_path, monkeypatch):
+    """Run make_gpkg on a fake TIGER areawater shapefile with features,
+    each a dict of attributes, and return the name and permanence of each
+    waterbody"""
     fips = "35001"
     geojson_path = tmp_path / "areawater.geojson"
     geojson_path.write_text(json.dumps({
         "type": "FeatureCollection",
         "features": [{
             "type": "Feature",
-            "properties": {"HYDROID": "1", "FULLNAME": "Rio Grande", "MTFCC": "H3010"},
+            "properties": properties,
             "geometry": {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]},
-        }],
+        } for properties in features],
     }))
     subprocess.run([
         "ogr2ogr", "-f", "ESRI Shapefile",
@@ -35,7 +36,27 @@ def test_make_gpkg_leaves_permanence_unknown(tmp_path, monkeypatch):
     con = sqlite3.connect(gpkg_path)
     rows = con.execute("SELECT name, permanence FROM waterbodies").fetchall()
     con.close()
+    return rows
+
+
+def test_make_gpkg_leaves_permanence_unknown(tmp_path, monkeypatch):
+    """Regression test for #31: TIGER doesn't say how often water fills its
+    areas, but they used to be called perennial"""
+    rows = make_gpkg_for(
+        [{"HYDROID": "1", "FULLNAME": "Rio Grande", "MTFCC": "H3010"}],
+        tmp_path, monkeypatch,
+    )
     assert rows == [("Rio Grande", None)]
+
+
+def test_make_gpkg_calls_washes_ephemeral(tmp_path, monkeypatch):
+    """Regression test for #60: washes are dry except right after rain, but
+    TIGER doesn't say so, and they were drawn like lakes"""
+    rows = make_gpkg_for(
+        [{"HYDROID": "1", "FULLNAME": "Big Wash", "MTFCC": "H3010"}],
+        tmp_path, monkeypatch,
+    )
+    assert rows == [("Big Wash", "ephemeral")]
 
 
 def write_zip(path, fips):

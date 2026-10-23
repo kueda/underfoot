@@ -201,6 +201,8 @@ def process_nhdplus_hr_source_waterways(gdb_path, srs):
 
 def waterbodies_sql(lyr_name):
     """Make SQL for extracting waterbodies from an NHD layer"""
+    # NHD doesn't say how often water fills washes, or many areas named after
+    # them, but they're dry except right after rain
     return f"""
         SELECT
           GNIS_ID AS waterbody_id,
@@ -229,7 +231,13 @@ def waterbodies_sql(lyr_name):
             OR {lyr_name}.FCode = 43613
             OR {lyr_name}.FCode = 43624
           ) AS is_natural,
-          LOWER(NULLIF(NHDFCode.HydrographicCategory, ' ')) AS permanence,
+          COALESCE(
+            LOWER(NULLIF(NHDFCode.HydrographicCategory, ' ')),
+            CASE
+            WHEN {lyr_name}.FCode = 48400 OR GNIS_Name LIKE '% Wash'
+            THEN 'ephemeral'
+            END
+          ) AS permanence,
           Shape AS geom
         FROM
           {lyr_name}

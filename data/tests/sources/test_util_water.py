@@ -89,6 +89,8 @@ FAKE_NHD_FCODES = [
      "Description": "Reservoir"},
     {"FCode": 55800, "HydrographicCategory": " ", "RelationshipToSurface": " ",
      "Description": "Artificial Path"},
+    {"FCode": 48400, "HydrographicCategory": " ", "RelationshipToSurface": " ",
+     "Description": "Wash"},
 ]
 
 
@@ -115,10 +117,10 @@ def _flowline(nhdplus_id, fcode, ftype):
     }
 
 
-def _waterbody(gnis_id, fcode, ftype):
+def _waterbody(gnis_id, fcode, ftype, name=None):
     return {
         "type": "Feature",
-        "properties": {"GNIS_ID": gnis_id, "GNIS_Name": None, "FCode": fcode, "FType": ftype},
+        "properties": {"GNIS_ID": gnis_id, "GNIS_Name": name, "FCode": fcode, "FType": ftype},
         "geometry": {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]},
     }
 
@@ -139,7 +141,12 @@ def fixture_fake_nhd_gdb(tmp_path, monkeypatch):
         _waterbody("lake", 39001, 390),
         _waterbody("reservoir", 43600, 436),
     ], "POLYGON")
-    _write_layer(gdb_path, "NHDArea", [_waterbody("river", 46006, 460)], "POLYGON")
+    _write_layer(gdb_path, "NHDArea", [
+        _waterbody("river", 46006, 460),
+        _waterbody("wash", 48400, 484),
+        _waterbody("stream-named-wash", 46000, 460, name="Big Wash"),
+        _waterbody("perennial-wash", 46006, 460, name="Wet Wash"),
+    ], "POLYGON")
     _write_layer(gdb_path, "NHDFCode", [
         {"type": "Feature", "properties": fcode, "geometry": None}
         for fcode in FAKE_NHD_FCODES
@@ -185,3 +192,19 @@ def test_process_nhdplus_hr_source_waterbodies_leaves_unknown_permanence_empty(f
     water.process_nhdplus_hr_source_waterbodies(str(fake_nhd_gdb), "EPSG:4326")
     permanence = _permanence_by_source_id(water.WATERBODIES_FNAME, "waterbodies")
     assert permanence["reservoir"] is None
+
+
+def test_process_nhdplus_hr_source_waterbodies_calls_washes_ephemeral(fake_nhd_gdb):
+    """Regression test for #60: NHD doesn't say how often water fills its
+    washes, so they were drawn like lakes, but they're dry except right after
+    rain"""
+    water.process_nhdplus_hr_source_waterbodies(str(fake_nhd_gdb), "EPSG:4326")
+    permanence = _permanence_by_source_id(water.WATERBODIES_FNAME, "waterbodies")
+    assert permanence["wash"] == "ephemeral"
+    assert permanence["stream-named-wash"] == "ephemeral"
+
+
+def test_process_nhdplus_hr_source_waterbodies_keeps_nhd_permanence_for_washes(fake_nhd_gdb):
+    water.process_nhdplus_hr_source_waterbodies(str(fake_nhd_gdb), "EPSG:4326")
+    permanence = _permanence_by_source_id(water.WATERBODIES_FNAME, "waterbodies")
+    assert permanence["perennial-wash"] == "perennial"

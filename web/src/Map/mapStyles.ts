@@ -852,10 +852,11 @@ const WATERBODIES_OPACITY_EXP: DataDrivenPropertyValueSpecification<number> = [
   'match',
   ['get', 'permanence'],
   'intermittent', 0.5,
+  'ephemeral', 0.25,
   1,
 ];
 
-const WATERBODIES_INTERMITTENT_OUTLINE_LAYER_ID = 'waterbodies-intermittent-outline';
+const WATERBODIES_NONPERENNIAL_OUTLINE_LAYER_ID = 'waterbodies-nonperennial-outline';
 
 const WATERWAY_ARROWS_LAYER_ID = 'waterways-arrows';
 
@@ -919,7 +920,7 @@ const TRACE_FADING_PAINT: FadingPaint[] = [
     faded: 'marsh-tufts-faded',
   },
   {
-    layer: WATERBODIES_INTERMITTENT_OUTLINE_LAYER_ID,
+    layer: WATERBODIES_NONPERENNIAL_OUTLINE_LAYER_ID,
     property: 'line-color',
     color: COLORS.water,
     faded: fadedOverLand(COLORS.water),
@@ -1067,19 +1068,20 @@ const WATER_STYLE: StyleSpecification = {
       },
     },
     {
-      // Lighter fill alone could look like a trace fading the map
-      'id': WATERBODIES_INTERMITTENT_OUTLINE_LAYER_ID,
+      // Lighter fill alone could look like a trace fading the map. Dashed
+      // like waterways that flow as often.
+      'id': WATERBODIES_NONPERENNIAL_OUTLINE_LAYER_ID,
       'source': 'water',
       'source-layer': 'waterbodies',
       'type': 'line',
-      'filter': ['==', ['get', 'permanence'], 'intermittent'],
+      'filter': ['in', ['get', 'permanence'], ['literal', ['intermittent', 'ephemeral']]],
       'layout': {
         'line-cap': 'round',
       },
       'paint': {
         'line-color': COLORS.water,
         'line-width': 1,
-        'line-dasharray': INTERMITTENT_DASHES,
+        'line-dasharray': WATERWAYS_DASHARRAY_EXP,
       },
     },
     {
