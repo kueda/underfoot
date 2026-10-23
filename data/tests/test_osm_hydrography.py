@@ -1,18 +1,17 @@
 """Tests for taking hydrography (waterways, their flow, and waterbodies) from
 OpenStreetMap alone."""
 
-import os
-import zipfile
-
-import fiona
+import duckdb
 import osmium
 import pytest
-from shapely.geometry import Point, Polygon, box as shapely_box, mapping
+from shapely.geometry import Point, Polygon, box as shapely_box
 
 import osm_hydrography
 import water
 from osm_hydrography import build_network, link_lakes, read_osm_waterbodies
 from tests.test_waterway_names import lonlat
+
+OVERTURE_PATH = "s3://overturemaps-us-west-2/release/2026-10-21.0/theme=base"
 
 
 def osm_way(way_id, refs, points_m, name=None, waterway="stream", **tags):
@@ -414,33 +413,53 @@ def test_read_osm_waterbodies_skips_areas_too_broken_to_build(tmp_path):
     assert [(w["source_id_attr"], w["source_id"]) for w in waterbodies] == [("OSM way", "1")]
 
 
-def water_polygons_zip(tmp_path, polygons):
-    """Path to a zip like a download of OSM_WATER_POLYGONS_URL with polygons in it"""
-    shp_dir = tmp_path / os.path.dirname(osm_hydrography.OSM_WATER_POLYGONS_SHP)
-    shp_dir.mkdir()
-    schema = {"geometry": "Polygon", "properties": {"x": "int"}}
-    with fiona.open(tmp_path / osm_hydrography.OSM_WATER_POLYGONS_SHP, "w", driver="ESRI Shapefile",
-                    crs="EPSG:4326", schema=schema) as shp:
-        for i, polygon in enumerate(polygons):
-            shp.write({"geometry": mapping(polygon), "properties": {"x": i}})
-    zip_path = tmp_path / "water-polygons.zip"
-    with zipfile.ZipFile(zip_path, "w") as archive:
-        for path in shp_dir.iterdir():
-            archive.write(path, path.relative_to(tmp_path))
-    return str(zip_path)
+def overture_base(tmp_path, water=(), land=()):
+    """Path like overture_base_path()'s to GeoParquet files like Overture's base theme, with
+    water and land features as (subtype, class, polygon)"""
+    con = duckdb.connect()
+    for kind, features in (("water", water), ("land", land)):
+        (tmp_path / f"type={kind}").mkdir()
+        con.execute("""
+            CREATE OR REPLACE TABLE features (
+                subtype VARCHAR, class VARCHAR,
+                bbox STRUCT(xmin DOUBLE, xmax DOUBLE, ymin DOUBLE, ymax DOUBLE),
+                geometry BLOB)
+        """)
+        for subtype, klass, polygon in features:
+            left, bottom, right, top = polygon.bounds
+            con.execute(
+                """
+                    INSERT INTO features
+                    VALUES (?, ?, {'xmin': ?, 'xmax': ?, 'ymin': ?, 'ymax': ?}, ?)
+                """,
+                [subtype, klass, left, right, bottom, top, polygon.wkb])
+        con.execute(f"COPY features TO '{tmp_path}/type={kind}/part-0.parquet' (FORMAT parquet)")
+    con.close()
+    return str(tmp_path)
 
 
-def test_read_osm_sea_clips_the_water_polygons_to_the_bbox(tmp_path):
-    zip_path = water_polygons_zip(tmp_path, [
-        shapely_box(-122.3, 37.7, -122.0, 37.9),
-        shapely_box(-100.0, 40.0, -99.0, 41.0),
+def test_read_osm_sea_clips_overtures_ocean_to_the_bbox(tmp_path):
+    overture_path = overture_base(tmp_path, water=[
+        ("ocean", "ocean", shapely_box(-122.3, 37.7, -122.0, 37.9)),
+        ("ocean", "ocean", shapely_box(-100.0, 40.0, -99.0, 41.0)),
     ])
     bbox = {"left": -122.1, "bottom": 37.8, "right": -121.9, "top": 38.0}
 
-    [sea] = osm_hydrography.read_osm_sea(zip_path, bbox)
+    [sea] = osm_hydrography.read_osm_sea(overture_path, bbox)
 
     assert (sea["type"], sea["name"], sea["is_natural"]) == ("ocean/sea", None, 1)
     assert sea["geom"].equals(shapely_box(-122.1, 37.8, -122.0, 37.9))
+
+
+def test_read_osm_sea_leaves_out_overtures_other_water(tmp_path):
+    """Lakes and the bays Overture names over the sea come from elsewhere or not at all"""
+    overture_path = overture_base(tmp_path, water=[
+        ("lake", "lake", shapely_box(-122.05, 37.85, -122.0, 37.9)),
+        ("physical", "bay", shapely_box(-122.1, 37.8, -121.9, 38.0)),
+    ])
+    bbox = {"left": -122.1, "bottom": 37.8, "right": -121.9, "top": 38.0}
+
+    assert osm_hydrography.read_osm_sea(overture_path, bbox) == []
 
 
 def test_read_osm_sea_leaves_out_where_water_only_touches_the_bbox(tmp_path):
@@ -450,10 +469,49 @@ def test_read_osm_sea_leaves_out_where_water_only_touches_the_bbox(tmp_path):
     touching = shapely_box(-122.0, 37.85, -121.8, 38.1).union(
         shapely_box(-122.05, 38.0, -122.0, 38.1))
 
-    [sea] = osm_hydrography.read_osm_sea(water_polygons_zip(tmp_path, [touching]), bbox)
+    [sea] = osm_hydrography.read_osm_sea(
+        overture_base(tmp_path, water=[("ocean", "ocean", touching)]), bbox)
 
     assert sea["geom"].geom_type in ("Polygon", "MultiPolygon")
     assert sea["geom"].equals(shapely_box(-122.0, 37.85, -121.9, 38.0))
+
+
+def test_read_osm_sea_takes_out_islands_overtures_ocean_covers(tmp_path):
+    """Overture's ocean in the 2026-10-21.0 release covers Southeast Farallon Island, which
+    its land has as an island"""
+    island = shapely_box(-122.06, 37.86, -122.04, 37.88)
+    overture_path = overture_base(
+        tmp_path,
+        water=[("ocean", "ocean", shapely_box(-122.1, 37.8, -122.0, 37.9))],
+        land=[("land", "island", island),
+              ("land", "islet", shapely_box(-122.02, 37.82, -122.01, 37.83)),
+              ("tree", "tree", shapely_box(-122.09, 37.81, -122.08, 37.82))])
+    bbox = {"left": -122.1, "bottom": 37.8, "right": -121.9, "top": 38.0}
+
+    [sea] = osm_hydrography.read_osm_sea(overture_path, bbox)
+
+    expected = shapely_box(-122.1, 37.8, -122.0, 37.9).difference(island).difference(
+        shapely_box(-122.02, 37.82, -122.01, 37.83))
+    assert sea["geom"].equals(expected)
+
+
+def test_overture_base_path_is_in_the_latest_release(monkeypatch):
+    """Overture only keeps a few months of releases"""
+    class Response:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"latest": "2026-10-21.0"}
+
+    requested = []
+    monkeypatch.setattr(
+        osm_hydrography.requests, "get",
+        lambda url, **kwargs: requested.append(url) or Response())
+
+    assert osm_hydrography.overture_base_path() == \
+        "s3://overturemaps-us-west-2/release/2026-10-21.0/theme=base"
+    assert requested == [osm_hydrography.OVERTURE_CATALOG_URL]
 
 
 def test_apply_osm_waterbodies_adds_water_areas_and_sea_where_the_ways_were_read(monkeypatch):
@@ -465,15 +523,16 @@ def test_apply_osm_waterbodies_adds_water_areas_and_sea_where_the_ways_were_read
         osm_hydrography, "read_osm_waterbodies",
         lambda pbf_path, b: read.append((pbf_path, b)) or waterbodies)
     monkeypatch.setattr(
-        osm_hydrography, "read_osm_sea", lambda sea_path, b: read.append((sea_path, b)) or sea)
+        osm_hydrography, "read_osm_sea",
+        lambda overture_path, b: read.append((overture_path, b)) or sea)
     monkeypatch.setattr(osm_hydrography, "write_waterbodies", written.append)
 
-    count = osm_hydrography.apply_osm_waterbodies("x.osm.pbf", "water.zip", bbox)
+    count = osm_hydrography.apply_osm_waterbodies("x.osm.pbf", OVERTURE_PATH, bbox)
 
     assert count == 3
     assert written == [waterbodies + sea]
     read_bbox = osm_hydrography.widen_bbox(bbox, osm_hydrography.OSM_BBOX_MARGIN_DEG)
-    assert read == [("x.osm.pbf", read_bbox), ("water.zip", read_bbox)]
+    assert read == [("x.osm.pbf", read_bbox), (OVERTURE_PATH, read_bbox)]
 
 
 def test_apply_osm_sea_adds_the_sea_in_the_bbox(monkeypatch):
@@ -481,23 +540,24 @@ def test_apply_osm_sea_adds_the_sea_in_the_bbox(monkeypatch):
     sea = [{"source_id": None}]
     read, written = [], []
     monkeypatch.setattr(
-        osm_hydrography, "read_osm_sea", lambda sea_path, b: read.append((sea_path, b)) or sea)
+        osm_hydrography, "read_osm_sea",
+        lambda overture_path, b: read.append((overture_path, b)) or sea)
     monkeypatch.setattr(osm_hydrography, "write_waterbodies", written.append)
 
-    count = osm_hydrography.apply_osm_sea("water.zip", bbox)
+    count = osm_hydrography.apply_osm_sea(OVERTURE_PATH, bbox)
 
     assert count == 1
     assert written == [sea]
-    assert read == [("water.zip", bbox)]
+    assert read == [(OVERTURE_PATH, bbox)]
 
 
 def test_apply_osm_sea_writes_nothing_inland(monkeypatch):
     bbox = {"left": -106.1, "bottom": 35.0, "right": -105.9, "top": 35.2}
     written = []
-    monkeypatch.setattr(osm_hydrography, "read_osm_sea", lambda sea_path, b: [])
+    monkeypatch.setattr(osm_hydrography, "read_osm_sea", lambda overture_path, b: [])
     monkeypatch.setattr(osm_hydrography, "write_waterbodies", written.append)
 
-    assert osm_hydrography.apply_osm_sea("water.zip", bbox) == 0
+    assert osm_hydrography.apply_osm_sea(OVERTURE_PATH, bbox) == 0
     assert not written
 
 

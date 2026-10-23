@@ -10,6 +10,7 @@ import water
 from sources import util
 
 BBOX = {"left": -156.1, "bottom": 18.9, "right": -154.8, "top": 20.3}
+OVERTURE_PATH = "s3://overturemaps-us-west-2/release/2026-10-21.0/theme=base"
 SOURCES_PATH = os.path.join(os.path.dirname(os.path.realpath(water.__file__)), "sources")
 
 
@@ -279,6 +280,7 @@ def _stub_make_water_steps(monkeypatch):
     monkeypatch.setattr(water, "clean_sources", lambda sources, debug=False: None)
     monkeypatch.setattr(water, "process_sources", fake_process_sources)
     monkeypatch.setattr(water, "fetch_data", lambda url, **kwargs: os.path.basename(url))
+    monkeypatch.setattr(water, "overture_base_path", lambda: OVERTURE_PATH)
     monkeypatch.setattr(
         water.util, "run_sql", lambda sql, **kwargs: captured["sql"].append(sql)
     )
@@ -373,11 +375,12 @@ def test_make_water_adds_the_sea_from_osm_to_packs_with_hydrography_from_the_sou
     _stub_make_water_steps(monkeypatch)
     calls = []
     monkeypatch.setattr(
-        water, "apply_osm_sea", lambda sea_path, bbox, **kwargs: calls.append((sea_path, bbox)))
+        water, "apply_osm_sea",
+        lambda overture_path, bbox, **kwargs: calls.append((overture_path, bbox)))
 
     water.make_water(["fake_source"], bbox=BBOX)
 
-    assert calls == [("water-polygons-split-4326.zip", BBOX)]
+    assert calls == [(OVERTURE_PATH, BBOX)]
 
 
 def test_make_water_adds_the_sea_before_filling_gaps_so_creeks_can_reach_it(monkeypatch):
@@ -638,8 +641,8 @@ def test_make_water_can_take_waterways_and_flow_from_osm_instead_of_the_sources(
             water, step, lambda sources, step=step, **kwargs: steps.append((step, sources)))
     monkeypatch.setattr(
         water, "apply_osm_waterbodies",
-        lambda pbf_path, sea_path, b, **kwargs: steps.append(
-            ("apply_osm_waterbodies", pbf_path, sea_path, b)))
+        lambda pbf_path, overture_path, b, **kwargs: steps.append(
+            ("apply_osm_waterbodies", pbf_path, overture_path, b)))
     monkeypatch.setattr(
         water, "read_osm_waterways",
         lambda pbf_path, read_bbox, kinds: steps.append(("read", kinds)) or osm_ways)
@@ -659,8 +662,7 @@ def test_make_water_can_take_waterways_and_flow_from_osm_instead_of_the_sources(
         "create_tables",
         ("load_watersheds", ["fake_source"]),
         ("read", water.HYDROGRAPHY_WATERWAY_KINDS),
-        ("apply_osm_waterbodies", "http://example.com/x.osm.pbf",
-         f"{water.OSM_WATER_POLYGONS_URL}.pbf", bbox),
+        ("apply_osm_waterbodies", "http://example.com/x.osm.pbf", OVERTURE_PATH, bbox),
         ("apply_osm_network", osm_ways, bbox),
         "label",
         ("make_pmtiles", ["fake_source", "osm"]),

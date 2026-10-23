@@ -16,7 +16,7 @@ from database import DBNAME, SRID, make_database
 from geometry import widen_bbox
 from osm import fetch_data
 from osm_hydrography import (
-    OSM_WATER_POLYGONS_URL, apply_osm_network, apply_osm_sea, apply_osm_waterbodies)
+    apply_osm_network, apply_osm_sea, apply_osm_waterbodies, overture_base_path)
 from osm_waterways import (
     ENHANCING_WATERWAY_KINDS, HYDROGRAPHY_WATERWAY_KINDS, OSM_BBOX_MARGIN_DEG, OSM_SOURCE,
     cite_osm, read_osm_waterways)
@@ -749,8 +749,7 @@ def make_water(
         osm_ways = read_osm_waterways(
             pbf_path, widen_bbox(bbox, OSM_BBOX_MARGIN_DEG), kinds=HYDROGRAPHY_WATERWAY_KINDS)
         # OSM's lakes line up with its waterways, since they're mapped together
-        apply_osm_waterbodies(
-            pbf_path, fetch_data(OSM_WATER_POLYGONS_URL), bbox, debug=debug)
+        apply_osm_waterbodies(pbf_path, overture_base_path(), bbox, debug=debug)
         apply_osm_network(osm_ways, bbox, debug=debug)
     else:
         load_waterways(sources, debug=debug)
@@ -758,7 +757,7 @@ def make_water(
         inherit_waterbody_permanence(debug=debug)
         # Before the gap fills, so creeks that NHD stops short of the shore can reach it
         if bbox:
-            sea_count = apply_osm_sea(fetch_data(OSM_WATER_POLYGONS_URL), bbox, debug=debug)
+            sea_count = apply_osm_sea(overture_base_path(), bbox, debug=debug)
         load_flow(sources, debug=debug)
         if osm_pbf_url:
             osm_ways = read_osm_waterways(

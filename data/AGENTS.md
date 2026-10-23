@@ -91,11 +91,12 @@ waterbodies, which line up with OSM's waterways better than NHD's do; their wate
 still provide watersheds. That suits places OSM maps waterways well, like the Bay Area.
 
 NHD and TIGER don't map the open sea, and OSM only implies it with its coastline, so every
-pack takes the sea from the water polygons osmdata.openstreetmap.de makes from it, a 900 MB
-download cached as `water-polygons-split-4326.zip`. The sea fills the pack's bbox instead of
-stopping at its boundary, which often follows the shore, so the sea between islands isn't
-blank, and it's in the water tiles at every zoom. The web app also draws it under the rocks, where
-geologic sources usually stop at the shore.
+pack takes the sea from the water polygons Overture Maps makes from it, read from the latest
+release of its base theme on S3 with DuckDB (`duckdb` in `requirements.txt`), less the
+islands in Overture's land, which its ocean sometimes covers. The sea fills the pack's bbox
+instead of stopping at its boundary, which often follows the shore, so the sea between
+islands isn't blank, and it's in the water tiles at every zoom. The web app also draws it
+under the rocks, where geologic sources usually stop at the shore.
 
 ## Working on a single source
 
