@@ -49,6 +49,28 @@ def test_waterbodies_sql_classifies_all_swamp_marsh_fcodes_as_swamps(fcode):
     assert dict(zip(columns, cursor.fetchone()))["type"] == "swamp/marsh"
 
 
+@pytest.mark.parametrize("fcode,ftype,expected", [
+    (46000, 460, "stream/river"),
+    (46003, 460, "stream/river"),
+    (46006, 460, "stream/river"),
+    (46007, 460, "stream/river"),
+    (44500, 445, "ocean/sea"),
+    (31200, 312, "bay/estuary/gulf/sound"),
+    (49300, 493, "bay/estuary/gulf/sound"),
+])
+def test_waterbodies_sql_classifies_nhd_areas_that_are_not_lakes(fcode, ftype, expected):
+    """Regression test for #64: NHD areas for streams and rivers that aren't
+    perennial, the sea, and bays used to fall through to lake/pond"""
+    con = sqlite3.connect(":memory:")
+    con.execute("CREATE TABLE NHDArea (GNIS_ID, GNIS_Name, FCode, FType, Shape)")
+    con.execute("CREATE TABLE NHDFcode (FCode, Description, HydrographicCategory)")
+    con.execute("INSERT INTO NHDArea VALUES ('1', 'Some Water', ?, ?, NULL)", (fcode, ftype))
+    con.execute("INSERT INTO NHDFcode VALUES (?, 'Some Water', ' ')", (fcode,))
+    cursor = con.execute(water.waterbodies_sql("NHDArea"))
+    columns = [d[0] for d in cursor.description]
+    assert dict(zip(columns, cursor.fetchone()))["type"] == expected
+
+
 # Just enough of an NHDPlus HR GDB for the queries that extract waterways and
 # waterbodies. NHD leaves HydrographicCategory blank for FCodes that don't say
 # how often water flows, like 46000 (Stream/River) and 43600 (Reservoir).

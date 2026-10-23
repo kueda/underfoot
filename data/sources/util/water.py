@@ -213,10 +213,12 @@ def waterbodies_sql(lyr_name):
           WHEN {lyr_name}.FCode = 43607 THEN 'evaporator'
           WHEN {lyr_name}.FCode = 43613 THEN 'storage'
           WHEN {lyr_name}.FCode = 43624 THEN 'treatment'
-          WHEN {lyr_name}.FCode = 46006 THEN 'stream/river'
           WHEN {lyr_name}.FCode BETWEEN 46600 AND 46602 THEN 'swamp/marsh'
           WHEN {lyr_name}.FCode = 53700 THEN 'swamp/marsh'
           WHEN {lyr_name}.FType = 436 THEN 'reservoir'
+          WHEN {lyr_name}.FType = 460 THEN 'stream/river'
+          WHEN {lyr_name}.FType = 445 THEN 'ocean/sea'
+          WHEN {lyr_name}.FType IN (312, 493) THEN 'bay/estuary/gulf/sound'
           ELSE 'lake/pond'
           END AS type,
           NOT (
