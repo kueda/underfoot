@@ -19,18 +19,20 @@ downstream. Huge waterbodies like bays are left alone, since the creeks that end
 don't flow out through anything.
 
 OSM only implies the sea with its coastline, so the sea comes from the water polygons
-osmdata.openstreetmap.de makes from it.
+Overture Maps makes from it in each monthly release of its base theme.
 """
 
 import math
 from collections import defaultdict
 
-import fiona
+import duckdb
 import osmium
 import psycopg2
+import requests
 from psycopg2.extras import execute_values
 from shapely import wkb
-from shapely.geometry import LineString, MultiPolygon, Point, box, shape
+from shapely.geometry import LineString, MultiPolygon, Point, box
+from shapely.ops import unary_union
 from shapely.strtree import STRtree
 
 from database import DBNAME, SRID
@@ -44,10 +46,13 @@ from waterway_names import normalize
 # Same table water.py loads
 WATERBODIES_TABLE_NAME = "waterbodies"
 # OSM only implies the sea with its coastline, so the sea comes from the water polygons
-# osmdata.openstreetmap.de makes from it every day
-OSM_WATER_POLYGONS_URL = \
-    "https://osmdata.openstreetmap.de/download/water-polygons-split-4326.zip"
-OSM_WATER_POLYGONS_SHP = "water-polygons-split-4326/water_polygons.shp"
+# Overture Maps makes from it, cut into 1° squares like osmdata.openstreetmap.de's were. Its
+# catalog names the latest release, since it only keeps a few months of them.
+OVERTURE_CATALOG_URL = "https://stac.overturemaps.org/catalog.json"
+OVERTURE_BASE_PATH = "s3://overturemaps-us-west-2/release/{release}/theme=base"
+# Overture's ocean sometimes covers islands OSM maps, like Southeast Farallon Island in the
+# 2026-10-21.0 release, but its land still has them
+OVERTURE_ISLAND_CLASSES = ("island", "islet")
 # Where flow forks, it follows these before those
 KIND_RANK = {"river": 0, "stream": 0, "canal": 1, "ditch": 2, "drain": 3}
 LAKE_TYPES = {"lake/pond", "reservoir"}
@@ -352,24 +357,54 @@ def read_osm_waterbodies(pbf_path, bbox):
     return waterbodies
 
 
-def read_osm_sea(zip_path, bbox):
-    """The sea within bbox, as waterbodies like read_osm_waterbodies's, from the water
-    polygons osmdata.openstreetmap.de makes from OSM's coastline (zip_path is a download of
-    OSM_WATER_POLYGONS_URL), which are already split into small pieces"""
+def overture_base_path():
+    """Path to the base theme of Overture's latest release, for read_osm_sea"""
+    response = requests.get(OVERTURE_CATALOG_URL, timeout=60)
+    response.raise_for_status()
+    return OVERTURE_BASE_PATH.format(release=response.json()["latest"])
+
+
+def read_overture(overture_path, kind, bbox, where, params):
+    """Geometries of the Overture features of type kind (water, land) at overture_path (see
+    overture_base_path) whose bbox overlaps bbox, filtered by the SQL where with params"""
+    con = duckdb.connect()
+    rows = con.execute(
+        f"""
+            SELECT geometry
+            FROM read_parquet('{overture_path}/type={kind}/*')
+            WHERE {where}
+                AND bbox.xmin <= ? AND bbox.xmax >= ? AND bbox.ymin <= ? AND bbox.ymax >= ?
+        """,
+        params + [bbox["right"], bbox["left"], bbox["top"], bbox["bottom"]]).fetchall()
+    con.close()
+    return [wkb.loads(bytes(geometry)) for (geometry,) in rows]
+
+
+def read_osm_sea(overture_path, bbox):
+    """The sea within bbox, as waterbodies like read_osm_waterbodies's, from the ocean in
+    Overture's base theme at overture_path (see overture_base_path), which is already split
+    into small pieces, without the islands Overture's land has in it"""
     clip = box(bbox["left"], bbox["bottom"], bbox["right"], bbox["top"])
+    islands = read_overture(
+        overture_path, "land", bbox,
+        f"subtype = 'land' AND class IN ({', '.join('?' for _ in OVERTURE_ISLAND_CLASSES)})",
+        list(OVERTURE_ISLAND_CLASSES))
+    island_tree = STRtree(islands)
     sea = []
-    with fiona.open(f"/vsizip/{zip_path}/{OSM_WATER_POLYGONS_SHP}") as polygons:
-        for feature in polygons.filter(bbox=clip.bounds):
-            geom = shape(feature["geometry"]).intersection(clip)
-            # Water that also runs along the bbox's edge outside it adds that edge as a
-            # line, which the waterbodies table can't hold
-            if geom.geom_type == "GeometryCollection":
-                geom = MultiPolygon([part for part in geom.geoms if part.geom_type == "Polygon"])
-            if geom.is_empty or geom.area == 0:
-                continue
-            sea.append({"source_id": None, "source_id_attr": None, "geom": geom,
-                        "name": None, "type": "ocean/sea", "is_natural": 1,
-                        "permanence": None})
+    for ocean in read_overture(overture_path, "water", bbox, "subtype = ?", ["ocean"]):
+        geom = ocean.intersection(clip)
+        covered = island_tree.query(geom, predicate="intersects")
+        if len(covered):
+            geom = geom.difference(unary_union([islands[i] for i in covered]))
+        # Water that also runs along the bbox's edge outside it adds that edge as a
+        # line, which the waterbodies table can't hold
+        if geom.geom_type == "GeometryCollection":
+            geom = MultiPolygon([part for part in geom.geoms if part.geom_type == "Polygon"])
+        if geom.is_empty or geom.area == 0:
+            continue
+        sea.append({"source_id": None, "source_id_attr": None, "geom": geom,
+                    "name": None, "type": "ocean/sea", "is_natural": 1,
+                    "permanence": None})
     return sea
 
 
@@ -403,13 +438,14 @@ def write_network(network):
     con.close()
 
 
-def apply_osm_waterbodies(pbf_path, sea_path, bbox, debug=False):
+def apply_osm_waterbodies(pbf_path, overture_path, bbox, debug=False):
     """Load waterbodies from the water areas in the OSM PBF at pbf_path (see
-    read_osm_waterbodies) and the sea from the water polygons at sea_path (see
+    read_osm_waterbodies) and the sea from Overture's base theme at overture_path (see
     read_osm_sea), from where water.py reads the OSM ways; returns how many waterbodies
     were loaded"""
     read_bbox = widen_bbox(bbox, OSM_BBOX_MARGIN_DEG)
-    waterbodies = read_osm_waterbodies(pbf_path, read_bbox) + read_osm_sea(sea_path, read_bbox)
+    waterbodies = (
+        read_osm_waterbodies(pbf_path, read_bbox) + read_osm_sea(overture_path, read_bbox))
     if debug:
         util.log(f"water: {len(waterbodies)} waterbodies from OSM")
     if waterbodies:
@@ -417,11 +453,11 @@ def apply_osm_waterbodies(pbf_path, sea_path, bbox, debug=False):
     return len(waterbodies)
 
 
-def apply_osm_sea(sea_path, bbox, debug=False):
-    """Load the sea within bbox from the water polygons at sea_path (see read_osm_sea),
-    for packs whose other waterbodies come from their sources, which don't map the open
-    sea; returns how many pieces of it were loaded"""
-    sea = read_osm_sea(sea_path, bbox)
+def apply_osm_sea(overture_path, bbox, debug=False):
+    """Load the sea within bbox from Overture's base theme at overture_path (see
+    read_osm_sea), for packs whose other waterbodies come from their sources, which don't
+    map the open sea; returns how many pieces of it were loaded"""
+    sea = read_osm_sea(overture_path, bbox)
     if debug:
         util.log(f"water: {len(sea)} pieces of sea from OSM")
     if sea:

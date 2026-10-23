@@ -1,4 +1,5 @@
 aiofiles
+duckdb
 Fiona
 httpx
 mercantile

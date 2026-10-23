@@ -132,18 +132,6 @@ jobs:
           path: "data/*.osm.pbf"
           key: cache-osm-${{ steps.get-osm-url.outputs.osm-url }}-${{ steps.calc-year-week.outputs.year-week }}
 
-      # Packs take the sea from osmdata's water polygons, a 900 MB download
-      # that changes slowly
-      - name: Get current year month
-        id: calc-year-month
-        run: echo "year-month=$(date +'%Y-%m')" >> $GITHUB_OUTPUT
-
-      - name: Cache OSM water polygons download
-        uses: actions/cache@v5
-        with:
-          path: data/water-polygons-split-4326.zip
-          key: cache-osm-water-polygons-${{ steps.calc-year-month.outputs.year-month }}
-
       # Public repos' runners have 4 CPUs, and water sources are processed in parallel
       - name: Build water
         run: python packs.py ${{ inputs.pack }} --only water --procs 4
