@@ -12,7 +12,8 @@ from util import usgs_states
 def process_usgs_states(
         states=None,
         base_path=os.path.realpath(__file__),
-        source_path=os.path.realpath(__file__)):
+        source_path=os.path.realpath(__file__),
+        metadata_overrides_csv_path=None):
     """Process some or all of AR, CO, IA, KS, LA, MO, MT, ND, NE, NM, OK, SD, TX, or WY"""
     if states is None:
         states = [
@@ -22,5 +23,6 @@ def process_usgs_states(
         states=states,
         base_path=base_path,
         base_url="http://pubs.usgs.gov/of/2005/1351/data",
-        source_path=source_path
+        source_path=source_path,
+        metadata_overrides_csv_path=metadata_overrides_csv_path
     )

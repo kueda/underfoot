@@ -42,13 +42,45 @@ def test_merge_attributes_reads_csv_without_header(tmp_path, monkeypatch):
     assert list(merged["ROCKTYPE1"]) == ["granite"]
 
 
-def schemify_row(tmp_path, monkeypatch, **overrides):
+def schemify_row(tmp_path, monkeypatch, overrides_path=None, **overrides):
     monkeypatch.chdir(tmp_path)
     row = dict(zip(HEADER.split(","), ME_ROW.split(",")))
     row.update(overrides)
     path = tmp_path / "merged_units.csv"
     pd.DataFrame([row]).to_csv(path, index=False)
-    return pd.read_csv(usgs_states.schemify_attributes(str(path)), keep_default_na=False).iloc[0]
+    schemified_path = usgs_states.schemify_attributes(str(path), overrides_path=overrides_path)
+    return pd.read_csv(schemified_path, keep_default_na=False).iloc[0]
+
+
+# OF 2005-1351 names some lithologies differently from GeMS, e.g. without "rock"
+@pytest.mark.parametrize("rocktype,lithology", [
+    ("fine-grained mixed clastic", "fine-grained mixed clastic rock"),
+    ("medium-grained mixed clastic", "medium-grained mixed clastic rock"),
+    ("coarse-grained mixed clastic", "coarse-grained mixed clastic rock"),
+    ("mixed clastic/carbonate", "mixed carbonate/clastic rock"),
+])
+def test_schemify_attributes_uses_known_name_for_lithology(
+    tmp_path, monkeypatch, rocktype, lithology
+):
+    row = schemify_row(tmp_path, monkeypatch, ROCKTYPE1=rocktype)
+    assert row["lithology"] == lithology
+    assert row["rock_type"] == "sedimentary"
+
+
+def test_schemify_attributes_applies_overrides(tmp_path, monkeypatch):
+    overrides_path = tmp_path / "overrides.csv"
+    overrides_path.write_text("code,lithology\nC1,mudstone\n", encoding="utf-8")
+    row = schemify_row(tmp_path, monkeypatch, overrides_path=str(overrides_path))
+    assert row["lithology"] == "mudstone"
+    assert row["rock_type"] == "sedimentary"
+
+
+def test_schemify_attributes_ignores_overrides_for_other_codes(tmp_path, monkeypatch):
+    overrides_path = tmp_path / "overrides.csv"
+    overrides_path.write_text("code,lithology\nC2,mudstone\n", encoding="utf-8")
+    row = schemify_row(tmp_path, monkeypatch, overrides_path=str(overrides_path))
+    assert row["lithology"] == "granite"
+    assert row["rock_type"] == "igneous"
 
 
 def test_schemify_attributes_infers_missing_span_from_title(tmp_path, monkeypatch):

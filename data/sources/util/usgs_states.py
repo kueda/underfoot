@@ -120,9 +120,35 @@ def normalize_unit_age(unit_age):
     return f"{terms[0]} to {terms[-1]}"
 
 
-def schemify_attributes(attributes_path):
-    """Convert metadata attributes to the Underfoot schema"""
+# Lithologies in these sources that Underfoot knows by another name
+ROCKTYPE_LITHOLOGIES = {
+    "fine-grained mixed clastic": "fine-grained mixed clastic rock",
+    "medium-grained mixed clastic": "medium-grained mixed clastic rock",
+    "coarse-grained mixed clastic": "coarse-grained mixed clastic rock",
+    "mixed clastic/carbonate": "mixed carbonate/clastic rock",
+}
+
+
+def read_overrides(overrides_path):
+    """Read an overrides CSV into a dict of non-blank values by code"""
+    if not overrides_path:
+        return {}
+    with open(overrides_path, encoding="utf-8") as overrides_file:
+        return {
+            row["code"]: {col: val for col, val in row.items() if val}
+            for row in csv.DictReader(overrides_file)
+        }
+
+
+def schemify_attributes(attributes_path, overrides_path=None):
+    """
+    Convert metadata attributes to the Underfoot schema, overriding values
+    with non-blank values in rows with the same code in an overrides CSV,
+    e.g. to fix lithologies the source only describes as mixed
+    """
     log(f"SCHEMIFYING ATTRIBUTES for {attributes_path}...")
+    overrides = read_overrides(overrides_path)
+    overridden_codes = set()
     outfile_path = "units.csv"
     with open(attributes_path, encoding="utf-8") as attr_f:
         reader = csv.DictReader(attr_f)
@@ -145,11 +171,13 @@ def schemify_attributes(attributes_path):
                 )
                 row["description"] = re.sub(r"\s+", " ", row["description"])
                 # Some values have stray whitespace, e.g. "basalt " in OR
-                row["lithology"] = row['ROCKTYPE1'].strip()
-                row["rock_type"] = rock_type_from_lithology(
-                    row["lithology"]
-                )
+                rocktype = row['ROCKTYPE1'].strip()
+                row["lithology"] = ROCKTYPE_LITHOLOGIES.get(rocktype, rocktype)
                 row["span"] = normalize_unit_age(row["UNIT_AGE"])
+                if override := overrides.get(row["code"]):
+                    row.update(override)
+                    overridden_codes.add(row["code"])
+                row["rock_type"] = rock_type_from_lithology(row["lithology"])
                 if not row["span"]:
                     row["span"] = span_from_text(row["title"])
                 if not row["span"]:
@@ -160,6 +188,8 @@ def schemify_attributes(attributes_path):
                 if row["span"]:
                     row["min_age"], row["max_age"], row["est_age"] = ages_from_span(row["span"])
                 writer.writerow(row)
+    for code in overrides.keys() - overridden_codes:
+        log(f"  Override for {code!r} doesn't match any unit")
     return os.path.realpath(outfile_path)
 
 
@@ -229,7 +259,9 @@ def process_usgs_states(
     # URL where remote data files lives
     base_url,
     # Path to the source script that output files are being made for
-    source_path
+    source_path,
+    # Path to a CSV of metadata that overrides the source's, by code
+    metadata_overrides_csv_path=None
 ):
     """Download and process files for states from of2006_1272"""
     work_path = make_work_dir(base_path)
@@ -238,7 +270,10 @@ def process_usgs_states(
     single_shapefile_path = merge_shapes(shape_paths)
     attribute_paths = [download_attributes(state, base_url) for state in states]  # noqa: E501
     single_attributes_path = merge_attributes(attribute_paths)
-    schemified_attributes_path = schemify_attributes(single_attributes_path)
+    schemified_attributes_path = schemify_attributes(
+        single_attributes_path,
+        overrides_path=metadata_overrides_csv_path
+    )
     join_polygons_and_metadata(
       single_shapefile_path,
       schemified_attributes_path,
