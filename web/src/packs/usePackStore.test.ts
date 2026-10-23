@@ -110,6 +110,27 @@ describe('usePackStore', () => {
       await act(() => result.current.download(OAKLAND));
       expect(result.current.currentPackId).toBe('us-ca-berkeley');
     });
+
+    describe('with the Umami tracker loaded', () => {
+      let track: ReturnType<typeof vi.fn>;
+
+      beforeEach(() => {
+        track = vi.fn();
+        vi.stubGlobal('umami', { track });
+      });
+
+      it('records a pack-download event for the pack', async () => {
+        const { result } = await renderPackStore();
+        await act(() => result.current.download(OAKLAND));
+        expect(track).toHaveBeenCalledWith('pack-download', { pack: OAKLAND });
+      });
+
+      it('does not record an event when the download fails', async () => {
+        const { result } = await renderPackStore();
+        await expect(result.current.download('us-xx-nowhere')).rejects.toThrow();
+        expect(track).not.toHaveBeenCalled();
+      });
+    });
   });
 
   describe('when the manifest has an update for a downloaded pack', () => {

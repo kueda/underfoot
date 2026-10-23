@@ -142,6 +142,7 @@ export function usePackStore(): PackStore {
       pmtiles_path: pack.pmtilesPath,
       updated_at: pack.updatedAt,
     }, blob));
+    window.umami?.track('pack-download', { pack: pack.id });
   }, [get, storePack]);
 
   // Loads a pack straight from a local .zip, bypassing the manifest/download
