@@ -27,6 +27,16 @@ describe('WaterHeader', () => {
     expect(screen.getByText('Waterway')).toBeTruthy();
   });
 
+  // Like the flood pools behind dams, which are dry most of the time (#83)
+  it('calls floodplains floodplains, not waterbodies', () => {
+    render(
+      <WaterHeader
+        feature={{ layer: 'waterbodies', source: 'nhdplus_h_1204_hu4', type: 'floodplain' }}
+      />,
+    );
+    expect(screen.getByText('Floodplain')).toBeTruthy();
+  });
+
   it('calls the sea the ocean, since it has no name', () => {
     render(<WaterHeader feature={{ layer: 'waterbodies', source: 'osm', type: 'ocean/sea' }} />);
     expect(screen.getByText('Ocean')).toBeTruthy();

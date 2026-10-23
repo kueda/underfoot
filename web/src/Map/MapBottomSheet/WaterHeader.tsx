@@ -7,7 +7,8 @@ export default function WaterHeader({ feature }: { feature?: WaterFeature }) {
       displayLayer = 'Waterway';
       break;
     case 'waterbodies':
-      displayLayer = 'Waterbody';
+      // Floodplains are dry most of the time, so they're not really waterbodies
+      displayLayer = feature.type === 'floodplain' ? 'Floodplain' : 'Waterbody';
       break;
     case 'watersheds':
       displayLayer = 'Watershed';

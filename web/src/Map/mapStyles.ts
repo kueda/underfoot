@@ -760,22 +760,39 @@ function byWaterwayNaturalness(
 // like the upstream trace. Pale enough for the marsh tufts on top to read.
 const SWAMP_OPACITY = 0.2;
 
+// Floodplains, like the flood pools behind dams, are dry most of the time
+// and often full of roads and houses, so they get just a hint of water (#83)
+const FLOODPLAIN_OPACITY = 0.1;
+
 function byWaterbodyType(
   openWater: string,
   swamp: string,
+  floodplain: string,
 ): DataDrivenPropertyValueSpecification<string> {
-  return ['match', ['get', 'type'], 'swamp/marsh', swamp, openWater];
+  return [
+    'match',
+    ['get', 'type'],
+    'swamp/marsh', swamp,
+    'floodplain', floodplain,
+    openWater,
+  ];
 }
 
 const WATERBODIES_COLOR_EXP = byWaterbodyType(
   COLORS.water,
   fadedOverLand(COLORS.water, SWAMP_OPACITY),
+  fadedOverLand(COLORS.water, FLOODPLAIN_OPACITY),
 );
 
 const FADED_WATERBODIES_COLOR_EXP = byWaterbodyType(
   fadedOverLand(COLORS.water),
   fadedOverLand(COLORS.water, SWAMP_OPACITY * FADED_OPACITY),
+  fadedOverLand(COLORS.water, FLOODPLAIN_OPACITY * FADED_OPACITY),
 );
+
+const FLOODPLAIN_LAYER_ID = 'waterbodies-floodplain';
+const FLOODPLAIN_OUTLINE_LAYER_ID = 'waterbodies-floodplain-outline';
+const FLOODPLAIN_FILTER: ExpressionFilterSpecification = ['==', ['get', 'type'], 'floodplain'];
 
 const MARSH_FILL_LAYER_ID = 'waterbodies-marsh-fill';
 const MARSH_LAYER_ID = 'waterbodies-marsh';
@@ -858,6 +875,10 @@ const WATERBODIES_OPACITY_EXP: DataDrivenPropertyValueSpecification<number> = [
 
 const WATERBODIES_NONPERENNIAL_OUTLINE_LAYER_ID = 'waterbodies-nonperennial-outline';
 
+// Floodplains only have water in floods, like ephemeral waterways after rain
+const FLOODPLAIN_OUTLINE_OPACITY = 0.6;
+const FLOODPLAIN_OUTLINE_COLOR = fadedOverLand(COLORS.water, FLOODPLAIN_OUTLINE_OPACITY);
+
 const WATERWAY_ARROWS_LAYER_ID = 'waterways-arrows';
 
 // The map font has these triangles but not the Unicode arrows
@@ -906,6 +927,18 @@ const TRACE_FADING_PAINT: FadingPaint[] = [
     property: 'fill-color',
     color: WATERBODIES_COLOR_EXP,
     faded: FADED_WATERBODIES_COLOR_EXP,
+  },
+  {
+    layer: FLOODPLAIN_LAYER_ID,
+    property: 'fill-color',
+    color: WATERBODIES_COLOR_EXP,
+    faded: FADED_WATERBODIES_COLOR_EXP,
+  },
+  {
+    layer: FLOODPLAIN_OUTLINE_LAYER_ID,
+    property: 'line-color',
+    color: FLOODPLAIN_OUTLINE_COLOR,
+    faded: fadedOverLand(COLORS.water, FLOODPLAIN_OUTLINE_OPACITY * FADED_OPACITY),
   },
   {
     layer: MARSH_FILL_LAYER_ID,
@@ -1031,6 +1064,34 @@ const WATER_STYLE: StyleSpecification = {
       },
     },
     {
+      // Under everything else in the waterbodies layer, since floodplains
+      // cover the lakes and marshes in them
+      'id': FLOODPLAIN_LAYER_ID,
+      'source': 'water',
+      'source-layer': 'waterbodies',
+      'type': 'fill',
+      'filter': FLOODPLAIN_FILTER,
+      'paint': {
+        'fill-color': WATERBODIES_COLOR_EXP,
+      },
+    },
+    {
+      // A fill this faint could look like a trace fading the map
+      'id': FLOODPLAIN_OUTLINE_LAYER_ID,
+      'source': 'water',
+      'source-layer': 'waterbodies',
+      'type': 'line',
+      'filter': FLOODPLAIN_FILTER,
+      'layout': {
+        'line-cap': 'round',
+      },
+      'paint': {
+        'line-color': FLOODPLAIN_OUTLINE_COLOR,
+        'line-width': 1.5,
+        'line-dasharray': EPHEMERAL_DASHES,
+      },
+    },
+    {
       'id': MARSH_FILL_LAYER_ID,
       'source': 'water',
       'source-layer': 'waterbodies',
@@ -1061,7 +1122,7 @@ const WATER_STYLE: StyleSpecification = {
       'source': 'water',
       'source-layer': 'waterbodies',
       'type': 'fill',
-      'filter': ['!', MARSH_FILTER],
+      'filter': ['all', ['!', MARSH_FILTER], ['!', FLOODPLAIN_FILTER]],
       'paint': {
         'fill-color': WATERBODIES_COLOR_EXP,
         'fill-opacity': WATERBODIES_OPACITY_EXP,

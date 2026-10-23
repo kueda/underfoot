@@ -211,7 +211,8 @@ def waterbodies_sql(lyr_name):
           GNIS_Name AS name,
           CASE
           WHEN {lyr_name}.FCode = 36400 THEN 'foreshore'
-          WHEN {lyr_name}.FCode = 40309 THEN 'floodplain'
+          /* Inundation areas, which only have water in floods */
+          WHEN {lyr_name}.FType = 403 THEN 'floodplain'
           WHEN {lyr_name}.FCode = 43607 THEN 'evaporator'
           WHEN {lyr_name}.FCode = 43613 THEN 'storage'
           WHEN {lyr_name}.FCode = 43624 THEN 'treatment'

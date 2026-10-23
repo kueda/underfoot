@@ -43,6 +43,9 @@ function evaluateForWaterbody(value: unknown, properties: Record<string, unknown
 
 const LAKE = { is_natural: 1, type: 'lake/pond' };
 const SWAMP = { is_natural: 1, type: 'swamp/marsh' };
+// NHD's inundation areas, like the flood pools behind Addicks and Barker dams in
+// Houston, which are dry and full of roads most of the time (#83)
+const FLOODPLAIN = { is_natural: 1, type: 'floodplain' };
 
 // Relative lightness of a #rrggbb or rgb(r,g,b) color, from 0 to 765
 function lightness(color: unknown) {
@@ -358,6 +361,58 @@ describe('waterway permanence', () => {
 
   it('dashes artificial paths through intermittent waterbodies', () => {
     expect(isSolid(dasharray({ ...ARTIFICIAL_PATH, permanence: 'intermittent' }))).toBe(false);
+  });
+});
+
+describe('floodplains', () => {
+  const FLOODPLAIN_LAYER_ID = 'waterbodies-floodplain';
+  const FLOODPLAIN_OUTLINE_LAYER_ID = 'waterbodies-floodplain-outline';
+  const MARSH_FILL_LAYER_ID = 'waterbodies-marsh-fill';
+
+  it('draws floodplains lighter than swamps and marshes', () => {
+    const color = paint(FLOODPLAIN_LAYER_ID, 'fill-color');
+    expect(lightness(evaluateForWaterbody(color, FLOODPLAIN)))
+      .toBeGreaterThan(lightness(evaluateForWaterbody(color, SWAMP)));
+  });
+
+  it('draws floodplains in their own layer, not as open water or marsh', () => {
+    expect(draws(FLOODPLAIN_LAYER_ID, FLOODPLAIN)).toBe(true);
+    expect(draws(FLOODPLAIN_LAYER_ID, LAKE)).toBe(false);
+    expect(draws(FLOODPLAIN_LAYER_ID, SWAMP)).toBe(false);
+    expect(draws('waterbodies', FLOODPLAIN)).toBe(false);
+    expect(draws(MARSH_FILL_LAYER_ID, FLOODPLAIN)).toBe(false);
+  });
+
+  // Floodplains cover the lakes and marshes in them
+  it('draws floodplains under marshes and open water', () => {
+    const ids = WATER_STYLE.layers.map(l => l.id);
+    expect(ids.indexOf(FLOODPLAIN_LAYER_ID)).toBeLessThan(ids.indexOf(MARSH_FILL_LAYER_ID));
+    expect(ids.indexOf(FLOODPLAIN_LAYER_ID)).toBeLessThan(ids.indexOf('waterbodies'));
+  });
+
+  it('outlines floodplains with dots like ephemeral waterways', () => {
+    const outline = layer(FLOODPLAIN_OUTLINE_LAYER_ID) as {
+      type: string;
+      layout?: Record<string, unknown>;
+      paint?: Record<string, unknown>;
+    };
+    expect(outline.type).toBe('line');
+    expect(outline.paint?.['line-dasharray']).toEqual(evaluateForWaterway(
+      paint('waterways', 'line-dasharray'),
+      { permanence: 'ephemeral' },
+    ));
+    expect(outline.layout?.['line-cap']).toBe('round');
+    expect(draws(FLOODPLAIN_OUTLINE_LAYER_ID, FLOODPLAIN)).toBe(true);
+    expect(draws(FLOODPLAIN_OUTLINE_LAYER_ID, LAKE)).toBe(false);
+  });
+
+  it('fades floodplains further while tracing', () => {
+    for (const id of [FLOODPLAIN_LAYER_ID, FLOODPLAIN_OUTLINE_LAYER_ID]) {
+      const fading = TRACE_FADING_PAINT.find(p => p.layer === id);
+      if (!fading) throw new Error(`${id} should fade while tracing`);
+      expect(lightness(evaluateForWaterbody(fading.faded, FLOODPLAIN)), id)
+        .toBeGreaterThan(lightness(evaluateForWaterbody(fading.color, FLOODPLAIN)));
+    }
   });
 });
 

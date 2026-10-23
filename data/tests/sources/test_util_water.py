@@ -71,6 +71,21 @@ def test_waterbodies_sql_classifies_nhd_areas_that_are_not_lakes(fcode, ftype, e
     assert dict(zip(columns, cursor.fetchone()))["type"] == expected
 
 
+@pytest.mark.parametrize("fcode", [40300, 40307, 40308, 40309])
+def test_waterbodies_sql_classifies_all_inundation_area_fcodes_as_floodplains(fcode):
+    """Inundation areas, like the flood pools behind Addicks and Barker dams in
+    Houston, are dry most of the time (#83). Only 40309 used to be a
+    floodplain; the rest fell through to lake/pond."""
+    con = sqlite3.connect(":memory:")
+    con.execute("CREATE TABLE NHDArea (GNIS_ID, GNIS_Name, FCode, FType, Shape)")
+    con.execute("CREATE TABLE NHDFcode (FCode, Description, HydrographicCategory)")
+    con.execute("INSERT INTO NHDArea VALUES (NULL, NULL, ?, 403, NULL)", (fcode,))
+    con.execute("INSERT INTO NHDFcode VALUES (?, 'Inundation Area', ' ')", (fcode,))
+    cursor = con.execute(water.waterbodies_sql("NHDArea"))
+    columns = [d[0] for d in cursor.description]
+    assert dict(zip(columns, cursor.fetchone()))["type"] == "floodplain"
+
+
 # Just enough of an NHDPlus HR GDB for the queries that extract waterways and
 # waterbodies. NHD leaves HydrographicCategory blank for FCodes that don't say
 # how often water flows, like 46000 (Stream/River) and 43600 (Reservoir).
