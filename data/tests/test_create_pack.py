@@ -208,6 +208,20 @@ def test_find_nhd_hu4_sources_skips_alaska_which_nhdplus_hr_does_not_cover(
     assert create_pack.find_nhd_hu4_sources("pack.geojson") == ["nhdplus_h_1802_hu4"]
 
 
+def test_find_nhd_hu4_sources_skips_mexican_hu4s_which_nhdplus_hr_does_not_cover(
+        tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    write_feature_collection(tmp_path / "simplified_wbd_hu4.geojson", [
+        box_feature(0, 0, 1, 1, {"huc4": "1309"}),
+        box_feature(1, 0, 2, 1, {"huc4": "1310"}),
+        box_feature(2, 0, 3, 1, {"huc4": "1311"}),
+        box_feature(3, 0, 4, 1, {"huc4": "1312"})
+    ])
+    write_feature_collection(tmp_path / "pack.geojson", [box_feature(0, 0, 4, 1)])
+
+    assert create_pack.find_nhd_hu4_sources("pack.geojson") == ["nhdplus_h_1309_hu4"]
+
+
 def test_create_pack_can_take_hydrography_from_osm(tmp_path):
     set_up_create_pack(tmp_path)
 
