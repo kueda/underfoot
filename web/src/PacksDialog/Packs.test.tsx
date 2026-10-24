@@ -288,4 +288,60 @@ describe('Packs', () => {
       });
     });
   });
+
+  describe('searching', () => {
+    const searchBox = () => screen.getByRole('searchbox', { name: 'Search packs' });
+
+    it('lists the All tab\'s matches flat, whatever level they are on', async () => {
+      render(<Packs />);
+      await screen.findByText('United States');
+
+      fireEvent.change(searchBox(), { target: { value: 'berk' } });
+
+      expect(await screen.findByText('Berkeley')).toBeTruthy();
+      expect(screen.queryByText('Oakland')).toBeNull();
+      expect(screen.queryByText('United States')).toBeNull();
+    });
+
+    it('says when nothing matches', async () => {
+      render(<Packs />);
+      await screen.findByText('United States');
+
+      fireEvent.change(searchBox(), { target: { value: 'zzz' } });
+
+      expect(screen.getByText('No packs match "zzz".')).toBeTruthy();
+    });
+
+    it('brings back the hierarchy when the search is cleared', async () => {
+      render(<Packs />);
+      await screen.findByText('United States');
+      fireEvent.change(searchBox(), { target: { value: 'berk' } });
+      await screen.findByText('Berkeley');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Clear search' }));
+
+      expect(await screen.findByText('United States')).toBeTruthy();
+      expect(screen.queryByText('Berkeley')).toBeNull();
+    });
+
+    it('filters the Downloaded tab', async () => {
+      render(<Packs />);
+      await openCalifornia();
+      fireEvent.click(row('Berkeley').getByRole('button', { name: 'download' }));
+      await waitFor(() => {
+        expect(row('Berkeley').getByRole('button', { name: 'delete' })).toBeTruthy();
+      });
+      fireEvent.click(row('Oakland').getByRole('button', { name: 'download' }));
+      await waitFor(() => {
+        expect(row('Oakland').getByRole('button', { name: 'delete' })).toBeTruthy();
+      });
+      fireEvent.click(screen.getByRole('tab', { name: 'Downloaded' }));
+      await screen.findByText('Berkeley');
+
+      fireEvent.change(searchBox(), { target: { value: 'oak' } });
+
+      expect(screen.getByText('Oakland')).toBeTruthy();
+      expect(screen.queryByText('Berkeley')).toBeNull();
+    });
+  });
 });
