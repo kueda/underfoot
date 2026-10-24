@@ -9,6 +9,12 @@ import {
 import { useHidePacksModal, useRequestPack } from '../useAppStore';
 import Packs from './Packs';
 
+// jsdom has no Worker, so unzip packs on the main thread instead
+vi.mock('../packs/extractPackInWorker', async () => {
+  const { extractPack } = await import('../packs/extractPack');
+  return { extractPackInWorker: extractPack };
+});
+
 const BERKELEY_PATH = 'us-ca-berkeley.pmtiles.zip';
 
 // The same IndexedDB stores usePackStore uses, for clearing between tests

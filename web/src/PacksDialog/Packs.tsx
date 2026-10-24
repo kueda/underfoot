@@ -181,7 +181,7 @@ export default function Packs() {
   // True while a shared link points at a pack that still needs downloading. The
   // "All" tab is the only one that lists it, and PackListItem scrolls it into
   // view and points a prompt at its download button.
-  const showRequestedPackPrompt = !!requestedPackId && !requestedPack?.data;
+  const showRequestedPackPrompt = !!requestedPackId && !requestedPack?.isDownloaded();
 
   useEffect(() => {
     if (showRequestedPackPrompt) setCurrentTab('all');

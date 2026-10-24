@@ -75,6 +75,14 @@ export type UnzippedPackData = {
   ways_pmtiles?: Blob;
 };
 
+// A pack zip unzipped into the origin private file system
+export interface ExtractedPack {
+  // Where its files are, relative to the packs folder (see packFiles.ts)
+  filesDir: string;
+  // The text of the zip's pack.json, if it has one
+  packJson?: string;
+}
+
 export interface DownloadOptions {
   onProgress?: (value: { loadedBytes: number; totalBytes: number }) => void;
   signal?: AbortSignal;

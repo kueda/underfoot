@@ -9,6 +9,7 @@ import Button from '@mui/material/Button';
 import AddIcon from '@mui/icons-material/Add';
 
 import InstallButton from '../InstallDialog/InstallButton';
+import { holdPackFiles } from '../packs/packFiles';
 import { usePackStore } from '../packs/usePackStore';
 import { UnderfootFeature, WaterFeature } from '../packs/types';
 import { initialHashParams } from '../urlHash';
@@ -144,6 +145,9 @@ export default function UnderfootMap() {
   // triggered while a load is starting (e.g. right after a download) could
   // otherwise kick off a second, concurrent load.
   const packLoadingRef = useRef(false);
+  // Lets go of the lock that keeps other tabs from removing the files of the
+  // pack the map is showing
+  const releaseShownPackFiles = useRef(() => {});
   const [mapFeature, setMapFeature] = useState<MapGeoJSONFeature>();
   const [underfootFeature, setUnderfootFeature] = useState<UnderfootFeature>();
   const [underfootFeatures, setUnderfootFeatures] = useState<UnderfootFeatures>({});
@@ -378,6 +382,8 @@ export default function UnderfootMap() {
       setTraces(NO_TRACES);
       // If there's no pack, ensure style gets reset so map is blank
       if (!currentPackId) {
+        releaseShownPackFiles.current();
+        releaseShownPackFiles.current = () => {};
         setLoadedPackId(null);
         map.current.setStyle(NO_STYLE);
         packLoadingRef.current = false;
@@ -385,7 +391,12 @@ export default function UnderfootMap() {
         return;
       }
       const currentPack = await packStore.get(currentPackId);
-      if (!currentPack?.data) throw new Error(`Pack not downloaded: ${currentPackId}`);
+      if (!currentPack?.isDownloaded()) throw new Error(`Pack not downloaded: ${currentPackId}`);
+      const releasePreviousPackFiles = releaseShownPackFiles.current;
+      releaseShownPackFiles.current = currentPack.filesDir
+        ? await holdPackFiles(currentPack.filesDir)
+        : () => {};
+      releasePreviousPackFiles();
       let packData;
       try {
         packData = await currentPack.unzippedData();

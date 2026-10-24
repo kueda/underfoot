@@ -6,8 +6,16 @@ import {
 import {
   DOWNLOAD_CHUNKS, packMetadata, packZip, publishPack, StaticServer, stubStaticServer,
 } from '../test/packFixtures';
+import { extractPack } from './extractPack';
 import { Pack } from './Pack';
+import { holdPackFiles, newPackFilesDir } from './packFiles';
 import { usePackStore } from './usePackStore';
+
+// jsdom has no Worker, so unzip packs on the main thread instead
+vi.mock('./extractPackInWorker', async () => {
+  const { extractPack: extract } = await import('./extractPack');
+  return { extractPackInWorker: extract };
+});
 
 const OAKLAND = 'us-ca-oakland';
 const OAKLAND_URL = 'https://static.underfoot.rocks/us-ca-oakland.pmtiles.zip';
@@ -32,8 +40,52 @@ function goOffline(server: StaticServer) {
   vi.spyOn(console, 'error').mockImplementation(() => {});
 }
 
-function rocksText(pack?: Pack) {
-  return pack?.data?.rocks_pmtiles?.text();
+async function rocksText(pack?: Pack) {
+  return (await pack?.unzippedData())?.rocks_pmtiles?.text();
+}
+
+// Paths of all the files packs have unzipped into the origin private file system
+async function packFilePaths() {
+  const paths: string[] = [];
+  async function walk(dir: FileSystemDirectoryHandle, prefix: string) {
+    for await (const [name, handle] of dir.entries()) {
+      if (handle.kind === 'directory') {
+        await walk(handle as FileSystemDirectoryHandle, `${prefix}${name}/`);
+      }
+      else paths.push(`${prefix}${name}`);
+    }
+  }
+  await walk(await navigator.storage.getDirectory(), '');
+  return paths.sort();
+}
+
+// Makes the download from this URL stall after its first half until the returned function is
+// called
+function stallDownload(
+  fetchMock: ReturnType<typeof stubStaticServer>['fetchMock'],
+  server: StaticServer,
+  url: string,
+) {
+  const serveEverything = fetchMock.getMockImplementation();
+  if (!serveEverything) throw new Error('fetch is not stubbed');
+  let finish = () => {};
+  fetchMock.mockImplementation(async (requestedUrl: string) => {
+    if (requestedUrl !== url) return serveEverything(requestedUrl);
+    const path = url.replace('https://static.underfoot.rocks/', '');
+    const bytes = new Uint8Array(await server.files[path].arrayBuffer());
+    const half = Math.ceil(bytes.length / 2);
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(bytes.slice(0, half));
+        finish = () => {
+          controller.enqueue(bytes.slice(half));
+          controller.close();
+        };
+      },
+    });
+    return new Response(body, { headers: { 'Content-Length': bytes.length.toString() } });
+  });
+  return () => finish();
 }
 
 describe('usePackStore', () => {
@@ -61,6 +113,18 @@ describe('usePackStore', () => {
       expect(pack).toBeInstanceOf(Pack);
       expect(await rocksText(pack)).toBe('oakland v1');
       expect(pack?.downloadedAt).toBe('2026-01-15T00:00:00.000Z');
+    });
+
+    it('keeps the pack\'s files out of IndexedDB', async () => {
+      // Phones can't fit the files of a large pack in memory, which storing them in IndexedDB
+      // needs, so they only go in the origin private file system
+      const { result } = await renderPackStore();
+      await act(() => result.current.download(OAKLAND));
+      const storedPack = await packStorage.getItem<Pack>(OAKLAND);
+      expect(storedPack?.data).toBeUndefined();
+      expect(await packFilePaths()).toEqual([
+        expect.stringMatching(/^packs\/us-ca-oakland\/[^/]+\/rocks_pmtiles$/),
+      ]);
     });
 
     it('reports how much has downloaded after each chunk', async () => {
@@ -156,13 +220,81 @@ describe('usePackStore', () => {
       expect(fetchMock).toHaveBeenLastCalledWith(OAKLAND_URL, expect.any(Object));
       expect(await rocksText(await result.current.get(OAKLAND))).toBe('oakland v2');
     });
+
+    it('keeps the version it has when downloading the update is aborted', async () => {
+      const { result } = await renderPackStore();
+      const ac = new AbortController();
+      const download = result.current.download(OAKLAND, {
+        onProgress: () => ac.abort(),
+        signal: ac.signal,
+      });
+      await expect(download).rejects.toMatchObject({ name: 'AbortError' });
+      expect(await rocksText(await result.current.get(OAKLAND))).toBe('oakland v1');
+      expect(await packFilePaths()).toHaveLength(1);
+    });
+
+    it('keeps the files of the version it replaced until the app next loads', async () => {
+      const { result, unmount } = await renderPackStore();
+      await act(() => result.current.download(OAKLAND));
+      // The map may still be showing the old version, which it reads from its files
+      expect(await packFilePaths()).toHaveLength(2);
+      unmount();
+
+      vi.resetModules();
+      const { usePackStore: reloadedUsePackStore } = await import('./usePackStore');
+      const reloaded = renderHook(() => reloadedUsePackStore());
+      await waitFor(async () => expect(await packFilePaths()).toHaveLength(1));
+      expect(await rocksText(await reloaded.result.current.get(OAKLAND))).toBe('oakland v2');
+    });
+
+    describe('when the app loads in another tab', () => {
+      // Loads the store again, like another tab would, and waits for it to remove pack files
+      // nothing uses, which an orphaned folder shows it has done
+      async function loadInAnotherTab() {
+        await extractPack(
+          { file: await packZip({ 'orphan/rocks.pmtiles': 'orphan' }) },
+          newPackFilesDir('us-ca-orphan'),
+        );
+        vi.resetModules();
+        const { usePackStore: otherTabUsePackStore } = await import('./usePackStore');
+        renderHook(() => otherTabUsePackStore());
+        await waitFor(async () => {
+          expect((await packFilePaths()).some(path => path.includes('orphan'))).toBe(false);
+        });
+      }
+
+      it('keeps the files of the version this tab\'s map is still showing', async () => {
+        const { result } = await renderPackStore();
+        const v1FilesDir = (await packStorage.getItem<Pack>(OAKLAND))?.filesDir as string;
+        const releaseV1 = await holdPackFiles(v1FilesDir);
+        await act(() => result.current.download(OAKLAND));
+        await loadInAnotherTab();
+        expect(await packFilePaths()).toHaveLength(2);
+        releaseV1();
+      });
+
+      it('keeps the files of an update this tab is still downloading', async () => {
+        const finishDownload = stallDownload(fetchMock, server, OAKLAND_URL);
+        const onProgress = vi.fn();
+        const { result } = await renderPackStore();
+        const download = result.current.download(OAKLAND, { onProgress });
+        await waitFor(() => expect(onProgress).toHaveBeenCalled());
+        await loadInAnotherTab();
+        finishDownload();
+        await act(() => download);
+        expect(await rocksText(await result.current.get(OAKLAND))).toBe('oakland v2');
+      });
+    });
   });
 
   describe('get', () => {
     it('fills in pmtilesPath from the manifest for packs stored without it', async () => {
       // Older versions of the app stored downloaded packs without their pmtiles_path
       const zip = await packZip({ 'us-ca-oakland/rocks.pmtiles': 'oakland v1' });
-      const storedPack = await Pack.fromZip(packMetadata({ pmtiles_path: undefined }), zip);
+      const storedPack = Pack.fromExtracted(
+        packMetadata({ pmtiles_path: undefined }),
+        await extractPack({ file: zip }, newPackFilesDir(OAKLAND)),
+      );
       await packStorage.setItem(OAKLAND, storedPack);
       const { result } = await renderPackStore();
       const pack = await result.current.get(OAKLAND);
@@ -180,12 +312,20 @@ describe('usePackStore', () => {
       expect((await result.current.get(OAKLAND))?.pmtilesPath).toBe('us-ca-oakland.pmtiles.zip');
     });
 
+    it('reads a pack an older version of the app stored with its files in IndexedDB', async () => {
+      await packStorage.setItem(OAKLAND, new Pack(packMetadata(), {
+        rocks_pmtiles: new Blob(['oakland v1']),
+      }));
+      const { result } = await renderPackStore();
+      expect(await rocksText(await result.current.get(OAKLAND))).toBe('oakland v1');
+    });
+
     it('discards a pack stored in an old format without unzipped data', async () => {
       await packStorage.setItem(OAKLAND, new Pack(packMetadata()));
       const { result } = await renderPackStore();
       const pack = await result.current.get(OAKLAND);
       expect(pack?.id).toBe(OAKLAND);
-      expect(pack?.data).toBeUndefined();
+      expect(pack?.isDownloaded()).toBe(false);
       expect(await packStorage.getItem(OAKLAND)).toBeNull();
     });
   });
@@ -202,7 +342,7 @@ describe('usePackStore', () => {
       const packs = await result.current.list();
       expect(packs.map(pack => pack.id)).toEqual([OAKLAND, 'us-ca-berkeley']);
       expect(await rocksText(packs[0])).toBe('oakland v1');
-      expect(packs[1].data).toBeUndefined();
+      expect(packs[1].isDownloaded()).toBe(false);
     });
 
     it('lists downloaded packs when the manifest is unavailable', async () => {
@@ -222,7 +362,8 @@ describe('usePackStore', () => {
       const { result } = await renderPackStore();
       await act(() => result.current.download(OAKLAND));
       await act(() => result.current.remove(OAKLAND));
-      expect((await result.current.get(OAKLAND))?.data).toBeUndefined();
+      expect((await result.current.get(OAKLAND))?.isDownloaded()).toBe(false);
+      expect(await packFilePaths()).toEqual([]);
       expect(result.current.currentPackId).toBeNull();
       await waitFor(async () => expect(await result.current.getCurrentPackId()).toBeNull());
     });

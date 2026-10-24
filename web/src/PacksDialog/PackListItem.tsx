@@ -55,7 +55,7 @@ const PackListItem = ({
   packStore,
   requested,
 }: Props) => {
-  const isDownloaded = !!pack.data;
+  const isDownloaded = pack.isDownloaded();
   const hasUpdate = isDownloaded
     && !!pack.downloadedAt
     && pack.updatedAt > pack.downloadedAt;

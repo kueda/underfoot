@@ -1,6 +1,6 @@
-import jszip from 'jszip';
+import { readPackFiles } from './packFiles';
 import {
-  PackBoundingBox, PackCenter, PackMetadata, UnzippedPackData,
+  ExtractedPack, PackBoundingBox, PackCenter, PackMetadata, UnzippedPackData,
 } from './types';
 
 // Namespaces packs loaded from a local file so their ids can never collide
@@ -12,11 +12,16 @@ export class Pack {
   admin1: string;
   admin2: string;
   bbox: PackBoundingBox;
+  // Older versions of the app stored a pack's unzipped files here, in
+  // IndexedDB. Packs downloaded since keep them in the folder at filesDir.
   data?: UnzippedPackData;
   defaultCenter?: PackCenter;
   defaultZoom?: number;
   description: string;
   downloadedAt?: string;
+  // Where the pack's unzipped files are in the origin private file system,
+  // relative to the packs folder (see packFiles.ts)
+  filesDir?: string;
   id: string;
   name: string;
   path?: string;
@@ -58,6 +63,7 @@ export class Pack {
       pack.data,
     );
     newPack.downloadedAt = pack.downloadedAt;
+    newPack.filesDir = pack.filesDir;
     newPack.sourceFileName = pack.sourceFileName;
     return newPack;
   }
@@ -87,29 +93,31 @@ export class Pack {
     };
   }
 
-  // Unzips a freshly-downloaded pack archive once, up front, so later reads
-  // (including on subsequent page loads) are plain blob lookups instead of
-  // repeating the CPU-bound jszip decompression of the whole archive. The
-  // default view comes from the zip's pack.json, since that's what the pack
-  // was built with.
-  static async fromZip(metadata: PackMetadata, zipBlob: Blob): Promise<Pack> {
-    const { data, packJson } = await Pack.unzip(zipBlob);
-    return new Pack({
+  // Makes a pack from a freshly-downloaded pack archive that was unzipped
+  // once, up front, so later reads (including on subsequent page loads) are
+  // plain file lookups instead of repeating the decompression of the whole
+  // archive. The default view comes from the zip's pack.json, since that's
+  // what the pack was built with.
+  static fromExtracted(metadata: PackMetadata, extracted: ExtractedPack): Pack {
+    const packJson = Pack.parsePackJson(extracted.packJson);
+    const pack = new Pack({
       ...metadata,
       default_center: packJson?.default_center,
       default_zoom: packJson?.default_zoom,
-    }, data);
+    });
+    pack.filesDir = extracted.filesDir;
+    return pack;
   }
 
-  // Like fromZip for a pack loaded from a local file, where there's no
+  // Like fromExtracted for a pack loaded from a local file, where there's no
   // manifest entry to supply metadata. The zip's own pack.json (written by
   // `packs.py`) supplies the title and description; any that's missing, like
   // in zips built before pack.json existed, falls back to the placeholders
   // derived from the file name. The id stays the namespaced local one
   // whatever pack.json says. The file name is kept so the packs list can show
   // where the pack came from.
-  static async fromLocalZip(fileName: string, zipBlob: Blob): Promise<Pack> {
-    const { data, packJson } = await Pack.unzip(zipBlob);
+  static fromLocalExtracted(fileName: string, extracted: ExtractedPack): Pack {
+    const packJson = Pack.parsePackJson(extracted.packJson);
     const metadata = Pack.metadataFromFileName(fileName);
     const pack = new Pack({
       ...metadata,
@@ -117,73 +125,17 @@ export class Pack {
       default_zoom: packJson?.default_zoom,
       description: packJson?.description || metadata.description,
       name: packJson?.name || metadata.name,
-    }, data);
+    });
+    pack.filesDir = extracted.filesDir;
     pack.sourceFileName = fileName;
     return pack;
-  }
-
-  private static async unzip(zipBlob: Blob): Promise<{
-    data: UnzippedPackData;
-    packJson?: Partial<Pick<
-      PackMetadata, 'default_center' | 'default_zoom' | 'description' | 'name'
-    >>;
-  }> {
-    const zip = await jszip.loadAsync(zipBlob);
-    const unzipped: UnzippedPackData = {};
-    let packJson;
-    const zipPaths: string[] = [];
-    // Some zip writers (e.g. Python's shutil.make_archive) emit an explicit
-    // entry for the top-level directory itself; skip it rather than treat it
-    // as a missing file below.
-    zip.forEach((path, file) => {
-      if (!file.dir) zipPaths.push(path);
-    });
-    await Promise.all(zipPaths.map(async path => {
-      const fname = path.split('/').pop();
-      if (!fname || !zip.file(path) || zip.file(path)?.dir) {
-        throw new Error(`Zip does not contain file: ${path}`);
-      }
-      const data = await zip.file(path)?.async('blob');
-      if (!data) {
-        throw new Error(`Path exists but is empty: ${path}`);
-      }
-      switch (fname) {
-        case 'rocks.pmtiles':
-          unzipped.rocks_pmtiles = data;
-          break;
-        case 'water.pmtiles':
-          unzipped.water_pmtiles = data;
-          break;
-        case 'ways.pmtiles':
-          unzipped.ways_pmtiles = data;
-          break;
-        case 'contours.pmtiles':
-          unzipped.contours_pmtiles = data;
-          break;
-        case 'context.pmtiles':
-          unzipped.context_pmtiles = data;
-          break;
-        case 'rocks-citations.csv':
-          unzipped.rocks_citations_csv = data;
-          break;
-        case 'rocks-rock_units_attrs.csv':
-          unzipped.rocks_units_csv = data;
-          break;
-        case 'water-citations.csv':
-          unzipped.water_citations_csv = data;
-          break;
-        case 'pack.json':
-          packJson = Pack.parsePackJson(await data.text());
-          break;
-      }
-    }));
-    return { data: unzipped, packJson };
   }
 
   // Reads just the fields a pack can use out of a pack.json, ignoring anything
   // that isn't a non-empty string so a malformed file can't blank out the
   // title, and any default view that isn't made of numbers.
-  private static parsePackJson(text: string) {
+  private static parsePackJson(text?: string) {
+    if (text === undefined) return undefined;
     let parsed: Record<string, unknown> | null;
     try {
       parsed = JSON.parse(text) as Record<string, unknown> | null;
@@ -208,7 +160,12 @@ export class Pack {
     };
   }
 
+  isDownloaded(): boolean {
+    return !!(this.filesDir || this.data);
+  }
+
   unzippedData(): Promise<UnzippedPackData> {
+    if (this.filesDir) return readPackFiles(this.filesDir);
     if (!this.data) throw new Error('No unzipped data available');
     return Promise.resolve(this.data);
   }

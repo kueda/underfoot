@@ -48,7 +48,7 @@ function App() {
       const hashPackId = initialHashParams.pack;
       if (hashPackId) {
         const pack = await packStore.get(hashPackId);
-        if (pack?.data) {
+        if (pack?.isDownloaded()) {
           setCurrentPackId(hashPackId);
           packStore.setCurrent(hashPackId);
         }
