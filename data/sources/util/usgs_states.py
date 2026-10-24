@@ -126,6 +126,7 @@ ROCKTYPE_LITHOLOGIES = {
     "medium-grained mixed clastic": "medium-grained mixed clastic rock",
     "coarse-grained mixed clastic": "coarse-grained mixed clastic rock",
     "mixed clastic/carbonate": "mixed carbonate/clastic rock",
+    "mixed clastic/volcanic": "mixed volcanic/clastic rock",
 }
 
 

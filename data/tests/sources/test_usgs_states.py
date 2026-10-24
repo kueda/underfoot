@@ -67,6 +67,14 @@ def test_schemify_attributes_uses_known_name_for_lithology(
     assert row["rock_type"] == "sedimentary"
 
 
+def test_schemify_attributes_uses_known_name_for_mixed_clastic_volcanic(
+    tmp_path, monkeypatch
+):
+    # e.g. OR unit TRsv, "Sedimentary and volcanic rocks"
+    row = schemify_row(tmp_path, monkeypatch, ROCKTYPE1="mixed clastic/volcanic")
+    assert row["lithology"] == "mixed volcanic/clastic rock"
+
+
 def test_schemify_attributes_applies_overrides(tmp_path, monkeypatch):
     overrides_path = tmp_path / "overrides.csv"
     overrides_path.write_text("code,lithology\nC1,mudstone\n", encoding="utf-8")
