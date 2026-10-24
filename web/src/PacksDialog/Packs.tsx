@@ -1,6 +1,8 @@
 import Box from '@mui/material/Box';
 import ClearIcon from '@mui/icons-material/Clear';
+import CircularProgress from '@mui/material/CircularProgress';
 import CloseIcon from '@mui/icons-material/Close';
+import MyLocationIcon from '@mui/icons-material/MyLocation';
 import SearchIcon from '@mui/icons-material/Search';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
@@ -11,12 +13,14 @@ import Tab from '@mui/material/Tab';
 import TabContext from '@mui/lab/TabContext';
 import TabList from '@mui/lab/TabList';
 import TextField from '@mui/material/TextField';
+import ToggleButton from '@mui/material/ToggleButton';
 import Toolbar from '@mui/material/Toolbar';
 import {
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { Pack } from '../packs/Pack';
 import { buildPackTree } from '../packs/packTree';
+import { PackCenter } from '../packs/types';
 import {
   useCurrentPackId,
   useHidePacksModal,
@@ -35,6 +39,28 @@ const filterPacks = (packs: Pack[] | null, query: string) => {
   return packs.filter(pack => pack.name.toLowerCase().includes(needle));
 };
 
+// Packs whose bounding boxes contain the location, the smallest first, since a small box is more
+// likely to be the place you're in than a neighbor whose big box happens to overlap it. All of
+// them when there's no location.
+const filterPacksCovering = (packs: Pack[] | null, location: PackCenter | null) => {
+  if (!packs || !location) return packs;
+  const area = ({ bbox }: Pack) => (bbox.right - bbox.left) * (bbox.top - bbox.bottom);
+  return packs
+    .filter(({ bbox }) => (
+      location.lon >= bbox.left
+      && location.lon <= bbox.right
+      && location.lat >= bbox.bottom
+      && location.lat <= bbox.top
+    ))
+    .sort((a, b) => area(a) - area(b));
+};
+
+const filterPacksMatching = (
+  packs: Pack[] | null,
+  query: string,
+  location: PackCenter | null,
+) => filterPacksCovering(filterPacks(packs, query), location);
+
 export default function Packs() {
   const packStore = usePackStore();
   const currentPackId = useCurrentPackId();
@@ -52,14 +78,57 @@ export default function Packs() {
   const [browseNodeId, setBrowseNodeId] = useState<string | null>(null);
   const [searchText, setSearchText] = useState('');
   const isSearching = searchText.trim() !== '';
+  // Whether "Near me" is on. The lists only filter by location once there is one.
+  const [nearMe, setNearMe] = useState(false);
+  const [location, setLocation] = useState<PackCenter | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const nearLocation = nearMe ? location : null;
+  const isLocating = nearMe && !location;
+  const isFiltering = isSearching || !!nearLocation;
   const packTree = useMemo(() => (packs ? buildPackTree(packs) : null), [packs]);
 
-  const matchingPacks = useMemo(() => filterPacks(packs, searchText), [packs, searchText]);
-  const matchingDownloadedPacks = useMemo(
-    () => filterPacks(downloadedPacks, searchText),
-    [downloadedPacks, searchText],
+  const matchingPacks = useMemo(
+    () => filterPacksMatching(packs, searchText, nearLocation),
+    [packs, searchText, nearLocation],
   );
-  const noMatchesDescription = `No packs match "${searchText.trim()}".`;
+  const matchingDownloadedPacks = useMemo(
+    () => filterPacksMatching(downloadedPacks, searchText, nearLocation),
+    [downloadedPacks, searchText, nearLocation],
+  );
+  const noMatchesDescription = isSearching
+    ? `No packs ${nearLocation ? 'near you ' : ''}match "${searchText.trim()}".`
+    : 'No packs cover your location.';
+
+  // Asks for the location every time it's turned on, since you may have moved since last time
+  const toggleNearMe = () => {
+    setLocationError(null);
+    setLocation(null);
+    if (nearMe) {
+      setNearMe(false);
+      return;
+    }
+    if (!navigator.geolocation) {
+      setLocationError('Your browser can\'t share your location.');
+      return;
+    }
+    setNearMe(true);
+    navigator.geolocation.getCurrentPosition(
+      position => setLocation({
+        lat: position.coords.latitude,
+        lon: position.coords.longitude,
+      }),
+      error => {
+        setNearMe(false);
+        setLocationError(
+          error.code === error.PERMISSION_DENIED
+            ? 'Couldn\'t get your location because permission was denied.'
+            : 'Couldn\'t get your location.',
+        );
+      },
+      // A rough location from a few minutes ago is enough to pick packs
+      { maximumAge: 5 * 60 * 1000, timeout: 30 * 1000 },
+    );
+  };
 
   const packsLoaded = packs !== null;
   const downloadedPacksLoaded = downloadedPacks !== null;
@@ -161,35 +230,51 @@ export default function Packs() {
           Download map data for use offline. Right now it&apos;s mostly just regions of California.
         </DialogContentText>
 
-        <TextField
-          fullWidth
-          size="small"
-          type="search"
-          placeholder="Search packs"
-          value={searchText}
-          onChange={event => setSearchText(event.target.value)}
-          sx={{ mb: 2 }}
-          inputProps={{ 'aria-label': 'Search packs' }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-            endAdornment: searchText && (
-              <InputAdornment position="end">
-                <IconButton
-                  edge="end"
-                  size="small"
-                  aria-label="Clear search"
-                  onClick={() => setSearchText('')}
-                >
-                  <ClearIcon fontSize="small" />
-                </IconButton>
-              </InputAdornment>
-            ),
-          }}
-        />
+        <Box sx={{ display: 'flex', gap: 1, mb: locationError ? 1 : 2 }}>
+          <TextField
+            fullWidth
+            size="small"
+            type="search"
+            placeholder="Search packs"
+            value={searchText}
+            onChange={event => setSearchText(event.target.value)}
+            inputProps={{ 'aria-label': 'Search packs' }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+              endAdornment: searchText && (
+                <InputAdornment position="end">
+                  <IconButton
+                    edge="end"
+                    size="small"
+                    aria-label="Clear search"
+                    onClick={() => setSearchText('')}
+                  >
+                    <ClearIcon fontSize="small" />
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+          />
+          <ToggleButton
+            value="nearMe"
+            size="small"
+            selected={nearMe}
+            onChange={toggleNearMe}
+            sx={{ flexShrink: 0, gap: 0.5, px: 1.5 }}
+          >
+            {isLocating ? <CircularProgress size={20} /> : <MyLocationIcon fontSize="small" />}
+            Near me
+          </ToggleButton>
+        </Box>
+        {locationError && (
+          <DialogContentText color="error" variant="body2" sx={{ mb: 2 }}>
+            {locationError}
+          </DialogContentText>
+        )}
 
         <TabContext value={currentTab}>
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
@@ -213,7 +298,7 @@ export default function Packs() {
               isOffline && !loading
                 ? 'Looks like you\'re offline. You can choose packs you\'ve already downloaded or '
                 + 'try again when you\'re online.'
-                : isSearching && !loading && matchingPacks?.length === 0
+                : isFiltering && !loading && matchingPacks?.length === 0
                   ? noMatchesDescription
                   : null
             }
@@ -221,8 +306,8 @@ export default function Packs() {
             onDelete={refreshPacks}
             onDownload={refreshPacks}
           >
-            {/* Searching lists the matches flat, whatever level of the hierarchy they're on */}
-            {packTree && !isSearching
+            {/* Filtering lists the matches flat, whatever level of the hierarchy they're on */}
+            {packTree && !isFiltering
               ? (
                   <PackNodeList
                     currentNodeId={browseNodeId}
@@ -259,7 +344,7 @@ export default function Packs() {
             description={
               !loadingLocal && (downloadedPacks === null || downloadedPacks?.length === 0)
                 ? 'No packs downloaded yet.'
-                : isSearching && !loadingLocal && matchingDownloadedPacks?.length === 0
+                : isFiltering && !loadingLocal && matchingDownloadedPacks?.length === 0
                   ? noMatchesDescription
                   : null
             }

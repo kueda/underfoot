@@ -63,10 +63,11 @@ export class Pack {
   }
 
   // Derives placeholder metadata for a pack loaded from a local file, since
-  // there's no manifest entry to supply a name/id. description and bbox
-  // aren't read anywhere in the app today, and admin1/2 only name the groups
-  // in the "All" tab, which lists local packs ungrouped (when offline), so
-  // they're just zeroed/blanked out.
+  // there's no manifest entry to supply a name/id. description isn't read
+  // anywhere in the app today, and admin1/2 only name the groups in the "All"
+  // tab, which lists local packs ungrouped (when offline), so they're just
+  // blanked out. The zeroed bbox means "Near me" in the packs dialog never
+  // lists these packs.
   static metadataFromFileName(fileName: string): PackMetadata {
     const base = fileName.replace(/\.pmtiles\.zip$/i, '').replace(/\.zip$/i, '');
     const slug = base

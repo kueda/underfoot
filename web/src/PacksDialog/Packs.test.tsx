@@ -1,6 +1,8 @@
 import { act, fireEvent, renderHook, render, screen, waitFor, within } from '@testing-library/react';
 import localforage from 'localforage';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import {
+  afterEach, beforeEach, describe, expect, it, vi,
+} from 'vitest';
 import {
   packMetadata, packZip, publishPack, StaticServer, stubStaticServer,
 } from '../test/packFixtures';
@@ -342,6 +344,153 @@ describe('Packs', () => {
 
       expect(screen.getByText('Oakland')).toBeTruthy();
       expect(screen.queryByText('Berkeley')).toBeNull();
+    });
+  });
+
+  describe('near me', () => {
+    const nearMeButton = () => screen.getByRole('button', { name: 'Near me' });
+    const OAKLAND = { latitude: 37.8, longitude: -122.27 };
+
+    // jsdom has no geolocation, so each test says what the browser answers with
+    function stubGeolocation(answer: (
+      success: PositionCallback,
+      error: PositionErrorCallback,
+    ) => void) {
+      const getCurrentPosition = vi.fn(answer);
+      Object.defineProperty(navigator, 'geolocation', {
+        configurable: true,
+        value: { getCurrentPosition },
+      });
+      return getCurrentPosition;
+    }
+
+    const answerWith = ({ latitude, longitude }: typeof OAKLAND) => (
+      success: PositionCallback,
+    ) => success({
+      coords: { latitude, longitude },
+    } as GeolocationPosition);
+
+    const listedNames = () => screen.getAllByRole('listitem').map(
+      item => item.querySelector('.MuiListItemText-primary')?.textContent,
+    );
+
+    beforeEach(async () => {
+      await publishPack(server, packMetadata({
+        bbox: {
+          bottom: 32.5, left: -124.5, right: -114.1, top: 42,
+        },
+        description: 'The whole state',
+        id: 'us-ca',
+        name: 'California (state)',
+        pmtiles_path: 'us-ca.pmtiles.zip',
+      }));
+      await publishPack(server, packMetadata({
+        bbox: {
+          bottom: 38.8, left: -120.3, right: -119.9, top: 39.3,
+        },
+        description: 'The lake',
+        id: 'us-ca-tahoe',
+        name: 'Tahoe',
+        pmtiles_path: 'us-ca-tahoe.pmtiles.zip',
+      }));
+    });
+
+    afterEach(() => {
+      Reflect.deleteProperty(navigator, 'geolocation');
+    });
+
+    it('lists the packs that cover the location flat, the smallest first', async () => {
+      stubGeolocation(answerWith(OAKLAND));
+      // Berkeley's box stops north of the location
+      await publishPack(server, packMetadata({
+        bbox: {
+          bottom: 37.85, left: -122.3, right: -122.2, top: 37.9,
+        },
+        description: 'Just the town',
+        id: 'us-ca-berkeley',
+        name: 'Berkeley',
+        pmtiles_path: BERKELEY_PATH,
+      }));
+      render(<Packs />);
+      await screen.findByText('United States');
+
+      fireEvent.click(nearMeButton());
+
+      await screen.findByText('Oakland');
+      expect(listedNames()).toEqual(['Oakland', 'California (state)']);
+      expect(nearMeButton().getAttribute('aria-pressed')).toBe('true');
+    });
+
+    it('only lists packs that match the search too', async () => {
+      stubGeolocation(answerWith(OAKLAND));
+      render(<Packs />);
+      await screen.findByText('United States');
+
+      fireEvent.click(nearMeButton());
+      fireEvent.change(
+        screen.getByRole('searchbox', { name: 'Search packs' }),
+        { target: { value: 'cali' } },
+      );
+
+      expect(await screen.findByText('California (state)')).toBeTruthy();
+      expect(screen.queryByText('Oakland')).toBeNull();
+      expect(screen.queryByText('Tahoe')).toBeNull();
+    });
+
+    it('says when no packs cover the location', async () => {
+      stubGeolocation(answerWith({ latitude: 0, longitude: 0 }));
+      render(<Packs />);
+      await screen.findByText('United States');
+
+      fireEvent.click(nearMeButton());
+
+      expect(await screen.findByText('No packs cover your location.')).toBeTruthy();
+    });
+
+    it('brings back the hierarchy when turned off', async () => {
+      stubGeolocation(answerWith(OAKLAND));
+      render(<Packs />);
+      await screen.findByText('United States');
+      fireEvent.click(nearMeButton());
+      await screen.findByText('Oakland');
+
+      fireEvent.click(nearMeButton());
+
+      expect(await screen.findByText('United States')).toBeTruthy();
+      expect(screen.queryByText('Oakland')).toBeNull();
+    });
+
+    it('turns itself off and says why when the location is not available', async () => {
+      stubGeolocation((_success, error) => error({
+        code: 1,
+        message: 'User denied Geolocation',
+        PERMISSION_DENIED: 1,
+        POSITION_UNAVAILABLE: 2,
+        TIMEOUT: 3,
+      } as GeolocationPositionError));
+      render(<Packs />);
+      await screen.findByText('United States');
+
+      fireEvent.click(nearMeButton());
+
+      expect(await screen.findByText(/Couldn't get your location/)).toBeTruthy();
+      expect(nearMeButton().getAttribute('aria-pressed')).toBe('false');
+      expect(screen.getByText('United States')).toBeTruthy();
+    });
+
+    it('asks for the location again each time it is turned on', async () => {
+      const getCurrentPosition = stubGeolocation(answerWith(OAKLAND));
+      render(<Packs />);
+      await screen.findByText('United States');
+      fireEvent.click(nearMeButton());
+      await screen.findByText('Oakland');
+      fireEvent.click(nearMeButton());
+      await screen.findByText('United States');
+
+      fireEvent.click(nearMeButton());
+
+      await screen.findByText('Oakland');
+      expect(getCurrentPosition).toHaveBeenCalledTimes(2);
     });
   });
 });
