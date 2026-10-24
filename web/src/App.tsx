@@ -6,6 +6,8 @@ import Map from './Map/Map';
 import PacksDialog from './PacksDialog/PacksDialog';
 import LogDialog from './LogDialog/LogDialog';
 import AboutDialog from './AboutDialog/AboutDialog';
+import InstallDialog from './InstallDialog/InstallDialog';
+import { useInstallListeners } from './InstallDialog/useInstall';
 
 import './App.css';
 import { usePackStore } from './packs/usePackStore';
@@ -31,6 +33,7 @@ function App() {
   const packStore = usePackStore();
   const [hashApplied, setHashApplied] = React.useState(false);
   const hashResolveStarted = React.useRef(false);
+  useInstallListeners();
 
   // Resolve the initial map view from the URL hash (for shared/bookmarked
   // links), falling back to the last pack the user had open. Runs once.
@@ -87,6 +90,7 @@ function App() {
       <PacksDialog />
       <LogDialog />
       <AboutDialog />
+      <InstallDialog />
     </>
   );
 }

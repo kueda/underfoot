@@ -12,7 +12,9 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import WaterIcon from '@mui/icons-material/Water';
 import InfoIcon from '@mui/icons-material/Info';
+import InstallMobileIcon from '@mui/icons-material/InstallMobile';
 
+import { useCanInstall, useInstall } from './InstallDialog/useInstall';
 import { reportBug } from './reportBug';
 import {
   ROCKS,
@@ -38,6 +40,8 @@ export default function UnderfootDrawer({
   const mapType = useMapType();
   const setMapType = useSetMapType();
   const { showLogModal } = useLogging();
+  const canInstall = useCanInstall();
+  const install = useInstall();
   return (
     <>
       <Drawer
@@ -73,6 +77,16 @@ export default function UnderfootDrawer({
                 <ListItemText primary="Packs" />
               </ListItemButton>
             </ListItem>
+            { canInstall && (
+              <ListItem disablePadding>
+                <ListItemButton onClick={install}>
+                  <ListItemIcon>
+                    <InstallMobileIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Install App" />
+                </ListItemButton>
+              </ListItem>
+            )}
             <ListItem disablePadding>
               <ListItemButton onClick={showLogModal}>
                 <ListItemIcon>

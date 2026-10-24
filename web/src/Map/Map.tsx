@@ -8,6 +8,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Button from '@mui/material/Button';
 import AddIcon from '@mui/icons-material/Add';
 
+import InstallButton from '../InstallDialog/InstallButton';
 import { usePackStore } from '../packs/usePackStore';
 import { UnderfootFeature, WaterFeature } from '../packs/types';
 import { initialHashParams } from '../urlHash';
@@ -581,6 +582,7 @@ export default function UnderfootMap() {
             alignItems: 'center',
             maxWidth: '50%',
             textAlign: 'center',
+            gap: '20px',
           }}
         >
           <p>
@@ -589,6 +591,7 @@ export default function UnderfootMap() {
             To get started, download some data to use offline.
           </p>
           <Button onClick={showPacksModal} variant="contained">DOWNLOAD MAP DATA</Button>
+          <InstallButton />
         </div>
       )}
       <Modal
