@@ -6,6 +6,7 @@ on:
       - data/**
       - .github/workflows/run-tests.yml
       - .github/workflows/build-image.yml
+      - .github/workflows/pytest.yml
 
 permissions:
   actions: write      # skip-duplicate-actions cancels superseded runs
@@ -26,15 +27,7 @@ jobs:
     uses: ./.github/workflows/build-image.yml
 
   run-pytest:
-    name: Run pytest
     needs: image
-    runs-on: ubuntu-24.04
-    container:
+    uses: ./.github/workflows/pytest.yml
+    with:
       image: ${{ needs.image.outputs.image }}
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-    steps:
-      - uses: actions/checkout@v7
-      - run: pytest -v
-        working-directory: data

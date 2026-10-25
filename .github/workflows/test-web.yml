@@ -5,6 +5,8 @@ on:
     paths:
       - web/**
       - .github/workflows/test-web.yml
+  # Called by deploy-web.yml so it only deploys when these checks pass
+  workflow_call:
 
 permissions:
   contents: read

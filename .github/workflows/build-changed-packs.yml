@@ -22,6 +22,13 @@ jobs:
     needs: skip-duplicates
     uses: ./.github/workflows/build-image.yml
 
+  # Don't spend time and bandwidth building packs if the tests fail
+  run-pytest:
+    needs: image
+    uses: ./.github/workflows/pytest.yml
+    with:
+      image: ${{ needs.image.outputs.image }}
+
   list-changed-packs:
     needs: skip-duplicates
     name: List changed packs
@@ -50,7 +57,7 @@ jobs:
 
   build-packs:
     name: Build packs
-    needs: [image, list-changed-packs]
+    needs: [image, list-changed-packs, run-pytest]
     if: ${{ needs.list-changed-packs.outputs.matrix }}
     strategy:
       fail-fast: false

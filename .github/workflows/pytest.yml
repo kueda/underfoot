@@ -1,0 +1,30 @@
+name: Pytest
+
+# Runs the data/ test suite inside the app image. Called by run-tests.yml and by
+# the pack-building workflows, which shouldn't build packs if the tests fail.
+
+on:
+  workflow_call:
+    inputs:
+      image:
+        description: Prebuilt app image ref (from .github/workflows/build-image.yml)
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  packages: read      # pull the app image from GHCR
+
+jobs:
+  run-pytest:
+    name: Run pytest
+    runs-on: ubuntu-24.04
+    container:
+      image: ${{ inputs.image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+      - run: pytest -v
+        working-directory: data

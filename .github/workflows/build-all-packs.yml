@@ -32,6 +32,13 @@ jobs:
     needs: skip-duplicates
     uses: ./.github/workflows/build-image.yml
 
+  # Don't spend time and bandwidth building packs if the tests fail
+  run-pytest:
+    needs: image
+    uses: ./.github/workflows/pytest.yml
+    with:
+      image: ${{ needs.image.outputs.image }}
+
   # https://code.dblock.org/2021/09/03/generating-task-matrix-by-looping-over-repo-files-with-github-actions.html
   list-packs:
     needs: skip-duplicates
@@ -46,7 +53,7 @@ jobs:
 
   build-packs:
     name: Build packs
-    needs: [image, list-packs]
+    needs: [image, list-packs, run-pytest]
     strategy:
       fail-fast: false
       # Each pack runs several jobs at once, and too many at once get

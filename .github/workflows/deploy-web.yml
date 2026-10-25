@@ -21,7 +21,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  test:
+    uses: ./.github/workflows/test-web.yml
+
   build:
+    needs: test
     runs-on: ubuntu-24.04
     defaults:
       run:
