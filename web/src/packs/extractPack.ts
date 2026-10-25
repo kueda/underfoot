@@ -182,7 +182,7 @@ export async function extractPack(
     // Report why unzipping stopped, like an abort, even if removing what it
     // unzipped fails too
     await removePackFilesDir(filesDir).catch((removeError: unknown) => {
-      console.error(`Failed to remove the files of a failed unzip in ${filesDir}: `, removeError);
+      console.error('Failed to remove the files of a failed unzip in %s:', filesDir, removeError);
     });
     throw error;
   }
