@@ -58,6 +58,8 @@ def schemify_row(tmp_path, monkeypatch, overrides_path=None, **overrides):
     ("medium-grained mixed clastic", "medium-grained mixed clastic rock"),
     ("coarse-grained mixed clastic", "coarse-grained mixed clastic rock"),
     ("mixed clastic/carbonate", "mixed carbonate/clastic rock"),
+    # e.g. in AL (#89)
+    ("carbonate", "carbonate rock"),
 ])
 def test_schemify_attributes_uses_known_name_for_lithology(
     tmp_path, monkeypatch, rocktype, lithology
