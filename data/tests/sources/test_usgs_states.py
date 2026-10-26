@@ -54,6 +54,7 @@ def schemify_row(tmp_path, monkeypatch, overrides_path=None, **overrides):
 
 # OF 2005-1351 names some lithologies differently from GeMS, e.g. without "rock"
 @pytest.mark.parametrize("rocktype,lithology", [
+    ("clastic", "clastic rock"),
     ("fine-grained mixed clastic", "fine-grained mixed clastic rock"),
     ("medium-grained mixed clastic", "medium-grained mixed clastic rock"),
     ("coarse-grained mixed clastic", "coarse-grained mixed clastic rock"),

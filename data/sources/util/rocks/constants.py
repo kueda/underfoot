@@ -298,6 +298,7 @@ SEDIMENTARY_ROCKS = [
   "carbonate rock",
   "calcerenite",
   "chert",
+  "clastic rock",
   "clay",
   "claystone",
   "coarse-grained mixed clastic rock",
