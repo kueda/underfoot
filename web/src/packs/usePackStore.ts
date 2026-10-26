@@ -3,7 +3,7 @@ import localforage from 'localforage';
 import { extractPackInWorker } from './extractPackInWorker';
 import { Pack } from './Pack';
 import {
-  newPackFilesDir, removePackFiles, removeUnusedPackFiles, withPackFilesLock,
+  newPackFilesDir, removePackFiles, removePackFilesDir, removeUnusedPackFiles, withPackFilesLock,
 } from './packFiles';
 
 import { Manifest } from './Manifest';
@@ -13,6 +13,34 @@ import {
 
 const packStore = localforage.createInstance({ name: 'packStore' });
 const prefStore = localforage.createInstance({ name: 'prefStore' });
+
+// Some browsers, like Firefox, give best-effort storage a much lower quota
+// than persistent storage, low enough that a large pack can exceed it. A pack
+// is still stored if the browser won't persist storage, since it may fit
+// anyway. Nothing waits for the answer, since Firefox asks the user, and the
+// pack shouldn't sit there showing no progress until they reply.
+function requestPersistentStorage() {
+  navigator.storage.persist().catch(() => false);
+}
+
+// Stores a pack whose files were just unzipped into filesDir, removing them
+// if that fails. Left behind, they'd keep using the space a retry needs until
+// the app next loads, and failing to store a pack usually means it ran out.
+async function storeOrRemoveFiles(filesDir: string, store: () => Promise<void>) {
+  try {
+    await store();
+  }
+  catch (error) {
+    await removePackFilesDir(filesDir).catch((removeError: unknown) => {
+      console.error(
+        'Failed to remove the files of an unstored pack in %s:',
+        filesDir,
+        removeError,
+      );
+    });
+    throw error;
+  }
+}
 
 // Removes pack files no stored pack uses, like those of a version of a pack
 // that was since updated, or of a download that was cut off when the app
@@ -128,12 +156,13 @@ export function usePackStore(): PackStore {
     const opts = options || {};
     const pack = await get(packId);
     if (!pack) throw new Error('Can\'t unknown pack');
+    requestPersistentStorage();
     const url = `https://static.underfoot.rocks/${pack.pmtilesPath}`;
     // Until the pack is stored, nothing says the files are in use but the lock
     const filesDir = newPackFilesDir(pack.id);
     await withPackFilesLock(filesDir, async () => {
       const extracted = await extractPackInWorker({ url }, filesDir, opts);
-      await storePack(Pack.fromExtracted({
+      await storeOrRemoveFiles(filesDir, () => storePack(Pack.fromExtracted({
         admin1: pack.admin1,
         admin2: pack.admin2,
         bbox: pack.bbox,
@@ -142,7 +171,7 @@ export function usePackStore(): PackStore {
         name: pack.name,
         pmtiles_path: pack.pmtilesPath,
         updated_at: pack.updatedAt,
-      }, extracted));
+      }, extracted)));
     });
     window.umami?.track('pack-download', { pack: pack.id });
   }, [get, storePack]);
@@ -151,13 +180,14 @@ export function usePackStore(): PackStore {
   // flow entirely, so a pack built with `packs.py` can be viewed without
   // hosting it anywhere first.
   const addFromFile = useCallback(async (file: File): Promise<string> => {
+    requestPersistentStorage();
     const filesDir = newPackFilesDir(Pack.metadataFromFileName(file.name).id);
     return withPackFilesLock(filesDir, async () => {
       const localPack = Pack.fromLocalExtracted(
         file.name,
         await extractPackInWorker({ file }, filesDir),
       );
-      await storePack(localPack);
+      await storeOrRemoveFiles(filesDir, () => storePack(localPack));
       return localPack.id;
     });
   }, [storePack]);

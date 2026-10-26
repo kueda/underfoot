@@ -6,16 +6,26 @@ import {
 import {
   packMetadata, packZip, publishPack, StaticServer, stubStaticServer,
 } from '../test/packFixtures';
+import { extractPackInWorker } from '../packs/extractPackInWorker';
 import { useHidePacksModal, useRequestPack } from '../useAppStore';
 import Packs from './Packs';
 
 // jsdom has no Worker, so unzip packs on the main thread instead
 vi.mock('../packs/extractPackInWorker', async () => {
   const { extractPack } = await import('../packs/extractPack');
-  return { extractPackInWorker: extractPack };
+  return { extractPackInWorker: vi.fn(extractPack) };
 });
 
 const BERKELEY_PATH = 'us-ca-berkeley.pmtiles.zip';
+
+const QUOTA_MESSAGE = /not enough storage space/i;
+
+// Makes the next pack unzip fail the way it does when the browser's storage quota runs out
+function exceedQuota() {
+  vi.mocked(extractPackInWorker).mockRejectedValueOnce(
+    new DOMException('The quota has been exceeded.', 'QuotaExceededError'),
+  );
+}
 
 // The same IndexedDB stores usePackStore uses, for clearing between tests
 const packStorage = localforage.createInstance({ name: 'packStore' });
@@ -65,6 +75,9 @@ describe('Packs', () => {
   let server: StaticServer;
 
   beforeEach(async () => {
+    // restoreMocks only restores spies, so drop a failure a test queued but never used, like
+    // when it failed before downloading
+    vi.mocked(extractPackInWorker).mockReset();
     await Promise.all([packStorage.clear(), prefStorage.clear()]);
     ({ fetchMock, server } = stubStaticServer());
     await publishPack(server, packMetadata({ description: 'The East Bay' }));
@@ -119,6 +132,108 @@ describe('Packs', () => {
       const item = await screen.findByText('us-ca-oakland');
       const localRow = within(item.closest('li') as HTMLElement);
       expect(localRow.getByText('Loaded from us-ca-oakland.pmtiles.zip')).toBeTruthy();
+    });
+
+    describe('when the file cannot be loaded', () => {
+      beforeEach(() => {
+        // The failure is logged for debugging too
+        vi.spyOn(console, 'error').mockImplementation(() => {});
+      });
+
+      async function loadFile() {
+        const zip = await packZip({ 'us-ca-oakland.pmtiles/rocks.pmtiles': 'rocks' });
+        const { container } = render(<Packs />);
+        fireEvent.click(await screen.findByRole('tab', { name: 'Downloaded' }));
+        const input = container.querySelector('input[type="file"]');
+        if (!input) throw new Error('No file input');
+        fireEvent.change(input, {
+          target: { files: [new File([zip], 'us-ca-oakland.pmtiles.zip')] },
+        });
+      }
+
+      it('says there is not enough storage space when the quota runs out', async () => {
+        exceedQuota();
+        await loadFile();
+        expect((await screen.findByRole('alert')).textContent).toMatch(QUOTA_MESSAGE);
+      });
+
+      it('says the file could not be loaded when it fails for another reason', async () => {
+        vi.mocked(extractPackInWorker).mockRejectedValueOnce(new Error('Not a zip'));
+        await loadFile();
+        expect((await screen.findByRole('alert')).textContent)
+          .toMatch(/could not load us-ca-oakland.pmtiles.zip/i);
+      });
+    });
+  });
+
+  describe('when a pack download fails', () => {
+    beforeEach(() => {
+      // The failure is logged for debugging too
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    async function startOaklandDownload() {
+      render(<Packs />);
+      await openCalifornia();
+      await screen.findByText('Oakland');
+      fireEvent.click(row('Oakland').getByRole('button', { name: 'download' }));
+    }
+
+    it('says there is not enough storage space when the quota runs out', async () => {
+      exceedQuota();
+      await startOaklandDownload();
+      expect((await row('Oakland').findByRole('alert')).textContent).toMatch(QUOTA_MESSAGE);
+      expect(row('Oakland').getByRole('button', { name: 'download' })).toBeTruthy();
+    });
+
+    it('does not fade the message with the row of a pack that is not downloaded', async () => {
+      // MUI draws disabled buttons at low opacity, too faint to read red text on
+      exceedQuota();
+      await startOaklandDownload();
+      const alert = await row('Oakland').findByRole('alert');
+      expect(alert.closest('[aria-disabled="true"]')).toBeNull();
+    });
+
+    it('says the download failed when it fails for another reason', async () => {
+      vi.mocked(extractPackInWorker).mockRejectedValueOnce(new Error('Network down'));
+      await startOaklandDownload();
+      expect((await row('Oakland').findByRole('alert')).textContent)
+        .toMatch(/could not download/i);
+    });
+
+    it('says the download failed when the error mentions aborting but it was not stopped',
+      async () => {
+        // Like an IndexedDB transaction that aborted while storing the pack
+        vi.mocked(extractPackInWorker).mockRejectedValueOnce(
+          new Error('The transaction was aborted, so the request cannot be fulfilled.'),
+        );
+        await startOaklandDownload();
+        expect((await row('Oakland').findByRole('alert')).textContent)
+          .toMatch(/could not download/i);
+      });
+
+    it('says nothing failed when the download is stopped', async () => {
+      const finishBerkeley = stallBerkeleyDownload(fetchMock, server);
+      render(<Packs />);
+      await openCalifornia();
+      await screen.findByText('Berkeley');
+      fireEvent.click(row('Berkeley').getByRole('button', { name: 'download' }));
+      fireEvent.click(await row('Berkeley').findByRole('button', { name: 'stop' }));
+      // The stalled read has to finish before the unzip notices it was stopped
+      finishBerkeley();
+      expect(await row('Berkeley').findByRole('button', { name: 'download' })).toBeTruthy();
+      expect(row('Berkeley').queryByRole('alert')).toBeNull();
+    });
+
+    it('stops saying so when the pack is downloaded again', async () => {
+      exceedQuota();
+      await startOaklandDownload();
+      await row('Oakland').findByRole('alert');
+      fireEvent.click(row('Oakland').getByRole('button', { name: 'download' }));
+      await waitFor(() => {
+        expect(row('Oakland').getByRole('button', { name: 'delete' })).toBeTruthy();
+      });
+      expect(row('Oakland').queryByRole('alert')).toBeNull();
     });
   });
 

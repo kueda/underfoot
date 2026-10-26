@@ -7,6 +7,7 @@ import {
   DOWNLOAD_CHUNKS, packMetadata, packZip, publishPack, StaticServer, stubStaticServer,
 } from '../test/packFixtures';
 import { extractPack } from './extractPack';
+import { extractPackInWorker } from './extractPackInWorker';
 import { Pack } from './Pack';
 import { holdPackFiles, newPackFilesDir } from './packFiles';
 import { usePackStore } from './usePackStore';
@@ -14,10 +15,23 @@ import { usePackStore } from './usePackStore';
 // jsdom has no Worker, so unzip packs on the main thread instead
 vi.mock('./extractPackInWorker', async () => {
   const { extractPack: extract } = await import('./extractPack');
-  return { extractPackInWorker: extract };
+  return { extractPackInWorker: vi.fn(extract) };
 });
 
 const OAKLAND = 'us-ca-oakland';
+
+// Like a browser that hasn't decided whether to persist storage, as when Firefox is still
+// asking the user
+function neverDecideToPersist() {
+  vi.spyOn(navigator.storage, 'persist').mockReturnValue(new Promise(() => {}));
+}
+
+// Makes storing a pack in IndexedDB fail the way it does when the storage quota runs out
+function exceedQuotaWhenStoring() {
+  vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(() => {
+    throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+  });
+}
 const OAKLAND_URL = 'https://static.underfoot.rocks/us-ca-oakland.pmtiles.zip';
 
 // The same IndexedDB stores usePackStore uses, for clearing between tests and for setting up
@@ -125,6 +139,43 @@ describe('usePackStore', () => {
       expect(await packFilePaths()).toEqual([
         expect.stringMatching(/^packs\/us-ca-oakland\/[^/]+\/rocks_pmtiles$/),
       ]);
+    });
+
+    it('requests persistent storage before downloading the pack', async () => {
+      // Best-effort storage has a much lower quota, which large packs can exceed
+      const persist = vi.spyOn(navigator.storage, 'persist');
+      const { result } = await renderPackStore();
+      await act(() => result.current.download(OAKLAND));
+      expect(persist).toHaveBeenCalled();
+      const packFetchOrder = fetchMock.mock.calls
+        .findIndex(([url]) => url === OAKLAND_URL);
+      expect(persist.mock.invocationCallOrder[0])
+        .toBeLessThan(fetchMock.mock.invocationCallOrder[packFetchOrder]);
+    });
+
+    it('downloads the pack when the browser will not persist storage', async () => {
+      vi.spyOn(navigator.storage, 'persist').mockRejectedValue(new Error('denied'));
+      const { result } = await renderPackStore();
+      await act(() => result.current.download(OAKLAND));
+      expect(await rocksText(await result.current.get(OAKLAND))).toBe('oakland v1');
+    });
+
+    it('downloads the pack without waiting for the browser to decide whether to persist storage',
+      async () => {
+        // The download would show no progress while Firefox asks the user
+        neverDecideToPersist();
+        const { result } = await renderPackStore();
+        await act(() => result.current.download(OAKLAND));
+        expect(await rocksText(await result.current.get(OAKLAND))).toBe('oakland v1');
+      });
+
+    it('removes the unzipped files when the pack cannot be stored', async () => {
+      // Left behind, they'd keep using the space a retry needs
+      const { result } = await renderPackStore();
+      exceedQuotaWhenStoring();
+      await expect(result.current.download(OAKLAND))
+        .rejects.toMatchObject({ name: 'QuotaExceededError' });
+      expect(await packFilePaths()).toEqual([]);
     });
 
     it('reports how much has downloaded after each chunk', async () => {
@@ -421,6 +472,46 @@ describe('usePackStore', () => {
         name: 'Oakland, CA, USA',
         sourceFileName: 'us-ca-oakland.pmtiles.zip',
       });
+    });
+
+    it('requests persistent storage before unzipping the pack', async () => {
+      // Best-effort storage has a much lower quota, which large packs can exceed
+      const persist = vi.spyOn(navigator.storage, 'persist');
+      const zip = await packZip({ 'Oakland Hills/rocks.pmtiles': 'local rocks' });
+      const file = new File([zip], 'Oakland Hills.pmtiles.zip');
+      const { result } = await renderPackStore();
+      await act(() => result.current.addFromFile(file));
+      expect(persist.mock.invocationCallOrder[0])
+        .toBeLessThan(vi.mocked(extractPackInWorker).mock.invocationCallOrder.at(-1) as number);
+    });
+
+    it('stores the pack without waiting for the browser to decide whether to persist storage',
+      async () => {
+        neverDecideToPersist();
+        const zip = await packZip({ 'Oakland Hills/rocks.pmtiles': 'local rocks' });
+        const file = new File([zip], 'Oakland Hills.pmtiles.zip');
+        const { result } = await renderPackStore();
+        const packId = await act(() => result.current.addFromFile(file));
+        expect(await rocksText(await result.current.get(packId))).toBe('local rocks');
+      });
+
+    it('removes the unzipped files when the pack cannot be stored', async () => {
+      const zip = await packZip({ 'Oakland Hills/rocks.pmtiles': 'local rocks' });
+      const file = new File([zip], 'Oakland Hills.pmtiles.zip');
+      const { result } = await renderPackStore();
+      exceedQuotaWhenStoring();
+      await expect(result.current.addFromFile(file))
+        .rejects.toMatchObject({ name: 'QuotaExceededError' });
+      expect(await packFilePaths()).toEqual([]);
+    });
+
+    it('stores the pack when the browser will not persist storage', async () => {
+      vi.spyOn(navigator.storage, 'persist').mockRejectedValue(new Error('denied'));
+      const zip = await packZip({ 'Oakland Hills/rocks.pmtiles': 'local rocks' });
+      const file = new File([zip], 'Oakland Hills.pmtiles.zip');
+      const { result } = await renderPackStore();
+      const packId = await act(() => result.current.addFromFile(file));
+      expect(await rocksText(await result.current.get(packId))).toBe('local rocks');
     });
   });
 });

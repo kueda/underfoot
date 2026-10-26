@@ -16,9 +16,13 @@ import StopIcon from '@mui/icons-material/Stop';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Tooltip from '@mui/material/Tooltip';
-import { useEffect, useRef, useState } from 'react';
+import Typography from '@mui/material/Typography';
+import {
+  ReactNode, useEffect, useRef, useState,
+} from 'react';
 
 import { Pack } from '../packs/Pack';
+import { packErrorMessage } from '../packs/packErrorMessage';
 import { packCountLabel } from '../packs/packTree';
 import { PackStore } from '../packs/types';
 
@@ -61,6 +65,7 @@ const PackListItem = ({
     && pack.updatedAt > pack.downloadedAt;
   const [downloadProgress, setDownloadProgress] = useState<null | { loadedBytes: number; totalBytes: number }>(null);
   const [abortController, setAbortController] = useState(new AbortController());
+  const [downloadError, setDownloadError] = useState<string | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTriggered = useRef(false);
@@ -81,6 +86,7 @@ const PackListItem = ({
   const handleDownload = () => {
     const ac = new AbortController();
     setAbortController(ac);
+    setDownloadError(null);
     packStore.download(pack.id, { onProgress: setDownloadProgress, signal: ac.signal })
       .then(() => (typeof (onDownload) === 'function' ? onDownload() : null))
       // This row stays mounted through the refresh, so stop showing progress now that the
@@ -88,11 +94,11 @@ const PackListItem = ({
       .then(() => setDownloadProgress(null))
       .then(() => (typeof (onChoose) === 'function' ? onChoose(pack.id) : null))
       .catch((e: Error) => {
-        if (e?.message?.match(/aborted/)) {
-          setDownloadProgress(null);
-          return;
-        }
+        setDownloadProgress(null);
+        // Stopping it isn't a failure, but another error can say it aborted
+        if (ac.signal.aborted) return;
         console.error('Failed to download pack', e);
+        setDownloadError(packErrorMessage(e, 'Could not download this pack. Try again.'));
       });
   };
   const downloadPercent = downloadProgress
@@ -107,6 +113,20 @@ const PackListItem = ({
         </>
       )
     : pack.description;
+  let secondary: ReactNode = description;
+  if (downloadPercent !== null) {
+    secondary = `${downloadPercent}% downloaded...`;
+  }
+  else if (pack.sourceFileName) {
+    secondary = (
+      <>
+        {description && <Box component="span" sx={secondaryLineSx}>{description}</Box>}
+        <Box component="span" sx={secondaryLineSx}>
+          {`Loaded from ${pack.sourceFileName}`}
+        </Box>
+      </>
+    );
+  }
   let secondaryAction;
   if (downloadProgress) {
     secondaryAction = (
@@ -256,13 +276,15 @@ const PackListItem = ({
     <ListItem
       key={pack.id}
       ref={itemRef}
-      sx={{ pl: 0 }}
+      // Lets the download error take a line of its own under the row
+      sx={{ pl: 0, flexWrap: 'wrap' }}
     >
       <ListItemButton
         disabled={!isDownloaded && !opensNestedPacks}
         // minWidth lets the name and description truncate to make room for the actions, whatever
-        // width they end up
-        sx={{ pl: 0, minWidth: 0 }}
+        // width they end up. Growing from no width keeps the row from wrapping the actions onto
+        // the download error's line.
+        sx={{ pl: 0, minWidth: 0, flex: '1 1 0' }}
         onClick={() => {
           if (opensNestedPacks) {
             onOpen();
@@ -288,20 +310,7 @@ const PackListItem = ({
           primaryTypographyProps={{
             noWrap: true,
           }}
-          secondary={
-            downloadPercent !== null
-              ? `${downloadPercent}% downloaded...`
-              : pack.sourceFileName
-                ? (
-                    <>
-                      {description && <Box component="span" sx={secondaryLineSx}>{description}</Box>}
-                      <Box component="span" sx={secondaryLineSx}>
-                        {`Loaded from ${pack.sourceFileName}`}
-                      </Box>
-                    </>
-                  )
-                : description
-          }
+          secondary={secondary}
           secondaryTypographyProps={{
             noWrap: true,
           }}
@@ -310,6 +319,13 @@ const PackListItem = ({
       <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
         {secondaryAction}
       </Box>
+      {downloadError && (
+        // Outside the button, which is disabled and faded until the pack is downloaded. The
+        // padding lines it up with the pack's name, past the radio.
+        <Typography role="alert" color="error" variant="body2" sx={{ flexBasis: '100%', pl: 7 }}>
+          {downloadError}
+        </Typography>
+      )}
     </ListItem>
   );
 };

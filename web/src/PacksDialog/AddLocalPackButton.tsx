@@ -1,7 +1,9 @@
 import Button from '@mui/material/Button';
+import Typography from '@mui/material/Typography';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 
+import { packErrorMessage } from '../packs/packErrorMessage';
 import { PackStore } from '../packs/types';
 
 interface Props {
@@ -14,6 +16,7 @@ interface Props {
 // same as a downloaded pack.
 const AddLocalPackButton = ({ onAdd, packStore }: Props) => {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [error, setError] = useState<string | null>(null);
   return (
     <>
       <input
@@ -26,9 +29,13 @@ const AddLocalPackButton = ({ onAdd, packStore }: Props) => {
           // Let the same file be picked again later without a reload
           e.target.value = '';
           if (!file) return;
+          setError(null);
           packStore.addFromFile(file)
             .then(onAdd)
-            .catch(err => console.error('Failed to add local pack', err));
+            .catch(err => {
+              console.error('Failed to add local pack', err);
+              setError(packErrorMessage(err, `Could not load ${file.name}. Is it a pack .zip?`));
+            });
         }}
       />
       <Button
@@ -38,6 +45,11 @@ const AddLocalPackButton = ({ onAdd, packStore }: Props) => {
       >
         Load pack from file&hellip;
       </Button>
+      {error && (
+        <Typography role="alert" color="error" variant="body2" sx={{ mx: 1, mb: 1 }}>
+          {error}
+        </Typography>
+      )}
     </>
   );
 };
