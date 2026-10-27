@@ -45,6 +45,22 @@ const MANIFEST = {
       pmtiles_path: 'us-ca-oakland.pmtiles.zip',
       updated_at: '2026-09-16T05:52:48.284014',
     },
+    // The same data under another id, for switching to a pack that isn't downloaded yet
+    {
+      admin1: 'United States',
+      admin2: 'California',
+      bbox: {
+        bottom: 37.6249329829376,
+        left: -122.37608299613,
+        right: -122.00107120948,
+        top: 37.9999225069647,
+      },
+      description: 'The Oakland pack under another name.',
+      id: 'us-ca-berkeley',
+      name: 'Berkeley, CA, USA',
+      pmtiles_path: 'us-ca-berkeley.pmtiles.zip',
+      updated_at: '2026-09-16T05:52:48.284014',
+    },
   ],
   updated_at: '2026-09-16T05:52:48.284014',
 };
@@ -59,7 +75,7 @@ test.beforeEach(async ({ page }) => {
     if (pathname === '/manifest.json') {
       return route.fulfill({ headers: CORS_HEADERS, json: MANIFEST });
     }
-    if (pathname === '/us-ca-oakland.pmtiles.zip') {
+    if (MANIFEST.packs.some(pack => pathname === `/${pack.pmtiles_path}`)) {
       return route.fulfill({ headers: CORS_HEADERS, path: PACK_ZIP });
     }
     return route.fulfill({ headers: CORS_HEADERS, status: 404 });
@@ -242,5 +258,32 @@ test('does not rotate or tilt the map', async ({ page }) => {
   await drag(0, 100);
   await expect(() => expect(hashMapParts(page)[1]).not.toBe(latBefore)).toPass();
   expect(hashMapParts(page)).toHaveLength(3);
+  expect(alerts).toEqual([]);
+});
+
+test('prompts to download a linked pack when only the URL hash changes', async ({ page }) => {
+  const alerts = collectAlerts(page);
+  await page.goto('/');
+  await downloadOaklandPack(page);
+  await expect(page.locator('.MapBottomSheetHeader h3')).not.toBeEmpty();
+
+  // Like pasting a shared link into the address bar of a window that already has the app open,
+  // which only changes the hash and doesn't reload the page
+  const { lat, lng } = SAUSAL_CREEK;
+  const hash = `map=11/${lat}/${lng}&type=water&pack=us-ca-berkeley`;
+  await page.evaluate(newHash => {
+    window.location.hash = newHash;
+  }, hash);
+  const packsDialog = page.getByRole('dialog', { name: 'Packs' });
+  await expect(packsDialog).toBeVisible();
+  await expect(page.getByRole('tooltip')).toHaveText('Download this pack to open the shared map');
+
+  const pack = packsDialog.getByRole('listitem').filter({ hasText: 'Berkeley, CA, USA' });
+  await pack.getByRole('button', { name: 'download' }).click();
+  // The dialog closes once the linked pack is downloaded and current
+  await expect(packsDialog).toBeHidden();
+  // The linked map type and location, not the pack's starting view
+  await expect(page.locator('.MapBottomSheetHeader h3')).toHaveText('Sausal Creek');
+  expect(new URL(page.url()).hash).toContain('pack=us-ca-berkeley');
   expect(alerts).toEqual([]);
 });

@@ -49,10 +49,14 @@ export function parseHashMapLocation(raw: string | null): HashMapLocation | null
   return { zoom, lat, lng };
 }
 
+export function readHashParams() {
+  return {
+    location: parseHashMapLocation(getHashParam('map')),
+    pack: getHashParam('pack'),
+    type: getHashParam('type'),
+  };
+}
+
 // The hash as it was when the page first loaded, captured before any part of the
 // app (including MapLibre) has had a chance to rewrite it.
-export const initialHashParams = {
-  location: parseHashMapLocation(getHashParam('map')),
-  pack: getHashParam('pack'),
-  type: getHashParam('type'),
-};
+export const initialHashParams = readHashParams();

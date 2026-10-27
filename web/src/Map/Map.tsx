@@ -12,7 +12,7 @@ import InstallButton from '../InstallDialog/InstallButton';
 import { holdPackFiles } from '../packs/packFiles';
 import { usePackStore } from '../packs/usePackStore';
 import { UnderfootFeature, WaterFeature } from '../packs/types';
-import { initialHashParams } from '../urlHash';
+import { type HashMapLocation, initialHashParams, readHashParams } from '../urlHash';
 import {
   addLog,
   useCurrentPackId,
@@ -86,6 +86,11 @@ type Traces = Record<TraceDirection, FlowLabels | null>;
 
 const NO_TRACES: Traces = { downstream: null, upstream: null };
 
+interface PendingHashLocation {
+  packId: string | null;
+  location: HashMapLocation;
+}
+
 // How many pixels from the crosshairs a waterway can be and still count as
 // under them. The Android app used the same radius.
 const CROSSHAIRS_WATERWAY_RADIUS = 10;
@@ -156,8 +161,26 @@ export default function UnderfootMap() {
   const [traces, setTraces] = useState<Traces>(NO_TRACES);
   const { add: log } = useLogging();
   // A location from the URL hash (shared link) that should override the default
-  // "recenter on the pack" behavior the first time a pack loads. Consumed once.
-  const pendingHashLocation = useRef(initialHashParams.location);
+  // "recenter on the pack" behavior when the linked pack loads. A null packId
+  // means whichever pack loads. Consumed by the next pack load either way.
+  const pendingHashLocation = useRef<PendingHashLocation | null>(
+    initialHashParams.location && {
+      packId: initialHashParams.pack,
+      location: initialHashParams.location,
+    },
+  );
+
+  // MapLibre follows the hash location itself, but the linked pack loading
+  // afterward would recenter the map on that pack.
+  useEffect(() => {
+    function onHashChange() {
+      const { pack, location } = readHashParams();
+      if (!pack) return;
+      pendingHashLocation.current = location && { packId: pack, location };
+    }
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
 
   // Update the "what's under the crosshairs" feature for the map's current
   // center. Called while panning and again once the map settles, since a shared
@@ -498,12 +521,13 @@ export default function UnderfootMap() {
       // mapType (e.g. rocks <-> water) on the same pack should preserve the
       // user's current view.
       if (currentPackId !== loadedPackId) {
-        if (pendingHashLocation.current) {
+        const pending = pendingHashLocation.current;
+        pendingHashLocation.current = null;
+        if (pending && (pending.packId === null || pending.packId === currentPackId)) {
           // A shared link specified a location; honor it instead of recentering
-          // on the pack. Only applies to the first pack load.
-          const { zoom, lat, lng } = pendingHashLocation.current;
+          // on the pack.
+          const { zoom, lat, lng } = pending.location;
           map.current.jumpTo({ center: [lng, lat], zoom });
-          pendingHashLocation.current = null;
         }
         else {
           const waysHeader = await waysPmtiles.getHeader();

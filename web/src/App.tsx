@@ -21,7 +21,7 @@ import {
   useSetCurrentPackId,
   useSetMapType,
 } from './useAppStore';
-import { initialHashParams, setHashParam } from './urlHash';
+import { initialHashParams, readHashParams, setHashParam } from './urlHash';
 
 function App() {
   const setCurrentPackId = useSetCurrentPackId();
@@ -35,6 +35,20 @@ function App() {
   const hashResolveStarted = React.useRef(false);
   useInstallListeners();
 
+  // Show a pack named in the URL hash, or prompt to download it if it isn't
+  // downloaded. Map.tsx pans/zooms to the hash location once the pack loads.
+  const applyHashPack = React.useCallback(async (hashPackId: string) => {
+    const pack = await packStore.get(hashPackId);
+    if (pack?.isDownloaded()) {
+      setCurrentPackId(hashPackId);
+      packStore.setCurrent(hashPackId);
+    }
+    else {
+      // The linked pack isn't downloaded (or isn't known yet); prompt for it.
+      requestPack(hashPackId);
+    }
+  }, [packStore, requestPack, setCurrentPackId]);
+
   // Resolve the initial map view from the URL hash (for shared/bookmarked
   // links), falling back to the last pack the user had open. Runs once.
   React.useEffect(() => {
@@ -45,18 +59,8 @@ function App() {
       if (initialHashParams.type === ROCKS || initialHashParams.type === WATER) {
         setMapType(initialHashParams.type);
       }
-      const hashPackId = initialHashParams.pack;
-      if (hashPackId) {
-        const pack = await packStore.get(hashPackId);
-        if (pack?.isDownloaded()) {
-          setCurrentPackId(hashPackId);
-          packStore.setCurrent(hashPackId);
-        }
-        else {
-          // The linked pack isn't downloaded (or isn't known yet); prompt for it.
-          // Map.tsx pans/zooms to the hash location once the pack finishes loading.
-          requestPack(hashPackId);
-        }
+      if (initialHashParams.pack) {
+        await applyHashPack(initialHashParams.pack);
       }
       else {
         const lastPackId = await packStore.getCurrentPackId();
@@ -66,7 +70,23 @@ function App() {
     }
 
     applyInitialHash().catch(e => console.error('Failed to apply initial URL hash', e));
-  }, [packStore, requestPack, setCurrentPackId, setMapType]);
+  }, [applyHashPack, packStore, setCurrentPackId, setMapType]);
+
+  // Follow changes to the hash after the page has loaded, e.g. when a shared
+  // link is pasted into a window that already has the app open, which changes
+  // the hash without reloading the page. Our own hash updates use
+  // history.replaceState, which doesn't fire hashchange.
+  React.useEffect(() => {
+    function onHashChange() {
+      const { pack, type } = readHashParams();
+      if (type === ROCKS || type === WATER) setMapType(type);
+      if (pack) {
+        applyHashPack(pack).catch(e => console.error('Failed to apply URL hash', e));
+      }
+    }
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, [applyHashPack, setMapType]);
 
   // Keep the hash in sync with the current view so it can be shared/bookmarked.
   React.useEffect(() => {
