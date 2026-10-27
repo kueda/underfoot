@@ -78,6 +78,22 @@ def test_schemify_attributes_uses_known_name_for_mixed_clastic_volcanic(
     assert row["lithology"] == "mixed volcanic/clastic rock"
 
 
+@pytest.mark.parametrize("rocktype,lithology", [
+    # Truncated in the source, e.g. CO unit Tmi, "Middle Tertiary intrusive rocks"
+    ("plutonic rock (phanerit", "plutonic rock"),
+    # Truncated in the source, e.g. CO, "Volcanic rocks in northwestern Colorado"
+    ("intermediate volcanic r", "intermediate volcanic rock"),
+    # e.g. AR unit Kw, "Woodbine Formation"
+    ("volcanic rock (aphanitic)", "volcanic rock"),
+])
+def test_schemify_attributes_uses_known_name_for_igneous_lithology(
+    tmp_path, monkeypatch, rocktype, lithology
+):
+    row = schemify_row(tmp_path, monkeypatch, ROCKTYPE1=rocktype)
+    assert row["lithology"] == lithology
+    assert row["rock_type"] == "igneous"
+
+
 def test_schemify_attributes_applies_overrides(tmp_path, monkeypatch):
     overrides_path = tmp_path / "overrides.csv"
     overrides_path.write_text("code,lithology\nC1,mudstone\n", encoding="utf-8")
