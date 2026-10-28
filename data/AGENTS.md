@@ -139,5 +139,6 @@ is arch-agnostic: developers build arm64 locally, CI builds amd64.
 
 `build-all-packs.yml` and `build-changed-packs.yml` use `changed_packs.py` to choose the
 layers a push affects, and `build-pack.yml` builds only those, taking the other layers from
-the published `<pack>.pmtiles.zip`. Keep `UTIL_LAYERS` in `changed_packs.py` up to date when
+the published `<pack>.pmtiles.zip`. It builds every layer instead if the pack isn't published
+or the `definition_hash` in its `pack.json` doesn't match its definition. Keep `UTIL_LAYERS` in `changed_packs.py` up to date when
 a `sources/util/` module starts or stops being used by a layer.
