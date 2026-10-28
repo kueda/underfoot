@@ -24,6 +24,9 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 1
+          # Otherwise git pushes with GITHUB_TOKEN instead of the Claude app token, and pushes
+          # made with GITHUB_TOKEN don't trigger other workflows like run-tests.yml
+          persist-credentials: false
       - uses: actions/setup-node@v7
         with:
           node-version: 24
