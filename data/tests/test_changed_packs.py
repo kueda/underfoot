@@ -170,3 +170,29 @@ def test_main_prints_build_all_packs_layers_as_json(data_dir, monkeypatch, capsy
     monkeypatch.setattr("sys.stdin", io.StringIO("data/sources/util/water.py\n"))
     changed_packs.main(["--build-all-packs"], data_dir)
     assert json.loads(capsys.readouterr().out) == ["water"]
+
+
+def test_definition_hash_changes_with_the_pack_definition(data_dir):
+    pack_path = data_dir / "packs" / "nv.json"
+    before = changed_packs.definition_hash(pack_path)
+    write_pack(data_dir, "nv", rock=["shared_nv", "solo"])
+    assert changed_packs.definition_hash(pack_path) != before
+
+
+def test_definition_hash_changes_with_the_referenced_geojson(data_dir):
+    pack_path = data_dir / "packs" / "with-boundary.json"
+    write(pack_path, json.dumps({
+        "id": "with-boundary",
+        "geojson": {"$ref": "file://./with-boundary.geojson"}
+    }))
+    write(data_dir / "packs" / "with-boundary.geojson", '{"type": "Polygon"}')
+    before = changed_packs.definition_hash(pack_path)
+    assert changed_packs.definition_hash(pack_path) == before
+    write(data_dir / "packs" / "with-boundary.geojson", '{"type": "MultiPolygon"}')
+    assert changed_packs.definition_hash(pack_path) != before
+
+
+def test_main_prints_the_definition_hash(data_dir, capsys):
+    pack_path = data_dir / "packs" / "nv.json"
+    changed_packs.main(["--definition-hash", str(pack_path)], data_dir)
+    assert capsys.readouterr().out.strip() == changed_packs.definition_hash(pack_path)

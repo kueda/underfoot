@@ -12,15 +12,20 @@ rebuilds every pack when they happen. To avoid building packs twice, this prints
 empty list if any of the paths are ones that workflow handles. With --build-all-packs,
 it prints the layers that workflow should rebuild instead.
 
+With --definition-hash, it prints the hash of a pack's definition instead, which
+build-pack.yml compares with the one the published pack was built from.
+
 Only uses the standard library so CI can run it without the app image.
 """
 
 import argparse
 import ast
+import hashlib
 import json
 import os
 import pathlib
 import sys
+from urllib.parse import urlparse
 
 DATA_DIR = pathlib.Path(__file__).parent.absolute()
 
@@ -168,16 +173,39 @@ def build_all_packs_layers(paths, data_dir=DATA_DIR):
     return ordered_layers(layers)
 
 
+def definition_hash(pack_path):
+    """SHA-256 of a pack definition file and the boundary GeoJSON file it references, which
+    every layer of the pack depends on"""
+    pack_path = pathlib.Path(pack_path)
+    pack_bytes = pack_path.read_bytes()
+    digest = hashlib.sha256(pack_bytes)
+    ref = json.loads(pack_bytes).get("geojson", {}).get("$ref")
+    if ref:
+        # Resolved the same way as in packs.py
+        parsed_uri = urlparse(ref)
+        digest.update((pack_path.parent / f"{parsed_uri.netloc}{parsed_uri.path}").read_bytes())
+    return digest.hexdigest()
+
+
 def main(args=None, data_dir=DATA_DIR):
-    """Print the packs affected by the paths on stdin as JSON, or with --build-all-packs,
-    the layers the Build all packs workflow should rebuild"""
+    """Print the packs affected by the paths on stdin as JSON, with --build-all-packs, the
+    layers the Build all packs workflow should rebuild, or with --definition-hash, the
+    hash of a pack definition"""
     parser = argparse.ArgumentParser(description=__doc__.split("\n", maxsplit=1)[0])
     parser.add_argument(
         "--build-all-packs",
         action="store_true",
         help="Print the layers the Build all packs workflow should rebuild"
     )
+    parser.add_argument(
+        "--definition-hash",
+        metavar="PACK_PATH",
+        help="Print the hash of the definition of the pack at this path"
+    )
     args = parser.parse_args(args)
+    if args.definition_hash:
+        print(definition_hash(args.definition_hash))
+        return
     paths = [line.strip() for line in sys.stdin if line.strip()]
     if args.build_all_packs:
         print(json.dumps(build_all_packs_layers(paths, data_dir)))

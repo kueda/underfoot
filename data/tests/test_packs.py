@@ -6,6 +6,7 @@ import zipfile
 
 import pytest
 
+import changed_packs
 import packs
 
 PACK_ID = "test-pack"
@@ -26,9 +27,15 @@ PACK_DEFINITION = {
 @pytest.fixture(name="build_dir")
 def fixture_build_dir(tmp_path, monkeypatch):
     """Point packs at a temp build dir and a test pack definition"""
-    monkeypatch.setattr(packs, "get_build_dir", lambda: str(tmp_path))
-    monkeypatch.setitem(packs.PACKS, PACK_ID, PACK_DEFINITION)
-    return tmp_path
+    build_dir = tmp_path / "build"
+    build_dir.mkdir()
+    monkeypatch.setattr(packs, "get_build_dir", lambda: str(build_dir))
+    definition_path = tmp_path / f"{PACK_ID}.json"
+    definition_path.write_text(json.dumps(PACK_DEFINITION), encoding="utf-8")
+    monkeypatch.setitem(
+        packs.PACKS, PACK_ID, {**PACK_DEFINITION, "definition_path": str(definition_path)}
+    )
+    return build_dir
 
 
 def test_write_pack_metadata_writes_descriptive_metadata(build_dir):
@@ -45,11 +52,48 @@ def test_write_pack_metadata_writes_descriptive_metadata(build_dir):
     assert metadata["updated_at"]
     assert "rock" not in metadata
     assert "geojson_path" not in metadata
+    assert "definition_path" not in metadata
+
+
+def test_write_pack_metadata_includes_the_definition_hash(build_dir):
+    pack_dir = packs.get_pack_dir(PACK_ID)
+    packs.write_pack_metadata(PACK_ID, pack_dir)
+    with open(os.path.join(pack_dir, "pack.json"), encoding="utf-8") as metadata_f:
+        metadata = json.load(metadata_f)
+    assert metadata["definition_hash"] == changed_packs.definition_hash(
+        packs.PACKS[PACK_ID]["definition_path"]
+    )
+
+
+def write_pack_zip(build_dir, pack_id, metadata):
+    with zipfile.ZipFile(build_dir / f"{pack_id}.pmtiles.zip", "w") as pack_zip:
+        pack_zip.writestr(f"{pack_id}/pack.json", json.dumps(metadata))
+
+
+def read_manifest(build_dir):
+    with open(build_dir / "manifest.json", encoding="utf-8") as manifest_f:
+        return {pack["id"]: pack for pack in json.load(manifest_f)["packs"]}
+
+
+def test_make_manifest_takes_the_definition_hash_from_the_built_pack(build_dir):
+    write_pack_zip(build_dir, PACK_ID, {"id": PACK_ID, "definition_hash": "built"})
+    packs.make_manifest()
+    assert read_manifest(build_dir)[PACK_ID]["definition_hash"] == "built"
+
+
+def test_make_manifest_keeps_the_definition_hash_of_packs_it_did_not_build(
+    build_dir, monkeypatch
+):
+    monkeypatch.setattr(packs, "remote_built_packs", lambda url: {
+        PACK_ID: {"id": PACK_ID, "updated_at": "2026-01-01", "definition_hash": "old"}
+    })
+    packs.make_manifest(manifest_url="https://example.com/manifest.json")
+    assert read_manifest(build_dir)[PACK_ID]["definition_hash"] == "old"
 
 
 def test_write_pack_metadata_includes_the_default_view(build_dir, monkeypatch):
     pack = {
-        **PACK_DEFINITION,
+        **packs.PACKS[PACK_ID],
         "default_center": {"lon": -122.27, "lat": 37.8},
         "default_zoom": 12
     }

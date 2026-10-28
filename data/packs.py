@@ -21,7 +21,9 @@ import os
 import pathlib
 import shutil
 import re
+import zipfile
 
+from changed_packs import definition_hash
 from elevation import make_contours
 from osm import make_ways, make_context
 from rocks import MAXZOOM as ROCKS_MAXZOOM, make_rocks
@@ -61,6 +63,7 @@ for pack_path in glob(pack_glob):
     with open(pack_path, encoding="utf-8") as pack_f:
         pack = json.load(pack_f)
         validate_pack(pack_path, pack)
+        pack["definition_path"] = pack_path
         if "geojson" in pack and "$ref" in pack["geojson"]:
             parsed_uri = urlparse(pack["geojson"]["$ref"])
             pack["geojson_path"] = os.path.join(pathlib.Path(pack_path).parent.absolute(),
@@ -138,6 +141,14 @@ def local_built_packs():
                     )
                 )
             )
+            # The hash of the definition the pack was built from, which build-pack.yml
+            # checks before reusing its layers
+            with zipfile.ZipFile(pmtiles_path) as pack_zip:
+                metadata_names = [n for n in pack_zip.namelist() if n.endswith("/pack.json")]
+                if metadata_names:
+                    metadata = json.loads(pack_zip.read(metadata_names[0]))
+                    if "definition_hash" in metadata:
+                        packs[pack_id]["definition_hash"] = metadata["definition_hash"]
         packs[pack_id]["updated_at"] = min(mtimes)
     return packs
 
@@ -297,7 +308,8 @@ def write_pack_metadata(pack_id, pack_dir):
     """
     metadata = add_metadata_to_pack({
         "id": pack_id,
-        "updated_at": datetime.now().isoformat()
+        "updated_at": datetime.now().isoformat(),
+        "definition_hash": definition_hash(get_pack(pack_id)["definition_path"])
     })
     with open(os.path.join(pack_dir, "pack.json"), "w", encoding="utf-8") as metadata_f:
         json.dump(metadata, metadata_f)

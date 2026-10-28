@@ -43,6 +43,7 @@ env:
   # The published pack, which the layers that aren't built are taken from. Read
   # from the bucket, not the CDN, so it's never older than the last upload
   PACK_URL: https://underfoot2.sfo2.digitaloceanspaces.com/${{ inputs.pack }}.pmtiles.zip
+  MANIFEST_URL: https://underfoot2.sfo2.digitaloceanspaces.com/manifest.json
 
 jobs:
   plan:
@@ -52,18 +53,40 @@ jobs:
       layers: ${{ steps.layers.outputs.layers }}
       reused: ${{ steps.layers.outputs.reused }}
     steps:
+      - uses: actions/checkout@v7
+
+      # Build every layer if there's no published pack to take the others from,
+      # or it was built from a different pack definition, like when the last
+      # build after a definition change failed. Packs published before the hash
+      # was recorded have none, and their layers are reused.
       - id: layers
-        working-directory: .
         env:
+          PACK: ${{ inputs.pack }}
           LAYERS: ${{ inputs.layers }}
           ALL_LAYERS: '["rocks", "water", "contours", "ways", "context"]'
         run: |
           reused=$(jq -n -c --argjson all "$ALL_LAYERS" --argjson layers "$LAYERS" \
             '$all - $layers')
-          if [ "$reused" != "[]" ] && ! curl -sfI "$PACK_URL" > /dev/null; then
-            echo "$PACK_URL isn't published, so building every layer"
-            LAYERS=$ALL_LAYERS
-            reused="[]"
+          if [ "$reused" != "[]" ]; then
+            if ! curl -sfI "$PACK_URL" > /dev/null; then
+              echo "$PACK_URL isn't published, so building every layer"
+              reused="[]"
+            else
+              current=$(python3 changed_packs.py --definition-hash "packs/$PACK.json")
+              # Mismatches if the manifest can't be read
+              published=$(set -o pipefail; curl -sf "$MANIFEST_URL" \
+                | jq -r --arg pack "$PACK" \
+                  '.packs[] | select(.id == $pack) | .definition_hash // empty' \
+                || echo unknown)
+              if [ -n "$published" ] && [ "$published" != "$current" ]; then
+                echo "$PACK's definition doesn't match the published pack's ($published)," \
+                  "so building every layer"
+                reused="[]"
+              fi
+            fi
+            if [ "$reused" = "[]" ]; then
+              LAYERS=$ALL_LAYERS
+            fi
           fi
           echo "layers=$(jq -c . <<< "$LAYERS")" >> "$GITHUB_OUTPUT"
           echo "reused=$reused" >> "$GITHUB_OUTPUT"
