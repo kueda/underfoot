@@ -40,8 +40,9 @@ defaults:
     working-directory: data
 
 env:
-  # The published pack, which the layers that aren't built are taken from
-  PACK_URL: https://static.underfoot.rocks/${{ inputs.pack }}.pmtiles.zip
+  # The published pack, which the layers that aren't built are taken from. Read
+  # from the bucket, not the CDN, so it's never older than the last upload
+  PACK_URL: https://underfoot2.sfo2.digitaloceanspaces.com/${{ inputs.pack }}.pmtiles.zip
 
 jobs:
   plan:
@@ -326,6 +327,13 @@ jobs:
     # Run when the jobs for layers that weren't built were skipped, but not when
     # any job failed or the run was cancelled
     if: ${{ !cancelled() && !failure() }}
+    # Upload a pack in one run at a time, so each run takes the layers it didn't
+    # build from the pack the last run uploaded instead of one they both
+    # downloaded. GitHub only keeps one job waiting per group, so if a third
+    # run's upload arrives while one waits, it cancels the waiting one.
+    concurrency:
+      group: upload-pack-${{ inputs.pack }}-${{ inputs.publish }}
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v7
 
