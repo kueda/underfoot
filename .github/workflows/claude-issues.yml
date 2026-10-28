@@ -36,6 +36,9 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           label_trigger: agent-ready
+          # User ID of claude[bot]. The action's default, 41898282, is github-actions[bot], so
+          # GitHub would attribute Claude's commits to github-actions[bot]
+          bot_id: "209825114"
           additional_permissions: |
             actions: read
           claude_args: |
