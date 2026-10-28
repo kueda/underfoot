@@ -136,3 +136,8 @@ pushes `ghcr.io/<repo>/app:<sha>`; `run-tests.yml` and `build-pack.yml` run in
 container jobs on that image (with a `postgis/postgis:16-3.5` service
 container), so the build environment is defined in exactly one place. `Dockerfile`
 is arch-agnostic: developers build arm64 locally, CI builds amd64.
+
+`build-all-packs.yml` and `build-changed-packs.yml` use `changed_packs.py` to choose the
+layers a push affects, and `build-pack.yml` builds only those, taking the other layers from
+the published `<pack>.pmtiles.zip`. Keep `UTIL_LAYERS` in `changed_packs.py` up to date when
+a `sources/util/` module starts or stops being used by a layer.

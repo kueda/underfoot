@@ -32,10 +32,10 @@ jobs:
         with:
           fetch-depth: 0  # for the diff against the commit before the push
 
-      # List the packs whose definitions or sources changed, or none if the Build all
-      # packs workflow will build them
+      # List the packs whose definitions or sources changed with the layers to build,
+      # or none if the Build all packs workflow will build them
       - id: set-matrix
-        name: Set matrix with IDs of changed packs
+        name: Set matrix with IDs and layers of changed packs
         env:
           BEFORE: ${{ github.event.before }}
           AFTER: ${{ github.sha }}
@@ -68,9 +68,10 @@ jobs:
       # rate limited by servers like Census that we download from
       max-parallel: 4
       matrix:
-        pack: ${{ fromJson(needs.list-changed-packs.outputs.matrix) }}
+        include: ${{ fromJson(needs.list-changed-packs.outputs.matrix) }}
     uses: ./.github/workflows/build-pack.yml
     with:
       pack: ${{ matrix.pack }}
+      layers: ${{ toJSON(matrix.layers) }}
       image: ${{ needs.image.outputs.image }}
     secrets: inherit
