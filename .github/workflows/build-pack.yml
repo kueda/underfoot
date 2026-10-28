@@ -131,7 +131,7 @@ jobs:
       - name: Upload rocks
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ inputs.pack }}-rocks
+          name: ${{ inputs.pack }}--rocks
           path: "data/build/${{ inputs.pack }}.pmtiles/"
 
   water:
@@ -207,7 +207,7 @@ jobs:
       - name: Upload water
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ inputs.pack }}-water
+          name: ${{ inputs.pack }}--water
           path: "data/build/${{ inputs.pack }}.pmtiles/"
 
   contours:
@@ -249,7 +249,7 @@ jobs:
       - name: Upload contours
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ inputs.pack }}-contours
+          name: ${{ inputs.pack }}--contours
           path: "data/build/${{ inputs.pack }}.pmtiles/"
 
   osm:
@@ -307,14 +307,14 @@ jobs:
         if: ${{ contains(fromJSON(needs.plan.outputs.layers), 'ways') }}
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ inputs.pack }}-ways
+          name: ${{ inputs.pack }}--ways
           path: "data/build/${{ inputs.pack }}.pmtiles/"
 
       - name: Upload context
         if: ${{ contains(fromJSON(needs.plan.outputs.layers), 'context') }}
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ inputs.pack }}-context
+          name: ${{ inputs.pack }}--context
           path: "data/build/${{ inputs.pack }}.pmtiles/"
 
   metadata:
@@ -334,7 +334,7 @@ jobs:
       - name: Upload pack.json
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ inputs.pack }}-metadata
+          name: ${{ inputs.pack }}--metadata
           path: "data/build/${{ inputs.pack }}.pmtiles/"
 
   upload-pack:
@@ -360,10 +360,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Artifacts are named <pack>--<layer> because every pack in a run shares
+      # its artifacts, and pack IDs have no "--", so us-ca--* doesn't match
+      # us-ca-oakland--rocks
       - name: Download all PMTiles artifacts
         uses: actions/download-artifact@v8
         with:
-          pattern: ${{ inputs.pack }}-*
+          pattern: ${{ inputs.pack }}--*
           path: data
 
       - name: Zip up the pack
@@ -374,7 +377,7 @@ jobs:
           mkdir -p build/${{ inputs.pack }}
           # Fails if the artifact of a layer that was built is missing
           for layer in $(jq -r '.[]' <<< "$BUILT") metadata; do
-            mv ${{ inputs.pack }}-$layer/* build/${{ inputs.pack }}/
+            mv ${{ inputs.pack }}--$layer/* build/${{ inputs.pack }}/
           done
           # Take the layers that weren't built from the published pack, with
           # their files like rocks-citations.csv

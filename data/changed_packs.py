@@ -30,7 +30,8 @@ from urllib.parse import urlparse
 
 DATA_DIR = pathlib.Path(__file__).parent.absolute()
 
-# Layers of a pack that build-pack.yml builds separately
+# Layers of a pack that build-pack.yml builds separately. Keep in sync with the default of
+# its layers input and ALL_LAYERS in its plan job
 LAYERS = ["rocks", "water", "contours", "ways", "context"]
 
 # Layers affected by changes to files or dirs in sources/util/. Changes to anything else
