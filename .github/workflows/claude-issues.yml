@@ -31,7 +31,7 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           label_trigger: agent-ready
           additional_permissions: |
             actions: read
