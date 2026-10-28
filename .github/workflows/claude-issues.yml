@@ -1,0 +1,40 @@
+name: Claude on agent-ready issues
+
+# When a maintainer adds the agent-ready label to an issue (including filing one with the label
+# already applied), Claude works on it on a new branch and opens a PR. Only people with triage
+# access can add labels, so the label is what gates which issue text Claude acts on.
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  id-token: write     # the Claude GitHub App authenticates with OIDC
+  actions: read       # lets Claude read CI results
+
+jobs:
+  claude:
+    if: github.event.label.name == 'agent-ready'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          label_trigger: agent-ready
+          additional_permissions: |
+            actions: read
+          claude_args: |
+            --allowedTools "Bash(npm ci:*),Bash(npm install:*),Bash(npm run:*),Bash(npm test:*),Bash(npx playwright:*),Bash(docker compose:*),Bash(gh pr create:*),Bash(gh pr view:*)"
+            --append-system-prompt "When you have committed and pushed your changes, open a pull request against the default branch with gh pr create instead of posting a Create a PR link. Start the PR body with a Closes line that references the issue, and link the PR in your comment."
