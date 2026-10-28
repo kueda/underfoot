@@ -42,16 +42,14 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
-      layers: ${{ steps.set-layers.outputs.layers }}
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0  # for the diff against the commit before the push
+      # List every pack with the layers the pushed changes affect, or every layer
+      # when run by hand or when the diff fails, like when a force push dropped
+      # the commit before it
       - id: set-matrix
-        run: echo "matrix=$(ls data/packs/*.json | xargs -I'{}' basename {} .json | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
-      # Build the layers the pushed changes affect, or every layer when run by hand or
-      # when the diff fails, like when a force push dropped the commit before it
-      - id: set-layers
         env:
           EVENT_NAME: ${{ github.event_name }}
           BEFORE: ${{ github.event.before }}
@@ -59,11 +57,11 @@ jobs:
         run: |
           if [ "$EVENT_NAME" = push ] \
             && changed=$(git diff --name-only "$BEFORE" "$AFTER"); then
-            layers=$(python3 data/changed_packs.py --build-all-packs <<< "$changed")
+            matrix=$(python3 data/changed_packs.py --build-all-packs <<< "$changed")
           else
-            layers='["rocks", "water", "contours", "ways", "context"]'
+            matrix=$(python3 data/changed_packs.py --build-all-packs --every-layer)
           fi
-          echo "layers=$layers" >> "$GITHUB_OUTPUT"
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
 
   build-packs:
     name: Build packs
@@ -74,10 +72,10 @@ jobs:
       # rate limited by servers like Census that we download from
       max-parallel: 4
       matrix:
-        pack: ${{ fromJson(needs.list-packs.outputs.matrix) }}
+        include: ${{ fromJson(needs.list-packs.outputs.matrix) }}
     uses: ./.github/workflows/build-pack.yml
     with:
       pack: ${{ matrix.pack }}
       image: ${{ needs.image.outputs.image }}
-      layers: ${{ needs.list-packs.outputs.layers }}
+      layers: ${{ toJSON(matrix.layers) }}
     secrets: inherit

@@ -130,6 +130,13 @@ def test_main_prints_pack_ids_for_paths_on_stdin_as_json(data_dir, monkeypatch, 
     ]
 
 
+ALL_PACKS = ["ca", "nv", "solo-only", "unrelated"]
+
+
+def layers_by_pack_id(matrix):
+    return {item["pack"]: item["layers"] for item in matrix}
+
+
 @pytest.mark.parametrize("path, layers", [
     ("data/sources/util/water.py", ["water"]),
     ("data/sources/util/tiger_water.py", ["water"]),
@@ -140,36 +147,66 @@ def test_main_prints_pack_ids_for_paths_on_stdin_as_json(data_dir, monkeypatch, 
     ("data/sources/util/proj.py", changed_packs.LAYERS),
     ("data/sources/util/citations.py", ["rocks", "water"]),
 ])
-def test_build_all_packs_layers_maps_util_changes_to_layers(data_dir, path, layers):
-    assert changed_packs.build_all_packs_layers([path], data_dir) == layers
+def test_build_all_packs_maps_util_changes_to_layers_of_every_pack(data_dir, path, layers):
+    assert changed_packs.build_all_packs([path], data_dir) == [
+        {"pack": pack_id, "layers": layers} for pack_id in ALL_PACKS
+    ]
 
 
-def test_build_all_packs_layers_combines_layers_of_util_changes(data_dir):
-    assert changed_packs.build_all_packs_layers(
+def test_build_all_packs_combines_layers_of_util_changes(data_dir):
+    assert layers_by_pack_id(changed_packs.build_all_packs(
         ["data/sources/util/water.py", "data/sources/util/rocks/constants.py"], data_dir
-    ) == ["rocks", "water"]
+    )) == {pack_id: ["rocks", "water"] for pack_id in ALL_PACKS}
 
 
-def test_build_all_packs_layers_ignores_util_init_like_build_all_packs_does(data_dir):
-    assert changed_packs.build_all_packs_layers(
+def test_build_all_packs_ignores_util_init_like_build_all_packs_does(data_dir):
+    assert layers_by_pack_id(changed_packs.build_all_packs(
         ["data/sources/util/water.py", "data/sources/util/__init__.py"], data_dir
-    ) == ["water"]
+    )) == {pack_id: ["water"] for pack_id in ALL_PACKS}
 
 
-def test_build_all_packs_layers_includes_layers_of_other_changes(data_dir):
+def test_build_all_packs_adds_the_layers_of_other_changes_to_the_packs_they_affect(data_dir):
     # Build changed packs leaves these to Build all packs when util changes too
-    assert changed_packs.build_all_packs_layers(
+    assert layers_by_pack_id(changed_packs.build_all_packs(
         ["data/sources/util/water.py", "data/sources/solo.py"], data_dir
-    ) == ["rocks", "water"]
-    assert changed_packs.build_all_packs_layers(
+    )) == {
+        "ca": ["rocks", "water"],
+        "nv": ["water"],
+        "solo-only": ["rocks", "water"],
+        "unrelated": ["water"]
+    }
+    assert layers_by_pack_id(changed_packs.build_all_packs(
         ["data/sources/util/water.py", "data/packs/nv.json"], data_dir
-    ) == changed_packs.LAYERS
+    )) == {
+        "ca": ["water"],
+        "nv": changed_packs.LAYERS,
+        "solo-only": ["water"],
+        "unrelated": ["water"]
+    }
 
 
-def test_main_prints_build_all_packs_layers_as_json(data_dir, monkeypatch, capsys):
+def test_build_all_packs_can_build_every_layer(data_dir):
+    assert changed_packs.build_all_packs([], data_dir, every_layer=True) == [
+        {"pack": pack_id, "layers": changed_packs.LAYERS} for pack_id in ALL_PACKS
+    ]
+
+
+def test_main_prints_build_all_packs_matrix_as_json(data_dir, monkeypatch, capsys):
     monkeypatch.setattr("sys.stdin", io.StringIO("data/sources/util/water.py\n"))
     changed_packs.main(["--build-all-packs"], data_dir)
-    assert json.loads(capsys.readouterr().out) == ["water"]
+    assert json.loads(capsys.readouterr().out) == [
+        {"pack": pack_id, "layers": ["water"]} for pack_id in ALL_PACKS
+    ]
+
+
+def test_main_prints_every_layer_of_every_pack_without_reading_stdin(
+    data_dir, monkeypatch, capsys
+):
+    monkeypatch.setattr("sys.stdin", io.StringIO("data/sources/util/water.py\n"))
+    changed_packs.main(["--build-all-packs", "--every-layer"], data_dir)
+    assert json.loads(capsys.readouterr().out) == [
+        {"pack": pack_id, "layers": changed_packs.LAYERS} for pack_id in ALL_PACKS
+    ]
 
 
 def test_definition_hash_changes_with_the_pack_definition(data_dir):

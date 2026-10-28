@@ -10,7 +10,8 @@ of2005_1305, which rebuilds the layer it uses the source for.
 Changes to sources/util/ affect nearly every pack, so the Build all packs workflow
 rebuilds every pack when they happen. To avoid building packs twice, this prints an
 empty list if any of the paths are ones that workflow handles. With --build-all-packs,
-it prints the layers that workflow should rebuild instead.
+it prints every pack with the layers that workflow should rebuild instead, or with
+--every-layer too, every layer of every pack without reading stdin.
 
 With --definition-hash, it prints the hash of a pack's definition instead, which
 build-pack.yml compares with the one the published pack was built from.
@@ -159,18 +160,24 @@ def changed_packs(paths, data_dir=DATA_DIR):
     ]
 
 
-def build_all_packs_layers(paths, data_dir=DATA_DIR):
-    """Layers the Build all packs workflow should rebuild after changes to paths relative to
-    the repo root. Includes the layers of changes Build changed packs leaves to it"""
+def build_all_packs(paths, data_dir=DATA_DIR, every_layer=False):
+    """Every pack, as dicts with the pack ID and the layers the Build all packs workflow
+    should rebuild after changes to paths relative to the repo root: the layers the util
+    changes affect, plus the layers of changes Build changed packs leaves to it. With
+    every_layer, every layer of every pack"""
     data_dir = pathlib.Path(data_dir)
     data_paths = data_paths_in(paths, data_dir)
-    layers = set()
+    util_layers = set(LAYERS) if every_layer else set()
     for path in data_paths:
         if built_by_build_all_packs(path):
-            layers.update(UTIL_LAYERS.get(path.parts[2], LAYERS))
-    for pack_layers in layers_by_pack(data_paths, data_dir).values():
-        layers.update(pack_layers)
-    return ordered_layers(layers)
+            util_layers.update(UTIL_LAYERS.get(path.parts[2], LAYERS))
+    other_layers = layers_by_pack(data_paths, data_dir)
+    matrix = []
+    for pack_id in sorted(path.stem for path in (data_dir / "packs").glob("*.json")):
+        layers = util_layers | other_layers.get(pack_id, set())
+        if layers:
+            matrix.append({"pack": pack_id, "layers": ordered_layers(layers)})
+    return matrix
 
 
 def definition_hash(pack_path):
@@ -189,13 +196,18 @@ def definition_hash(pack_path):
 
 def main(args=None, data_dir=DATA_DIR):
     """Print the packs affected by the paths on stdin as JSON, with --build-all-packs, the
-    layers the Build all packs workflow should rebuild, or with --definition-hash, the
-    hash of a pack definition"""
+    packs and layers the Build all packs workflow should rebuild, or with
+    --definition-hash, the hash of a pack definition"""
     parser = argparse.ArgumentParser(description=__doc__.split("\n", maxsplit=1)[0])
     parser.add_argument(
         "--build-all-packs",
         action="store_true",
-        help="Print the layers the Build all packs workflow should rebuild"
+        help="Print every pack with the layers the Build all packs workflow should rebuild"
+    )
+    parser.add_argument(
+        "--every-layer",
+        action="store_true",
+        help="With --build-all-packs, print every layer of every pack without reading stdin"
     )
     parser.add_argument(
         "--definition-hash",
@@ -206,9 +218,12 @@ def main(args=None, data_dir=DATA_DIR):
     if args.definition_hash:
         print(definition_hash(args.definition_hash))
         return
+    if args.build_all_packs and args.every_layer:
+        print(json.dumps(build_all_packs([], data_dir, every_layer=True)))
+        return
     paths = [line.strip() for line in sys.stdin if line.strip()]
     if args.build_all_packs:
-        print(json.dumps(build_all_packs_layers(paths, data_dir)))
+        print(json.dumps(build_all_packs(paths, data_dir)))
     else:
         print(json.dumps(changed_packs(paths, data_dir)))
 
