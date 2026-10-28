@@ -2,16 +2,11 @@ name: Build all packs
 
 on:
   push:
-    # Reprocess all packs if anything related to source processing changes.
-    # TODO come up with a better way to exclude data/sources/util/__init__.py
+    # Reprocess all packs if anything related to source processing changes. Keep in
+    # sync with built_by_build_all_packs() in data/changed_packs.py
     paths:
-      - data/sources/util/c*
-      - data/sources/util/m*
-      - data/sources/util/p*
-      - data/sources/util/r*
-      - data/sources/util/t*
-      - data/sources/util/u*
-      - data/sources/util/w*
+      - data/sources/util/**
+      - '!data/sources/util/__init__.py'
     branches: main
   workflow_dispatch:
 

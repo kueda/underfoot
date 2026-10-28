@@ -2,7 +2,12 @@ name: Build changed packs
 
 on:
   push:
-    paths: data/packs/*.json
+    paths:
+      - data/packs/*.json
+      - data/sources/**
+      # Build all packs builds every pack when these change, and data/changed_packs.py
+      # ignores util/__init__.py
+      - '!data/sources/util/**'
     branches: main
 
 permissions:
@@ -18,8 +23,32 @@ jobs:
         with:
           github_token: ${{ github.token }}
 
-  image:
+  list-changed-packs:
     needs: skip-duplicates
+    name: List changed packs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0  # for the diff against the commit before the push
+
+      # List the packs whose definitions or sources changed, or none if the Build all
+      # packs workflow will build them
+      - id: set-matrix
+        name: Set matrix with IDs of changed packs
+        env:
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          matrix=$(git diff --name-only "$BEFORE" "$AFTER" | python3 data/changed_packs.py)
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+
+  # Don't build the image or run the tests if there are no packs to build
+  image:
+    needs: list-changed-packs
+    if: ${{ needs.list-changed-packs.outputs.matrix != '[]' }}
     uses: ./.github/workflows/build-image.yml
 
   # Don't spend time and bandwidth building packs if the tests fail
@@ -29,36 +58,10 @@ jobs:
     with:
       image: ${{ needs.image.outputs.image }}
 
-  list-changed-packs:
-    needs: skip-duplicates
-    name: List changed packs
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-
-      # Detect changed pack definitions
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          list-files: shell
-          filters: |
-            changed:
-              - added|modified: 'data/packs/*.json'
-
-      # Convert paths into a list of pack IDs
-      - id: set-matrix
-        if: ${{ steps.filter.outputs.changed == 'true' }}
-        name: Set matrix with basenames of changed paths
-        # Run basename on the list of changed files then convert the list to
-        # JSON
-        run: echo "matrix=$(basename -s .json ${{ steps.filter.outputs.changed_files }} | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
-
   build-packs:
     name: Build packs
     needs: [image, list-changed-packs, run-pytest]
-    if: ${{ needs.list-changed-packs.outputs.matrix }}
+    if: ${{ needs.list-changed-packs.outputs.matrix != '[]' }}
     strategy:
       fail-fast: false
       # Each pack runs several jobs at once, and too many at once get
