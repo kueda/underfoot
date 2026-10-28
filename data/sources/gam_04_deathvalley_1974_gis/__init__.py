@@ -25,5 +25,8 @@ def run():
             "title": "FullName",
             "span": "Age",
             "description": "Descr"
-        }
+        },
+        metadata_overrides_csv_path=os.path.join(
+            os.path.dirname(os.path.realpath(__file__)), "overrides.csv"
+        )
     )
