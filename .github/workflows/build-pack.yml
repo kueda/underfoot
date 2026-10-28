@@ -11,6 +11,12 @@ on:
         description: Prebuilt app image ref (from .github/workflows/build-image.yml)
         type: string
         required: true
+      layers:
+        description: |
+          JSON array of the layers to build. Takes the other layers from the
+          published pack, or builds every layer if it hasn't been published.
+        type: string
+        default: '["rocks", "water", "contours", "ways", "context"]'
       publish:
         description: |
           Publish the pack to Digital Ocean. If false, upload the pack zip as
@@ -33,9 +39,38 @@ defaults:
   run:
     working-directory: data
 
+env:
+  # The published pack, which the layers that aren't built are taken from
+  PACK_URL: https://static.underfoot.rocks/${{ inputs.pack }}.pmtiles.zip
+
 jobs:
+  plan:
+    name: Choose layers to build
+    runs-on: ubuntu-24.04
+    outputs:
+      layers: ${{ steps.layers.outputs.layers }}
+      reused: ${{ steps.layers.outputs.reused }}
+    steps:
+      - id: layers
+        working-directory: .
+        env:
+          LAYERS: ${{ inputs.layers }}
+          ALL_LAYERS: '["rocks", "water", "contours", "ways", "context"]'
+        run: |
+          reused=$(jq -n -c --argjson all "$ALL_LAYERS" --argjson layers "$LAYERS" \
+            '$all - $layers')
+          if [ "$reused" != "[]" ] && ! curl -sfI "$PACK_URL" > /dev/null; then
+            echo "$PACK_URL isn't published, so building every layer"
+            LAYERS=$ALL_LAYERS
+            reused="[]"
+          fi
+          echo "layers=$(jq -c . <<< "$LAYERS")" >> "$GITHUB_OUTPUT"
+          echo "reused=$reused" >> "$GITHUB_OUTPUT"
+
   rocks:
     name: Build rocks
+    needs: plan
+    if: ${{ contains(fromJSON(needs.plan.outputs.layers), 'rocks') }}
     runs-on: ubuntu-24.04
     container:
       image: ${{ inputs.image }}
@@ -77,6 +112,8 @@ jobs:
 
   water:
     name: Build water
+    needs: plan
+    if: ${{ contains(fromJSON(needs.plan.outputs.layers), 'water') }}
     runs-on: ubuntu-24.04
     container:
       image: ${{ inputs.image }}
@@ -151,6 +188,8 @@ jobs:
 
   contours:
     name: Build contours
+    needs: plan
+    if: ${{ contains(fromJSON(needs.plan.outputs.layers), 'contours') }}
     runs-on: ubuntu-24.04
     container:
       image: ${{ inputs.image }}
@@ -191,6 +230,10 @@ jobs:
 
   osm:
     name: Build ways & context
+    needs: plan
+    if: >-
+      ${{ contains(fromJSON(needs.plan.outputs.layers), 'ways')
+        || contains(fromJSON(needs.plan.outputs.layers), 'context') }}
     runs-on: ubuntu-24.04
     container:
       image: ${{ inputs.image }}
@@ -230,15 +273,21 @@ jobs:
           key: cache-osm-${{ steps.get-osm-url.outputs.osm-url }}-${{ steps.calc-year-week.outputs.year-week }}
 
       - name: Build ways & context
-        run: python packs.py ${{ inputs.pack }} --only ways context
+        env:
+          LAYERS: ${{ needs.plan.outputs.layers }}
+        run: |
+          python packs.py ${{ inputs.pack }} --only \
+            $(jq -r '.[] | select(. == "ways" or . == "context")' <<< "$LAYERS")
 
       - name: Upload ways
+        if: ${{ contains(fromJSON(needs.plan.outputs.layers), 'ways') }}
         uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.pack }}-ways
           path: "data/build/${{ inputs.pack }}.pmtiles/"
 
       - name: Upload context
+        if: ${{ contains(fromJSON(needs.plan.outputs.layers), 'context') }}
         uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.pack }}-context
@@ -268,11 +317,15 @@ jobs:
     name: Archive and upload pack
     runs-on: ubuntu-24.04
     needs:
+      - plan
       - rocks
       - water
       - contours
       - osm
       - metadata
+    # Run when the jobs for layers that weren't built were skipped, but not when
+    # any job failed or the run was cancelled
+    if: ${{ !cancelled() && !failure() }}
     steps:
       - uses: actions/checkout@v7
 
@@ -283,14 +336,27 @@ jobs:
           path: data
 
       - name: Zip up the pack
+        env:
+          BUILT: ${{ needs.plan.outputs.layers }}
+          REUSED: ${{ needs.plan.outputs.reused }}
         run: |
           mkdir -p build/${{ inputs.pack }}
-          mv ${{ inputs.pack }}-rocks/* build/${{ inputs.pack }}/
-          mv ${{ inputs.pack }}-contours/* build/${{ inputs.pack }}/
-          mv ${{ inputs.pack }}-water/* build/${{ inputs.pack }}/
-          mv ${{ inputs.pack }}-ways/* build/${{ inputs.pack }}/
-          mv ${{ inputs.pack }}-context/* build/${{ inputs.pack }}/
-          mv ${{ inputs.pack }}-metadata/* build/${{ inputs.pack }}/
+          # Fails if the artifact of a layer that was built is missing
+          for layer in $(jq -r '.[]' <<< "$BUILT") metadata; do
+            mv ${{ inputs.pack }}-$layer/* build/${{ inputs.pack }}/
+          done
+          # Take the layers that weren't built from the published pack, with
+          # their files like rocks-citations.csv
+          if [ "$REUSED" != "[]" ]; then
+            curl -sf -o published.zip "$PACK_URL"
+            for layer in $(jq -r '.[]' <<< "$REUSED"); do
+              unzip -o -d build/ published.zip "${{ inputs.pack }}/$layer.pmtiles"
+              # Not every layer has other files, and unzip exits 11 if none match
+              unzip -o -d build/ published.zip "${{ inputs.pack }}/$layer-*" \
+                || [ $? -eq 11 ]
+            done
+            rm published.zip
+          fi
           cd build/
           zip ${{ inputs.pack }}.pmtiles.zip ${{ inputs.pack }}/*
           cd ../

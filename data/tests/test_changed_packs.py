@@ -46,38 +46,53 @@ def fixture_data_dir(tmp_path):
 def test_includes_packs_that_use_a_changed_source_module(data_dir):
     assert changed_packs.changed_packs(
         ["data/sources/solo.py"], data_dir
-    ) == ["ca", "solo-only"]
+    ) == [
+        {"pack": "ca", "layers": ["rocks"]},
+        {"pack": "solo-only", "layers": ["rocks"]}
+    ]
 
 
 def test_includes_packs_that_use_a_source_with_changed_files(data_dir):
     assert changed_packs.changed_packs(
         ["data/sources/shared_ca/overrides.csv"], data_dir
-    ) == ["ca"]
+    ) == [{"pack": "ca", "layers": ["rocks"]}]
 
 
 def test_includes_packs_whose_sources_import_a_changed_module(data_dir):
     assert changed_packs.changed_packs(
         ["data/sources/shared/helpers.py"], data_dir
-    ) == ["ca", "nv"]
+    ) == [{"pack": "ca", "layers": ["rocks"]}, {"pack": "nv", "layers": ["rocks"]}]
 
 
 def test_includes_packs_whose_sources_import_a_changed_module_indirectly(data_dir):
     assert changed_packs.changed_packs(
         ["data/sources/base/__init__.py"], data_dir
-    ) == ["ca", "nv"]
+    ) == [{"pack": "ca", "layers": ["rocks"]}, {"pack": "nv", "layers": ["rocks"]}]
 
 
 def test_includes_packs_that_use_a_changed_water_source(data_dir):
     write(data_dir / "sources" / "tiger_water_06001.py")
     assert changed_packs.changed_packs(
         ["data/sources/tiger_water_06001.py"], data_dir
-    ) == ["ca"]
+    ) == [{"pack": "ca", "layers": ["water"]}]
 
 
-def test_includes_changed_packs(data_dir):
+def test_includes_rocks_and_water_for_packs_with_changed_rock_and_water_sources(data_dir):
+    write(data_dir / "sources" / "tiger_water_06001.py")
     assert changed_packs.changed_packs(
-        ["data/packs/nv.json", "data/packs/unrelated.json"], data_dir
-    ) == ["nv", "unrelated"]
+        ["data/sources/tiger_water_06001.py", "data/sources/shared_ca.py"], data_dir
+    ) == [{"pack": "ca", "layers": ["rocks", "water"]}]
+
+
+def test_includes_every_layer_of_changed_packs(data_dir):
+    assert changed_packs.changed_packs(
+        ["data/packs/nv.json", "data/packs/unrelated.json", "data/sources/solo.py"], data_dir
+    ) == [
+        {"pack": "ca", "layers": ["rocks"]},
+        {"pack": "nv", "layers": changed_packs.LAYERS},
+        {"pack": "solo-only", "layers": ["rocks"]},
+        {"pack": "unrelated", "layers": changed_packs.LAYERS}
+    ]
 
 
 def test_excludes_deleted_packs(data_dir):
@@ -100,10 +115,58 @@ def test_lists_no_packs_when_util_changes_because_build_all_packs_builds_them(da
 def test_ignores_util_init_like_build_all_packs_does(data_dir):
     assert changed_packs.changed_packs(
         ["data/sources/solo.py", "data/sources/util/__init__.py"], data_dir
-    ) == ["ca", "solo-only"]
+    ) == [
+        {"pack": "ca", "layers": ["rocks"]},
+        {"pack": "solo-only", "layers": ["rocks"]}
+    ]
 
 
 def test_main_prints_pack_ids_for_paths_on_stdin_as_json(data_dir, monkeypatch, capsys):
     monkeypatch.setattr("sys.stdin", io.StringIO("data/sources/solo.py\n"))
-    changed_packs.main(data_dir)
-    assert json.loads(capsys.readouterr().out) == ["ca", "solo-only"]
+    changed_packs.main([], data_dir)
+    assert json.loads(capsys.readouterr().out) == [
+        {"pack": "ca", "layers": ["rocks"]},
+        {"pack": "solo-only", "layers": ["rocks"]}
+    ]
+
+
+@pytest.mark.parametrize("path, layers", [
+    ("data/sources/util/water.py", ["water"]),
+    ("data/sources/util/tiger_water.py", ["water"]),
+    ("data/sources/util/rocks/constants.py", ["rocks"]),
+    ("data/sources/util/usgs_states.py", ["rocks"]),
+    ("data/sources/util/met2xml.py", ["rocks"]),
+    ("data/sources/util/polygonize_arcs.py", ["rocks"]),
+    ("data/sources/util/proj.py", changed_packs.LAYERS),
+    ("data/sources/util/citations.py", ["rocks", "water"]),
+])
+def test_build_all_packs_layers_maps_util_changes_to_layers(data_dir, path, layers):
+    assert changed_packs.build_all_packs_layers([path], data_dir) == layers
+
+
+def test_build_all_packs_layers_combines_layers_of_util_changes(data_dir):
+    assert changed_packs.build_all_packs_layers(
+        ["data/sources/util/water.py", "data/sources/util/rocks/constants.py"], data_dir
+    ) == ["rocks", "water"]
+
+
+def test_build_all_packs_layers_ignores_util_init_like_build_all_packs_does(data_dir):
+    assert changed_packs.build_all_packs_layers(
+        ["data/sources/util/water.py", "data/sources/util/__init__.py"], data_dir
+    ) == ["water"]
+
+
+def test_build_all_packs_layers_includes_layers_of_other_changes(data_dir):
+    # Build changed packs leaves these to Build all packs when util changes too
+    assert changed_packs.build_all_packs_layers(
+        ["data/sources/util/water.py", "data/sources/solo.py"], data_dir
+    ) == ["rocks", "water"]
+    assert changed_packs.build_all_packs_layers(
+        ["data/sources/util/water.py", "data/packs/nv.json"], data_dir
+    ) == changed_packs.LAYERS
+
+
+def test_main_prints_build_all_packs_layers_as_json(data_dir, monkeypatch, capsys):
+    monkeypatch.setattr("sys.stdin", io.StringIO("data/sources/util/water.py\n"))
+    changed_packs.main(["--build-all-packs"], data_dir)
+    assert json.loads(capsys.readouterr().out) == ["water"]
