@@ -1,0 +1,5 @@
+# Gitignored files Claude Code copies into new worktrees (.gitignore syntax)
+# Husky's generated hook runner, which core.hooksPath points at
+.husky/_/
+# Per-developer local hooks
+.husky/*.local
