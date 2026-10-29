@@ -49,6 +49,7 @@ LITHOLOGY_PATTERN = re.compile(
     benmoreite|
     blueschist|
     calcerenite|
+    charnockite|
     chert|
     claystone|
     clay|
@@ -72,6 +73,8 @@ LITHOLOGY_PATTERN = re.compile(
     granitic|
     granitoid|
     granodiorite|
+    granofels|
+    granofel|
     gravel|
     graywacke|
     greenschist|
@@ -195,6 +198,7 @@ LITHOLOGY_SYNONYMS = {
   "fill": "artificial",
   "glacier": "ice",
   "gneissic": "gneiss",
+  "granofels": "granofel",
   "granitic": "granite",
   "listwanite": "silica-carbonate",
   "listvenite": "silica-carbonate",
@@ -273,7 +277,9 @@ IGNEOUS_ROCKS = [
 
 METAMORPHIC_ROCKS = [
   "blueschist",
+  "charnockite",
   "gneiss",
+  "granofel",
   "greenstone",
   "felsic metavolcanic rock",
   "greenschist",
