@@ -106,7 +106,10 @@ def schemify_attributes(attributes_path):
                     est_age = (min_age + max_age) / 2
             units_from_shp[code] = {
                 "code": code,
-                "lithology": rocks.lithology_from_text(unit["properties"]["Com"]),
+                "lithology": (
+                    unit_overrides.get(code, {}).get("lithology")
+                    or rocks.lithology_from_text(unit["properties"]["Com"])
+                ),
                 "min_age": min_age,
                 "max_age": max_age,
                 "est_age": est_age,
