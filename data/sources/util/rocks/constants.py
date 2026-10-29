@@ -335,6 +335,7 @@ NON_ROCKS = [
   "colluvium",
   "dune sand",
   "glacial drift",
+  "glaciolacustrine sediment",
   "gravel",
   "landslide",
   "melange",
