@@ -5,7 +5,9 @@ Reads paths relative to the repo root from stdin, one per line, like the output 
 pack ID and the layers to rebuild, like `{"pack": "us-ca-oakland", "layers": ["rocks"]}`.
 A pack is affected if its definition changed, which rebuilds every layer, or if it uses a
 source whose module or files changed, including shared modules the source imports, like
-of2005_1305, which rebuilds the layer it uses the source for.
+of2005_1305, which rebuilds the layer it uses the source for. With --before, a pack
+definition is compared with its version in that commit, and a pack whose descriptive
+attributes are all that changed is listed with no layers, so only its pack.json is rebuilt.
 
 Changes to sources/util/ affect nearly every pack, so the Build all packs workflow
 rebuilds every pack when they happen. To avoid building packs twice, this prints an
@@ -25,6 +27,7 @@ import hashlib
 import json
 import os
 import pathlib
+import subprocess
 import sys
 from urllib.parse import urlparse
 
@@ -46,6 +49,18 @@ UTIL_LAYERS = {
     "usgs_states.py": ["rocks"],
     "water.py": ["water"],
 }
+
+# Attributes of a pack definition that only describe the pack in pack.json and the manifest,
+# so changing them doesn't change any layer. bbox and id are in the metadata too, but the
+# builds use them
+DESCRIPTIVE_ATTRIBUTES = [
+    "admin1",
+    "admin2",
+    "default_center",
+    "default_zoom",
+    "description",
+    "name",
+]
 
 
 def built_by_build_all_packs(path):
@@ -122,14 +137,36 @@ def data_paths_in(paths, data_dir):
     return data_paths
 
 
-def layers_by_pack(data_paths, data_dir):
+def build_definition(pack):
+    """A pack definition without its descriptive attributes"""
+    return {key: value for key, value in pack.items() if key not in DESCRIPTIVE_ATTRIBUTES}
+
+
+def definition_before(path, data_dir, before):
+    """The pack definition at a path relative to the data dir as of the commit before, or
+    None if it didn't exist then"""
+    result = subprocess.run(
+        ["git", "show", f"{before}:./{path.as_posix()}"],
+        cwd=data_dir, capture_output=True, text=True, check=False
+    )
+    return json.loads(result.stdout) if result.returncode == 0 else None
+
+
+def layers_by_pack(data_paths, data_dir, before=None):
     """Map of the IDs of the packs affected by changes to paths relative to the data dir to
-    the sets of their layers that need rebuilding, ignoring changes to sources/util/"""
+    the sets of their layers that need rebuilding, ignoring changes to sources/util/. With
+    before, a pack whose definition only changed descriptive attributes since that commit
+    maps to an empty set"""
     layers = {}
     for path in data_paths:
         if path.parent.as_posix() == "packs" and path.suffix == ".json":
             if (data_dir / path).exists():
                 layers[path.stem] = set(LAYERS)
+                if before:
+                    old = definition_before(path, data_dir, before)
+                    new = json.loads((data_dir / path).read_text(encoding="utf-8"))
+                    if old is not None and build_definition(old) == build_definition(new):
+                        layers[path.stem] = set()
     # Nearly every source imports util, so util/__init__.py doesn't trigger a build,
     # same as in Build all packs
     modules = {changed_module(path) for path in data_paths} - {None, "util"}
@@ -143,9 +180,9 @@ def layers_by_pack(data_paths, data_dir):
     return layers
 
 
-def changed_packs(paths, data_dir=DATA_DIR):
-    """Packs affected by changes to paths relative to the repo root, as dicts with the pack
-    ID and the layers to rebuild"""
+def changed_packs(paths, data_dir=DATA_DIR, before=None):
+    """Packs affected by changes to paths relative to the repo root since the commit before,
+    if given, as dicts with the pack ID and the layers to rebuild"""
     data_dir = pathlib.Path(data_dir)
     data_paths = data_paths_in(paths, data_dir)
     build_all_paths = [path for path in data_paths if built_by_build_all_packs(path)]
@@ -157,37 +194,39 @@ def changed_packs(paths, data_dir=DATA_DIR):
         return []
     return [
         {"pack": pack_id, "layers": ordered_layers(layers)}
-        for pack_id, layers in sorted(layers_by_pack(data_paths, data_dir).items())
+        for pack_id, layers in sorted(layers_by_pack(data_paths, data_dir, before).items())
     ]
 
 
-def build_all_packs(paths, data_dir=DATA_DIR, every_layer=False):
+def build_all_packs(paths, data_dir=DATA_DIR, every_layer=False, before=None):
     """Every pack, as dicts with the pack ID and the layers the Build all packs workflow
-    should rebuild after changes to paths relative to the repo root: the layers the util
-    changes affect, plus the layers of changes Build changed packs leaves to it. With
-    every_layer, every layer of every pack"""
+    should rebuild after changes to paths relative to the repo root since the commit before,
+    if given: the layers the util changes affect, plus the layers of changes Build changed
+    packs leaves to it. With every_layer, every layer of every pack"""
     data_dir = pathlib.Path(data_dir)
     data_paths = data_paths_in(paths, data_dir)
     util_layers = set(LAYERS) if every_layer else set()
     for path in data_paths:
         if built_by_build_all_packs(path):
             util_layers.update(UTIL_LAYERS.get(path.parts[2], LAYERS))
-    other_layers = layers_by_pack(data_paths, data_dir)
+    other_layers = layers_by_pack(data_paths, data_dir, before)
     matrix = []
     for pack_id in sorted(path.stem for path in (data_dir / "packs").glob("*.json")):
         layers = util_layers | other_layers.get(pack_id, set())
-        if layers:
+        # Packs with no layers to build still need their pack.json rebuilt if their
+        # descriptive attributes changed
+        if layers or pack_id in other_layers:
             matrix.append({"pack": pack_id, "layers": ordered_layers(layers)})
     return matrix
 
 
 def definition_hash(pack_path):
-    """SHA-256 of a pack definition file and the boundary GeoJSON file it references, which
-    every layer of the pack depends on"""
+    """SHA-256 of a pack definition without its descriptive attributes and the boundary
+    GeoJSON file it references, which every layer of the pack depends on"""
     pack_path = pathlib.Path(pack_path)
-    pack_bytes = pack_path.read_bytes()
-    digest = hashlib.sha256(pack_bytes)
-    ref = json.loads(pack_bytes).get("geojson", {}).get("$ref")
+    pack = json.loads(pack_path.read_text(encoding="utf-8"))
+    digest = hashlib.sha256(json.dumps(build_definition(pack), sort_keys=True).encode())
+    ref = pack.get("geojson", {}).get("$ref")
     if ref:
         # Resolved the same way as in packs.py
         parsed_uri = urlparse(ref)
@@ -215,6 +254,11 @@ def main(args=None, data_dir=DATA_DIR):
         metavar="PACK_PATH",
         help="Print the hash of the definition of the pack at this path"
     )
+    parser.add_argument(
+        "--before",
+        metavar="COMMIT",
+        help="Compare pack definitions with their versions in this commit"
+    )
     args = parser.parse_args(args)
     if args.definition_hash:
         print(definition_hash(args.definition_hash))
@@ -224,9 +268,9 @@ def main(args=None, data_dir=DATA_DIR):
         return
     paths = [line.strip() for line in sys.stdin if line.strip()]
     if args.build_all_packs:
-        print(json.dumps(build_all_packs(paths, data_dir)))
+        print(json.dumps(build_all_packs(paths, data_dir, before=args.before)))
     else:
-        print(json.dumps(changed_packs(paths, data_dir)))
+        print(json.dumps(changed_packs(paths, data_dir, before=args.before)))
 
 
 if __name__ == "__main__":

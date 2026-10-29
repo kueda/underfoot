@@ -57,7 +57,8 @@ jobs:
         run: |
           if [ "$EVENT_NAME" = push ] \
             && changed=$(git diff --name-only "$BEFORE" "$AFTER"); then
-            matrix=$(python3 data/changed_packs.py --build-all-packs <<< "$changed")
+            matrix=$(python3 data/changed_packs.py --build-all-packs --before "$BEFORE" \
+              <<< "$changed")
           else
             matrix=$(python3 data/changed_packs.py --build-all-packs --every-layer)
           fi

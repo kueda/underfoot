@@ -2,6 +2,7 @@
 
 import io
 import json
+import subprocess
 
 import pytest
 
@@ -13,11 +14,26 @@ def write(path, content=""):
     path.write_text(content, encoding="utf-8")
 
 
-def write_pack(data_dir, pack_id, rock=(), water=()):
+def write_pack(data_dir, pack_id, rock=(), water=(), **attrs):
     write(
         data_dir / "packs" / f"{pack_id}.json",
-        json.dumps({"id": pack_id, "rock": list(rock), "water": list(water)})
+        json.dumps({"id": pack_id, "rock": list(rock), "water": list(water), **attrs})
     )
+
+
+def commit_all(repo_dir):
+    """Commit everything in a repo, making it first if needed, and return the commit"""
+    def git(*args):
+        return subprocess.run(
+            ["git", "-c", "user.name=Test", "-c", "user.email=test@example.com",
+             "-c", "commit.gpgsign=false", *args],
+            cwd=repo_dir, check=True, capture_output=True, text=True
+        ).stdout.strip()
+    if not (repo_dir / ".git").exists():
+        git("init", "-q")
+    git("add", "-A")
+    git("commit", "-q", "-m", "commit")
+    return git("rev-parse", "HEAD")
 
 
 @pytest.fixture(name="data_dir")
@@ -233,3 +249,54 @@ def test_main_prints_the_definition_hash(data_dir, capsys):
     pack_path = data_dir / "packs" / "nv.json"
     changed_packs.main(["--definition-hash", str(pack_path)], data_dir)
     assert capsys.readouterr().out.strip() == changed_packs.definition_hash(pack_path)
+
+
+def test_definition_hash_ignores_descriptive_attributes(data_dir):
+    pack_path = data_dir / "packs" / "nv.json"
+    before = changed_packs.definition_hash(pack_path)
+    write_pack(
+        data_dir, "nv", rock=["shared_nv"],
+        name="Nevada", description="The Silver State", admin1="United States",
+        admin2="Nevada", default_center={"lon": -119.8, "lat": 39.5}, default_zoom=10
+    )
+    assert changed_packs.definition_hash(pack_path) == before
+
+
+def test_includes_packs_with_only_descriptive_changes_since_before_with_no_layers(data_dir):
+    before = commit_all(data_dir.parent)
+    write_pack(data_dir, "nv", rock=["shared_nv"], default_center={"lon": -119.8, "lat": 39.5})
+    assert changed_packs.changed_packs(["data/packs/nv.json"], data_dir, before=before) == [
+        {"pack": "nv", "layers": []}
+    ]
+
+
+def test_includes_every_layer_of_packs_with_build_changes_since_before(data_dir):
+    before = commit_all(data_dir.parent)
+    write_pack(data_dir, "nv", rock=["shared_nv", "solo"], default_zoom=10)
+    assert changed_packs.changed_packs(["data/packs/nv.json"], data_dir, before=before) == [
+        {"pack": "nv", "layers": changed_packs.LAYERS}
+    ]
+
+
+def test_includes_every_layer_of_packs_added_since_before(data_dir):
+    before = commit_all(data_dir.parent)
+    write_pack(data_dir, "new", rock=["solo"])
+    assert changed_packs.changed_packs(["data/packs/new.json"], data_dir, before=before) == [
+        {"pack": "new", "layers": changed_packs.LAYERS}
+    ]
+
+
+def test_build_all_packs_includes_descriptive_changes_since_before(data_dir):
+    before = commit_all(data_dir.parent)
+    write_pack(data_dir, "nv", rock=["shared_nv"], name="Nevada")
+    assert layers_by_pack_id(changed_packs.build_all_packs(
+        ["data/sources/util/water.py", "data/packs/nv.json"], data_dir, before=before
+    )) == {pack_id: ["water"] for pack_id in ALL_PACKS}
+
+
+def test_main_compares_pack_definitions_with_before(data_dir, monkeypatch, capsys):
+    before = commit_all(data_dir.parent)
+    write_pack(data_dir, "nv", rock=["shared_nv"], name="Nevada")
+    monkeypatch.setattr("sys.stdin", io.StringIO("data/packs/nv.json\n"))
+    changed_packs.main(["--before", before], data_dir)
+    assert json.loads(capsys.readouterr().out) == [{"pack": "nv", "layers": []}]

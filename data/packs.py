@@ -36,6 +36,7 @@ REQUIRED_ATTRIBUTES = [
     "name"
 ]
 
+# Keep the ones the builds don't use in sync with DESCRIPTIVE_ATTRIBUTES in changed_packs.py
 ATTRIBUTES_FOR_METADATA = [
     "admin1",
     "admin2",

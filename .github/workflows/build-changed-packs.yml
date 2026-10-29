@@ -40,7 +40,8 @@ jobs:
           BEFORE: ${{ github.event.before }}
           AFTER: ${{ github.sha }}
         run: |
-          matrix=$(git diff --name-only "$BEFORE" "$AFTER" | python3 data/changed_packs.py)
+          matrix=$(git diff --name-only "$BEFORE" "$AFTER" \
+            | python3 data/changed_packs.py --before "$BEFORE")
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
