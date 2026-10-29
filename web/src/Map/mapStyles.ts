@@ -562,7 +562,7 @@ const ROCK_STYLE: StyleSpecification = {
           ['granitic gneiss'], 'rgb(213,164,254)',
           ['granitoid', 'monzogranite'], 'rgb(221,41,114)',
           ['granodiorite'], 'rgb(233,121,166)',
-          ['granofels'], 'rgb(163,55,253)',
+          ['granofel', 'charnockite'], 'rgb(163,55,253)',
           ['granulite'], 'rgb(106,0,106)',
           ['gravel'], 'rgb(236,180,0)',
           ['graywacke'], 'rgb(184,234,195)',
