@@ -219,6 +219,10 @@ def test_lithology_from_text_extracts_tectonic_wacke():
 def test_lithology_from_text_extracts_terrace():
     assert rocks.lithology_from_text("marine terrace") == "terrace"
 
+def test_lithology_from_text_extracts_unconsolidated_deposit_as_unconsolidated_material():
+    assert rocks.lithology_from_text("Unconsolidated Deposit") == "unconsolidated material"
+    assert rocks.lithology_from_text("Unconsolidated deposits") == "unconsolidated material"
+
 def test_lithology_from_text_extracts_lava_flow():
     assert rocks.lithology_from_text("Basaltic to andesitic lava flows") == "lava flow"
 

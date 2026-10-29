@@ -163,7 +163,7 @@ LOW_PRIORITY_LITHOLOGY_PATTERN = re.compile(
     mud|
     sand|
     silt|
-    unconsolidated\smaterial|
+    unconsolidated\s(?:material|deposits?)|
     playa|
     spring mound|
     water|
@@ -216,6 +216,8 @@ LITHOLOGY_SYNONYMS = {
   "silica carbonate": "silica-carbonate",
   "surficial deposit": "surficial deposits",
   "tephrite (basanite)": "basanite",
+  "unconsolidated deposit": "unconsolidated material",
+  "unconsolidated deposits": "unconsolidated material",
   "valley deposits": "sedimentary rock",
   "volcanic": "volcanic rock",
 }
