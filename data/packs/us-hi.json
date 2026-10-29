@@ -1,6 +1,10 @@
 {
     "admin1": "United States",
     "admin2": "Hawaii",
+    "default_center": {
+        "lon": -157.8583,
+        "lat": 21.3069
+    },
     "bbox": {
         "bottom": 16,
         "left": -179.8,
