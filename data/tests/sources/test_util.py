@@ -10,6 +10,10 @@ import pytest
 
 from sources import util
 
+# download_file retries every error, which makes tests of permanent failures wait through
+# all of curl's retries, and curl uses the last --retry it's given
+NO_RETRIES = ["--retry", "0"]
+
 def test_extless_basename_removes_extension():
     path = str(pathlib.Path(__file__))
     assert path.endswith(".py")
@@ -43,7 +47,9 @@ def test_download_file_leaves_nothing_at_path_when_download_fails(tmp_path):
     the download because the file existed"""
     dest = tmp_path / "dest.zip"
     with pytest.raises(subprocess.CalledProcessError):
-        util.download_file((tmp_path / "missing.zip").as_uri(), str(dest))
+        util.download_file(
+            (tmp_path / "missing.zip").as_uri(), str(dest), curl_args=NO_RETRIES
+        )
     assert not dest.exists()
 
 
@@ -64,7 +70,9 @@ def test_download_file_fails_on_http_error(tmp_path):
     try:
         dest = tmp_path / "dest.zip"
         with pytest.raises(subprocess.CalledProcessError):
-            util.download_file(f"http://127.0.0.1:{server.server_port}/x.zip", str(dest))
+            util.download_file(
+                f"http://127.0.0.1:{server.server_port}/x.zip", str(dest), curl_args=NO_RETRIES
+            )
         assert not dest.exists()
     finally:
         server.shutdown()
@@ -92,6 +100,40 @@ def test_download_file_retries_when_rate_limited(tmp_path):
             pass
 
     server = http.server.HTTPServer(("127.0.0.1", 0), RateLimitOnceHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        dest = tmp_path / "dest.zip"
+        util.download_file(f"http://127.0.0.1:{server.server_port}/x.zip", str(dest))
+        assert dest.read_bytes() == b"zip contents"
+        assert len(requests) == 2
+    finally:
+        server.shutdown()
+
+
+def test_download_file_retries_when_the_connection_breaks(tmp_path):
+    """Regression test: curl only retries errors it considers transient, so a
+    ScienceBase download that broke off with "HTTP/2 stream 1 was not closed
+    cleanly" failed a whole pack build"""
+    requests = []
+
+    class BreakOnceHandler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):  # pylint: disable=invalid-name
+            requests.append(self.path)
+            self.send_response(200)
+            self.send_header("Content-Length", "12")
+            self.end_headers()
+            if len(requests) == 1:
+                # Close the connection partway through the body
+                self.wfile.write(b"zip")
+                self.close_connection = True  # pylint: disable=attribute-defined-outside-init
+                return
+            self.wfile.write(b"zip contents")
+
+        def log_message(self, *args):  # pylint: disable=arguments-differ
+            pass
+
+    server = http.server.HTTPServer(("127.0.0.1", 0), BreakOnceHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
