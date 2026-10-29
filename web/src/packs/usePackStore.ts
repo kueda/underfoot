@@ -157,7 +157,10 @@ export function usePackStore(): PackStore {
     const pack = await get(packId);
     if (!pack) throw new Error('Can\'t unknown pack');
     requestPersistentStorage();
-    const url = `https://static.underfoot.rocks/${pack.pmtilesPath}`;
+    // The zip keeps its URL when the pack is rebuilt, and the CDN and the browser both cache
+    // it for an hour, so give each version its own URL to keep them from serving an old one
+    const url = `https://static.underfoot.rocks/${pack.pmtilesPath}`
+      + `?v=${encodeURIComponent(pack.updatedAt)}`;
     // Until the pack is stored, nothing says the files are in use but the lock
     const filesDir = newPackFilesDir(pack.id);
     await withPackFilesLock(filesDir, async () => {

@@ -45,7 +45,7 @@ export function stubStaticServer() {
       if (!server.manifest) throw new TypeError('Failed to fetch');
       return Response.json(server.manifest);
     }
-    const file = server.files[url.replace(`${STATIC_HOST}/`, '')];
+    const file = server.files[new URL(url).pathname.slice(1)];
     // Fail with the URL instead of serving a 404, which usePackStore would try to unzip, so a
     // test that requests the wrong URL says which one
     if (!file) throw new Error(`Test server has no file at ${url}`);

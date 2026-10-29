@@ -53,7 +53,7 @@ function stallBerkeleyDownload(
   if (!serveEverything) throw new Error('fetch is not stubbed');
   let finish = () => {};
   fetchMock.mockImplementation(async (url: string) => {
-    if (!url.endsWith(BERKELEY_PATH)) return serveEverything(url);
+    if (new URL(url).pathname !== `/${BERKELEY_PATH}`) return serveEverything(url);
     const bytes = new Uint8Array(await server.files[BERKELEY_PATH].arrayBuffer());
     const half = Math.ceil(bytes.length / 2);
     const body = new ReadableStream<Uint8Array>({

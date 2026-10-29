@@ -32,7 +32,12 @@ function exceedQuotaWhenStoring() {
     throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
   });
 }
-const OAKLAND_URL = 'https://static.underfoot.rocks/us-ca-oakland.pmtiles.zip';
+// Each version of a pack is requested at its own URL, so neither the CDN nor the browser can
+// answer with a cached copy of an older version
+const OAKLAND_V1_URL = 'https://static.underfoot.rocks/us-ca-oakland.pmtiles.zip'
+  + '?v=2026-01-01T00%3A00%3A00.000Z';
+const OAKLAND_V2_URL = 'https://static.underfoot.rocks/us-ca-oakland.pmtiles.zip'
+  + '?v=2026-02-01T00%3A00%3A00.000Z';
 
 // The same IndexedDB stores usePackStore uses, for clearing between tests and for setting up
 // packs stored by older versions of the app
@@ -85,7 +90,7 @@ function stallDownload(
   let finish = () => {};
   fetchMock.mockImplementation(async (requestedUrl: string) => {
     if (requestedUrl !== url) return serveEverything(requestedUrl);
-    const path = url.replace('https://static.underfoot.rocks/', '');
+    const path = new URL(url).pathname.slice(1);
     const bytes = new Uint8Array(await server.files[path].arrayBuffer());
     const half = Math.ceil(bytes.length / 2);
     const body = new ReadableStream<Uint8Array>({
@@ -122,7 +127,7 @@ describe('usePackStore', () => {
     it('stores the pack so get returns it with its data', async () => {
       const { result } = await renderPackStore();
       await act(() => result.current.download(OAKLAND));
-      expect(fetchMock).toHaveBeenLastCalledWith(OAKLAND_URL, expect.any(Object));
+      expect(fetchMock).toHaveBeenLastCalledWith(OAKLAND_V1_URL, expect.any(Object));
       const pack = await result.current.get(OAKLAND);
       expect(pack).toBeInstanceOf(Pack);
       expect(await rocksText(pack)).toBe('oakland v1');
@@ -148,7 +153,7 @@ describe('usePackStore', () => {
       await act(() => result.current.download(OAKLAND));
       expect(persist).toHaveBeenCalled();
       const packFetchOrder = fetchMock.mock.calls
-        .findIndex(([url]) => url === OAKLAND_URL);
+        .findIndex(([url]) => url === OAKLAND_V1_URL);
       expect(persist.mock.invocationCallOrder[0])
         .toBeLessThan(fetchMock.mock.invocationCallOrder[packFetchOrder]);
     });
@@ -268,7 +273,7 @@ describe('usePackStore', () => {
     it('downloads the update from the manifest pmtiles_path', async () => {
       const { result } = await renderPackStore();
       await act(() => result.current.download(OAKLAND));
-      expect(fetchMock).toHaveBeenLastCalledWith(OAKLAND_URL, expect.any(Object));
+      expect(fetchMock).toHaveBeenLastCalledWith(OAKLAND_V2_URL, expect.any(Object));
       expect(await rocksText(await result.current.get(OAKLAND))).toBe('oakland v2');
     });
 
@@ -325,7 +330,7 @@ describe('usePackStore', () => {
       });
 
       it('keeps the files of an update this tab is still downloading', async () => {
-        const finishDownload = stallDownload(fetchMock, server, OAKLAND_URL);
+        const finishDownload = stallDownload(fetchMock, server, OAKLAND_V2_URL);
         const onProgress = vi.fn();
         const { result } = await renderPackStore();
         const download = result.current.download(OAKLAND, { onProgress });
