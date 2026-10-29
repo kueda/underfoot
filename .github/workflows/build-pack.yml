@@ -296,12 +296,13 @@ jobs:
           path: "data/*.osm.pbf"
           key: cache-osm-${{ steps.get-osm-url.outputs.osm-url }}-${{ steps.calc-year-week.outputs.year-week }}
 
+      # Container jobs run steps with sh, not bash, so no <<<
       - name: Build ways & context
         env:
           LAYERS: ${{ needs.plan.outputs.layers }}
         run: |
           python packs.py ${{ inputs.pack }} --only \
-            $(jq -r '.[] | select(. == "ways" or . == "context")' <<< "$LAYERS")
+            $(echo "$LAYERS" | jq -r '.[] | select(. == "ways" or . == "context")')
 
       - name: Upload ways
         if: ${{ contains(fromJSON(needs.plan.outputs.layers), 'ways') }}
