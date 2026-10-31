@@ -344,6 +344,7 @@ NON_ROCKS = [
   "glaciolacustrine sediment",
   "gravel",
   "landslide",
+  "levee",
   "melange",
   "moraine",
   "sand",
