@@ -1,10 +1,12 @@
 """Functions for working with OpenStreetMap data"""
 
+import hashlib
 import json
 import os
 import re
 import sys
 from urllib.parse import quote
+import osmium
 import psycopg2
 
 from sources import util
@@ -41,8 +43,32 @@ def database_connection(recreate=False):
         return create_database()
 
 
+def merge_pbfs(paths, merged_path):
+    """Merge sorted PBFs into one, keeping only the newest copy of the objects
+    in more than one of them, like those along the borders of extracts"""
+    processors = [osmium.FileProcessor(path) for path in paths]
+    # Written alongside so an interrupted merge doesn't look like a finished one
+    partial_path = f"{merged_path}.part.osm.pbf"
+    with osmium.SimpleWriter(partial_path, overwrite=True) as writer:
+        for objects in osmium.zip_processors(*processors):
+            copies = [obj for obj in objects if obj is not None]
+            writer.add(max(copies, key=lambda obj: obj.version))
+    os.replace(partial_path, merged_path)
+
+
+def fetch_merged_data(urls, clean=False):
+    """Fetch extracts from URLs and merge them into one PBF"""
+    filename = f"merged-{hashlib.sha256(' '.join(urls).encode()).hexdigest()[:12]}.osm.pbf"
+    paths = [fetch_data(url, clean=clean) for url in urls]
+    if clean or not os.path.isfile(filename):
+        merge_pbfs(paths, filename)
+    return filename
+
+
 def fetch_data(url, clean=False):
-    """Fetch data from URL"""
+    """Fetch data from URL, or from a list of URLs of extracts to merge"""
+    if isinstance(url, list):
+        return fetch_merged_data(url, clean=clean)
     filename = os.path.basename(url)
     if os.path.isfile(filename) and not clean:
         pass
@@ -322,8 +348,8 @@ def make_ways(pbf_url, clean=False, pack=None, path="./ways.pmtiles"):
 
     Parameters
     ----------
-    pbf_url : str
-      The URL of a PBF export of OSM data
+    pbf_url : str or list of str
+      The URL of a PBF export of OSM data, or a list of them to merge
     pack : dict
       Pack object
     clean : bool

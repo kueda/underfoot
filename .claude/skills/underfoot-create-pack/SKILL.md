@@ -58,6 +58,10 @@ most of the boundary, with their coverage and size. Show that list to the user a
 to use (usually the smallest one covering nearly all of the pack), then rerun with
 `--osm <url>`. Don't edit the `osm` field in the generated JSON instead.
 
+**Packs spanning extracts:** If no reasonably sized extract contains the boundary, as with `us-md`,
+whose boundary reaches into six neighbors, pass several URLs to `--osm`. `osm` is then a list, and
+builds merge the extracts into one PBF.
+
 **Hydrography from OSM:** Pass `--osm-hydrography` to write `"hydrography": "osm"`, which
 builds the pack's waterways, their flow, and its waterbodies from OSM instead of NHD/TIGER
 (watersheds still come from the water sources). Only do this when the user asks for it; it suits

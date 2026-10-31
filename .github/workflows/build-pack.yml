@@ -185,7 +185,7 @@ jobs:
 
       - name: Get OSM URL
         id: get-osm-url
-        run: echo "osm-url=$(jq -c -r .osm packs/${{ inputs.pack }}.json)" >> $GITHUB_OUTPUT
+        run: echo "osm-url=$(jq -c -r .osm packs/${{ inputs.pack }}.json | sha256sum | cut -d' ' -f1)" >> $GITHUB_OUTPUT
 
       - name: Cache OSM download
         uses: actions/cache@v5
@@ -288,7 +288,7 @@ jobs:
 
       - name: Get OSM URL
         id: get-osm-url
-        run: echo "osm-url=$(jq -c -r .osm packs/${{ inputs.pack }}.json)" >> $GITHUB_OUTPUT
+        run: echo "osm-url=$(jq -c -r .osm packs/${{ inputs.pack }}.json | sha256sum | cut -d' ' -f1)" >> $GITHUB_OUTPUT
 
       - name: Cache OSM download
         uses: actions/cache@v5
