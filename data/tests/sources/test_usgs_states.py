@@ -88,7 +88,7 @@ def test_schemify_attributes_uses_known_name_for_mixed_clastic_volcanic(
     # e.g. ME, "Silurian unnamed mafic volcanic rocks"
     ("mafic volcanic rocks", "mafic volcanic rock"),
     # e.g. ME, "Cretaceous alkali feldspar granite"
-    ("Alkali Granite Alaskite", "alaskite"),
+    ("alkali-granite (alaskite)", "alaskite"),
     # e.g. ME, "Alkali syenite"
     ("alkali syenite", "alkali-feldspar syenite"),
 ])
