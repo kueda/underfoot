@@ -18,7 +18,6 @@ from .rocks import (
     ages_from_span,
     controlled_span_from_span,
     join_polygons_and_metadata,
-    LITHOLOGY_SYNONYMS,
     METADATA_COLUMN_NAMES,
     rock_type_from_lithology,
     span_from_lithology,
@@ -131,6 +130,7 @@ ROCKTYPE_LITHOLOGIES = {
     "mixed clastic/carbonate": "mixed carbonate/clastic rock",
     "mixed clastic/volcanic": "mixed volcanic/clastic rock",
     "glaciolacustrine": "glaciolacustrine sediment",
+    "granofels": "granofel",
     "volcanic rock (aphanitic)": "volcanic rock",
     # Truncated in the source, e.g. in CO
     "intermediate volcanic r": "intermediate volcanic rock",
@@ -181,10 +181,7 @@ def schemify_attributes(attributes_path, overrides_path=None):
                 row["description"] = re.sub(r"\s+", " ", row["description"])
                 # Some values have stray whitespace, e.g. "basalt " in OR
                 rocktype = row['ROCKTYPE1'].strip()
-                rocktype = ROCKTYPE_LITHOLOGIES.get(rocktype, rocktype)
-                row["lithology"] = LITHOLOGY_SYNONYMS.get(
-                    rocktype.lower(), rocktype
-                )
+                row["lithology"] = ROCKTYPE_LITHOLOGIES.get(rocktype, rocktype)
                 row["span"] = normalize_unit_age(row["UNIT_AGE"])
                 if override := overrides.get(row["code"]):
                     row.update(override)

@@ -94,6 +94,15 @@ def test_schemify_attributes_uses_known_name_for_igneous_lithology(
     assert row["rock_type"] == "igneous"
 
 
+def test_schemify_attributes_uses_known_name_for_metamorphic_lithology(
+    tmp_path, monkeypatch
+):
+    # e.g. MA unit Om, "Moretown Formation" (#115)
+    row = schemify_row(tmp_path, monkeypatch, ROCKTYPE1="granofels")
+    assert row["lithology"] == "granofel"
+    assert row["rock_type"] == "metamorphic"
+
+
 def test_schemify_attributes_applies_overrides(tmp_path, monkeypatch):
     overrides_path = tmp_path / "overrides.csv"
     overrides_path.write_text("code,lithology\nC1,mudstone\n", encoding="utf-8")
