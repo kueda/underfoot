@@ -134,6 +134,12 @@ ROCKTYPE_LITHOLOGIES = {
     # Truncated in the source, e.g. in CO
     "intermediate volcanic r": "intermediate volcanic rock",
     "plutonic rock (phanerit": "plutonic rock",
+    # e.g. in ME, "Cretaceous alkali feldspar granite"
+    "alkali granite alaskite": "alaskite",
+    # e.g. in ME, "Alkali syenite"
+    "alkali syenite": "alkali-feldspar syenite",
+    # Plural in the source, e.g. in ME, "Silurian unnamed mafic volcanic rocks"
+    "mafic volcanic rocks": "mafic volcanic rock",
 }
 
 
@@ -180,7 +186,9 @@ def schemify_attributes(attributes_path, overrides_path=None):
                 row["description"] = re.sub(r"\s+", " ", row["description"])
                 # Some values have stray whitespace, e.g. "basalt " in OR
                 rocktype = row['ROCKTYPE1'].strip()
-                row["lithology"] = ROCKTYPE_LITHOLOGIES.get(rocktype, rocktype)
+                row["lithology"] = ROCKTYPE_LITHOLOGIES.get(
+                    rocktype.lower(), rocktype
+                )
                 row["span"] = normalize_unit_age(row["UNIT_AGE"])
                 if override := overrides.get(row["code"]):
                     row.update(override)
