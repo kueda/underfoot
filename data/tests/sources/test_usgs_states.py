@@ -1,6 +1,7 @@
 # pylint: disable=missing-function-docstring
 """Tests for statewide USGS geology processing"""
 
+import os
 import zipfile
 
 import pandas as pd
@@ -190,3 +191,31 @@ def test_schemify_attributes_strips_whitespace_from_lithology(tmp_path, monkeypa
     row = schemify_row(tmp_path, monkeypatch, ROCKTYPE1="basalt ")
     assert row["lithology"] == "basalt"
     assert row["rock_type"] == "igneous"
+
+
+def test_process_usgs_states_works_in_the_directory_of_its_source(tmp_path, monkeypatch):
+    # Sources of one family run in parallel in a pack like us-md, and would
+    # overwrite each other's intermediate files if they shared a directory
+    (tmp_path / "of_family").mkdir()
+    (tmp_path / "of_family" / "citation.json").write_text("[]", encoding="utf-8")
+    source_work_path = tmp_path / "work-of_family_md"
+    source_work_path.mkdir()
+    monkeypatch.setattr(usgs_states, "make_work_dir", lambda path: str(source_work_path)
+        if os.path.basename(path) == "of_family_md.py" else str(tmp_path / "work-of_family"))
+    work_dirs = []
+    def record_work_dir(*args, **kwargs):
+        work_dirs.append(os.getcwd())
+        return "path"
+    for name in ["download_shapes", "merge_shapes", "download_attributes", "merge_attributes",
+                 "schemify_attributes", "join_polygons_and_metadata"]:
+        monkeypatch.setattr(usgs_states, name, record_work_dir)
+    monkeypatch.chdir(tmp_path)
+
+    usgs_states.process_usgs_states(
+        states=["MD"],
+        base_path=str(tmp_path / "of_family" / "__init__.py"),
+        base_url="https://example.com",
+        source_path=str(tmp_path / "of_family_md.py"))
+
+    assert set(work_dirs) == {str(source_work_path)}
+    assert (source_work_path / "citation.json").is_file()
