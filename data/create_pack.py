@@ -416,8 +416,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "--osm",
         type=str,
+        nargs="+",
         metavar="URL",
-        help="URL of the OSM PBF extract to use, skipping the Geofabrik lookup")
+        help="URL of the OSM PBF extract to use, skipping the Geofabrik lookup, or several "
+             "to merge when building, for packs that span extracts")
     parser.add_argument(
         "--osm-hydrography",
         action="store_true",
@@ -476,7 +478,10 @@ if __name__ == "__main__":
         "$ref": f"file://./{os.path.basename(geojson_path)}"
     }
     data["bbox"] = generate_bbox(geojson_path)
-    data["osm"] = args.osm or choose_osm_url(geojson_path, interactive=args.interactive)
+    if args.osm:
+        data["osm"] = args.osm[0] if len(args.osm) == 1 else args.osm
+    else:
+        data["osm"] = choose_osm_url(geojson_path, interactive=args.interactive)
     data["water"] = find_water_sources(geojson_path)
     if args.osm_hydrography:
         data["hydrography"] = "osm"

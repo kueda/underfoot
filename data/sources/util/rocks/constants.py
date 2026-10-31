@@ -32,6 +32,7 @@ LITHOLOGY_PRIORITY_PATTERNS = [
 LITHOLOGY_PATTERN = re.compile(
   re.sub(r'\s+', '', r'''(
     agglomerate|
+    alaskite|
     alluvium|
     alluvial.fan|
     alluvial.terrace|
@@ -228,6 +229,8 @@ LITHOLOGY_SYNONYMS = {
 
 IGNEOUS_ROCKS = [
   "agglomerate",
+  "alaskite",
+  "alkali-feldspar syenite",
   "andesite",
   "anorthosite",
   "aplite",
@@ -344,6 +347,7 @@ NON_ROCKS = [
   "glaciolacustrine sediment",
   "gravel",
   "landslide",
+  "levee",
   "melange",
   "moraine",
   "sand",

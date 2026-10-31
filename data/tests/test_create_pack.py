@@ -258,6 +258,23 @@ def test_create_pack_leaves_out_the_contour_zoom_by_default(tmp_path):
     assert "zoom" not in run_create_pack(tmp_path)
 
 
+def test_create_pack_keeps_a_single_osm_extract_as_a_string(tmp_path):
+    set_up_create_pack(tmp_path)
+
+    pack = run_create_pack(tmp_path)
+
+    assert pack["osm"] == "https://example.com/test.osm.pbf"
+
+
+def test_create_pack_can_use_several_osm_extracts(tmp_path):
+    set_up_create_pack(tmp_path)
+
+    pack = run_create_pack(
+        tmp_path, "--osm", "https://example.com/a.osm.pbf", "https://example.com/b.osm.pbf")
+
+    assert pack["osm"] == ["https://example.com/a.osm.pbf", "https://example.com/b.osm.pbf"]
+
+
 def test_create_pack_can_set_the_default_view(tmp_path):
     set_up_create_pack(tmp_path)
 

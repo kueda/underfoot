@@ -133,12 +133,19 @@ ROCKTYPE_LITHOLOGIES = {
     "mixed clastic/carbonate": "mixed carbonate/clastic rock",
     "mixed clastic/volcanic": "mixed volcanic/clastic rock",
     "glaciolacustrine": "glaciolacustrine sediment",
+    "granofels": "granofel",
     "volcanic rock (aphanitic)": "volcanic rock",
     # Truncated in the source, e.g. in CO
     "intermediate volcanic r": "intermediate volcanic rock",
     "plutonic rock (phanerit": "plutonic rock",
     "plutonic rock (phaneritic)": "plutonic rock",
     "pelitic schist": "schist",
+    # e.g. in ME, "Cretaceous alkali feldspar granite"
+    "alkali-granite (alaskite)": "alaskite",
+    # e.g. in ME, "Alkali syenite"
+    "alkali syenite": "alkali-feldspar syenite",
+    # Plural in the source, e.g. in ME, "Silurian unnamed mafic volcanic rocks"
+    "mafic volcanic rocks": "mafic volcanic rock",
 }
 
 
@@ -278,7 +285,9 @@ def process_usgs_states(
     metadata_overrides_csv_path=None
 ):
     """Download and process files for states from of2006_1272"""
-    work_path = make_work_dir(base_path)
+    # Each source gets its own directory, even when it shares a base_path with
+    # others, since a pack's sources are processed in parallel
+    work_path = make_work_dir(source_path)
     os.chdir(work_path)
     shape_paths = [download_shapes(state, base_url) for state in states]
     single_shapefile_path = merge_shapes(shape_paths)
@@ -295,10 +304,3 @@ def process_usgs_states(
       metadata_join_col="UNIT_LINK",
       output_path="units.geojson")
     copy_citation(base_path, work_path)
-    dest_work_path = make_work_dir(source_path)
-    for fname in ["units.csv", "units.geojson", "citation.json"]:
-        call_cmd([
-            "cp",
-            os.path.join(work_path, fname),
-            os.path.join(dest_work_path, fname)
-        ])

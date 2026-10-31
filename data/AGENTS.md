@@ -73,6 +73,9 @@ into the `underfoot` PostGIS database (`underfoot_osm` for OSM), and writes
 PMTiles to `build/`. Cached source output lives in `sources/work-<name>/` and is
 reused across builds unless a `--clean` or `--clean-<layer>` flag is passed.
 
+A pack's `osm` is the URL of an OSM extract, or a list of them for a pack that spans
+extracts. `osm.py` merges a list into a single `merged-<hash>.osm.pbf` with pyosmium.
+
 When a pack is built, `water.py` also renames waterways from the pack's OSM extract
 (`waterway_names.py`): an OSM river, stream, or canal that runs along a waterway gives it
 its name, replacing the source's name, so corrections made in OSM show up in Underfoot at
