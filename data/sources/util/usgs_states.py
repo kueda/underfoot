@@ -134,6 +134,12 @@ ROCKTYPE_LITHOLOGIES = {
     # Truncated in the source, e.g. in CO
     "intermediate volcanic r": "intermediate volcanic rock",
     "plutonic rock (phanerit": "plutonic rock",
+    # e.g. in ME, "Cretaceous alkali feldspar granite"
+    "alkali-granite (alaskite)": "alaskite",
+    # e.g. in ME, "Alkali syenite"
+    "alkali syenite": "alkali-feldspar syenite",
+    # Plural in the source, e.g. in ME, "Silurian unnamed mafic volcanic rocks"
+    "mafic volcanic rocks": "mafic volcanic rock",
 }
 
 
