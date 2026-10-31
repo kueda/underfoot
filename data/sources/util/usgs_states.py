@@ -130,6 +130,7 @@ ROCKTYPE_LITHOLOGIES = {
     "mixed clastic/carbonate": "mixed carbonate/clastic rock",
     "mixed clastic/volcanic": "mixed volcanic/clastic rock",
     "glaciolacustrine": "glaciolacustrine sediment",
+    "granofels": "granofel",
     "volcanic rock (aphanitic)": "volcanic rock",
     # Truncated in the source, e.g. in CO
     "intermediate volcanic r": "intermediate volcanic rock",
