@@ -18,6 +18,7 @@ from .rocks import (
     ages_from_span,
     controlled_span_from_span,
     join_polygons_and_metadata,
+    LITHOLOGY_SYNONYMS,
     METADATA_COLUMN_NAMES,
     rock_type_from_lithology,
     span_from_lithology,
@@ -120,7 +121,9 @@ def normalize_unit_age(unit_age):
     return f"{terms[0]} to {terms[-1]}"
 
 
-# Lithologies in these sources that Underfoot knows by another name
+# Lithologies in these sources that Underfoot knows by another name. These
+# take precedence over LITHOLOGY_SYNONYMS, whose values for "pelitic schist"
+# and "plutonic rock (phaneritic)" have the wrong rock type or none here.
 ROCKTYPE_LITHOLOGIES = {
     "carbonate": "carbonate rock",
     "clastic": "clastic rock",
@@ -134,6 +137,8 @@ ROCKTYPE_LITHOLOGIES = {
     # Truncated in the source, e.g. in CO
     "intermediate volcanic r": "intermediate volcanic rock",
     "plutonic rock (phanerit": "plutonic rock",
+    "plutonic rock (phaneritic)": "plutonic rock",
+    "pelitic schist": "schist",
 }
 
 
@@ -180,7 +185,8 @@ def schemify_attributes(attributes_path, overrides_path=None):
                 row["description"] = re.sub(r"\s+", " ", row["description"])
                 # Some values have stray whitespace, e.g. "basalt " in OR
                 rocktype = row['ROCKTYPE1'].strip()
-                row["lithology"] = ROCKTYPE_LITHOLOGIES.get(rocktype, rocktype)
+                lithology = ROCKTYPE_LITHOLOGIES.get(rocktype, rocktype)
+                row["lithology"] = LITHOLOGY_SYNONYMS.get(lithology, lithology)
                 row["span"] = normalize_unit_age(row["UNIT_AGE"])
                 if override := overrides.get(row["code"]):
                     row.update(override)

@@ -94,6 +94,25 @@ def test_schemify_attributes_uses_known_name_for_igneous_lithology(
     assert row["rock_type"] == "igneous"
 
 
+@pytest.mark.parametrize("rocktype,lithology,rock_type", [
+    ("dolostone (dolomite)", "dolomite", "sedimentary"),
+    ("paragneiss", "gneiss", "metamorphic"),
+    ("orthogneiss", "gneiss", "metamorphic"),
+    ("tephrite (basanite)", "basanite", "igneous"),
+    # Not a rock, so like alluvium it has no rock_type
+    ("unconsolidated deposit", "unconsolidated material", ""),
+    # e.g. MA unit Oca, "Cobble Mountain Formation"
+    ("pelitic schist", "schist", "metamorphic"),
+    ("plutonic rock (phaneritic)", "plutonic rock", "igneous"),
+])
+def test_schemify_attributes_normalizes_lithology_synonyms(
+    tmp_path, monkeypatch, rocktype, lithology, rock_type
+):
+    row = schemify_row(tmp_path, monkeypatch, ROCKTYPE1=rocktype)
+    assert row["lithology"] == lithology
+    assert row["rock_type"] == rock_type
+
+
 def test_schemify_attributes_applies_overrides(tmp_path, monkeypatch):
     overrides_path = tmp_path / "overrides.csv"
     overrides_path.write_text("code,lithology\nC1,mudstone\n", encoding="utf-8")
