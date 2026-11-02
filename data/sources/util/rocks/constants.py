@@ -304,7 +304,6 @@ IGNEOUS_ROCKS = [
   "ultramafic intrusive rock",
   "ultramafitite",
   "volcanic ash",
-  "volcanic breccia",
   "volcanic rock",
   "volcanoclastic breccia",
 ]

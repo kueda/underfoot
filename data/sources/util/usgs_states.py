@@ -162,7 +162,9 @@ ROCKTYPE_LITHOLOGIES = {
     "pyroclastic": "pyroclastic rock",
     "ultramafic rock": "ultramafitite",
     "ultramafitite (komatiite)": "ultramafitite",
-    "volcanic breccia (agglomerate)": "volcanic breccia",
+    # e.g. in NV, "BRECCIA-Volcanic, thrust, and jasperoid breccia and
+    # landslide megabreccia"
+    "volcanic breccia (agglomerate)": "breccia",
 }
 
 

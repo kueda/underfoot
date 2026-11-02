@@ -92,6 +92,8 @@ def test_schemify_attributes_uses_known_name_for_mixed_clastic_volcanic(
     ("alkali-granite (alaskite)", "alaskite"),
     # e.g. ME, "Alkali syenite"
     ("alkali syenite", "alkali-feldspar syenite"),
+    # e.g. NV, "BRECCIA-Volcanic, thrust, and jasperoid breccia..."
+    ("volcanic breccia (agglomerate)", "breccia"),
 ])
 def test_schemify_attributes_uses_known_name_for_igneous_lithology(
     tmp_path, monkeypatch, rocktype, lithology
@@ -204,7 +206,6 @@ def test_schemify_attributes_keeps_specific_lithology_and_its_rock_type(
     ("pyroclastic", "pyroclastic rock"),
     ("ultramafic rock", "ultramafitite"),
     ("ultramafitite (komatiite)", "ultramafitite"),
-    ("volcanic breccia (agglomerate)", "volcanic breccia"),
 ])
 def test_schemify_attributes_normalizes_rocktype_to_name_used_by_map(
     tmp_path, monkeypatch, rocktype, lithology
