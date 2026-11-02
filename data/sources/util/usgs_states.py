@@ -146,6 +146,9 @@ ROCKTYPE_LITHOLOGIES = {
     "alkali syenite": "alkali-feldspar syenite",
     # Plural in the source, e.g. in ME, "Silurian unnamed mafic volcanic rocks"
     "mafic volcanic rocks": "mafic volcanic rock",
+    # e.g. in NV, "BRECCIA-Volcanic, thrust, and jasperoid breccia and
+    # landslide megabreccia"
+    "volcanic breccia agglomerate": "breccia",
 }
 
 
