@@ -295,6 +295,19 @@ def test_infer_metadata_from_csv_row_uses_geomaterial_when_text_has_no_lithology
     assert inferred_row["rock_type"] == "sedimentary"
 
 
+# Unlithified, so like sand and silt they have no rock_type
+@pytest.mark.parametrize("lithology", ["clay", "mud"])
+def test_infer_metadata_from_csv_row_treats_fine_sediment_as_non_rock(lithology):
+    row = {
+        "title": "Unnamed unit",
+        "description": "Unnamed unit.",
+        "lithology": lithology
+    }
+    inferred_row = rocks.infer_metadata_from_csv_row(row)
+    assert inferred_row["lithology"] == lithology
+    assert inferred_row["rock_type"] == ""
+
+
 def test_infer_metadata_from_csv_row_uses_description_for_lithology_over_geomaterial():
     row = {
         "title": "Yeso Formation",

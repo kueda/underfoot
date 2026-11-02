@@ -108,6 +108,8 @@ def test_schemify_attributes_uses_known_name_for_igneous_lithology(
     ("tephrite (basanite)", "basanite", "igneous"),
     # Not a rock, so like alluvium it has no rock_type
     ("unconsolidated deposit", "unconsolidated material", ""),
+    # e.g. MS unit "Jackson group"
+    ("clay or mud", "clay", ""),
     # e.g. MA unit Oca, "Cobble Mountain Formation"
     ("pelitic schist", "schist", "metamorphic"),
     ("plutonic rock (phaneritic)", "plutonic rock", "igneous"),

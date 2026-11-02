@@ -127,6 +127,8 @@ def normalize_unit_age(unit_age):
 ROCKTYPE_LITHOLOGIES = {
     "carbonate": "carbonate rock",
     "clastic": "clastic rock",
+    # e.g. in MS, "Jackson group"
+    "clay or mud": "clay",
     "fine-grained mixed clastic": "fine-grained mixed clastic rock",
     "medium-grained mixed clastic": "medium-grained mixed clastic rock",
     "coarse-grained mixed clastic": "coarse-grained mixed clastic rock",
