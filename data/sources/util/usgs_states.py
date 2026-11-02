@@ -18,7 +18,9 @@ from .rocks import (
     ages_from_span,
     controlled_span_from_span,
     join_polygons_and_metadata,
+    LITHOLOGIES,
     LITHOLOGY_SYNONYMS,
+    lithology_from_text,
     METADATA_COLUMN_NAMES,
     rock_type_from_lithology,
     span_from_lithology,
@@ -148,6 +150,19 @@ ROCKTYPE_LITHOLOGIES = {
     "alkali syenite": "alkali-feldspar syenite",
     # Plural in the source, e.g. in ME, "Silurian unnamed mafic volcanic rocks"
     "mafic volcanic rocks": "mafic volcanic rock",
+    "meta-basalt": "metabasalt",
+    "meta-conglomerate": "metaconglomerate",
+    "meta-rhyolite": "metarhyolite",
+    "alkali rhyolite": "alkali-feldspar rhyolite",
+    "biogenic sediment": "biogenic material",
+    # e.g. in GA, "Cross-Biotite Schist"
+    "biotite schist": "mica schist",
+    "eolian": "eolian material",
+    "outwash": "glacial outwash sediment",
+    "pyroclastic": "pyroclastic rock",
+    "ultramafic rock": "ultramafitite",
+    "ultramafitite (komatiite)": "ultramafitite",
+    "volcanic breccia (agglomerate)": "volcanic breccia",
 }
 
 
@@ -193,9 +208,18 @@ def schemify_attributes(attributes_path, overrides_path=None):
                 )
                 row["description"] = re.sub(r"\s+", " ", row["description"])
                 # Some values have stray whitespace, e.g. "basalt " in OR
-                rocktype = row['ROCKTYPE1'].strip()
+                rocktype = " ".join(row['ROCKTYPE1'].split())
                 lithology = ROCKTYPE_LITHOLOGIES.get(rocktype, rocktype)
-                row["lithology"] = LITHOLOGY_SYNONYMS.get(lithology, lithology)
+                lithology = LITHOLOGY_SYNONYMS.get(lithology, lithology)
+                # Some values aren't lithologies, e.g. "indeterminate", or "lake
+                # or marine deposit (non-glacial)" for NV "Sedimentary rocks"
+                if lithology not in LITHOLOGIES:
+                    lithology = (
+                        lithology_from_text(row["title"])
+                        or lithology_from_text(row["description"])
+                        or ""
+                    )
+                row["lithology"] = lithology
                 row["span"] = normalize_unit_age(row["UNIT_AGE"])
                 if override := overrides.get(row["code"]):
                     row.update(override)
