@@ -133,6 +133,8 @@ ROCKTYPE_LITHOLOGIES = {
     "mixed clastic/carbonate": "mixed carbonate/clastic rock",
     "mixed clastic/volcanic": "mixed volcanic/clastic rock",
     "glaciolacustrine": "glaciolacustrine sediment",
+    # e.g. NV, "Sedimentary rocks", mostly lake deposits (#121)
+    "lake or marine deposit non glacial": "sedimentary rock",
     "granofels": "granofel",
     "volcanic rock (aphanitic)": "volcanic rock",
     # Truncated in the source, e.g. in CO
@@ -192,7 +194,7 @@ def schemify_attributes(attributes_path, overrides_path=None):
                 row["description"] = re.sub(r"\s+", " ", row["description"])
                 # Some values have stray whitespace, e.g. "basalt " in OR
                 rocktype = row['ROCKTYPE1'].strip()
-                lithology = ROCKTYPE_LITHOLOGIES.get(rocktype, rocktype)
+                lithology = ROCKTYPE_LITHOLOGIES.get(rocktype.lower(), rocktype)
                 row["lithology"] = LITHOLOGY_SYNONYMS.get(lithology, lithology)
                 row["span"] = normalize_unit_age(row["UNIT_AGE"])
                 if override := overrides.get(row["code"]):

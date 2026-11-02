@@ -62,6 +62,9 @@ def schemify_row(tmp_path, monkeypatch, overrides_path=None, **overrides):
     ("mixed clastic/carbonate", "mixed carbonate/clastic rock"),
     # e.g. in AL (#89)
     ("carbonate", "carbonate rock"),
+    # e.g. NV, "Sedimentary rocks", mostly lake deposits (#121)
+    ("lake or marine deposit non glacial", "sedimentary rock"),
+    ("Lake or marine deposit non glacial", "sedimentary rock"),
 ])
 def test_schemify_attributes_uses_known_name_for_lithology(
     tmp_path, monkeypatch, rocktype, lithology
