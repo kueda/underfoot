@@ -93,7 +93,7 @@ def test_schemify_attributes_uses_known_name_for_mixed_clastic_volcanic(
     # e.g. ME, "Alkali syenite"
     ("alkali syenite", "alkali-feldspar syenite"),
     # e.g. NV, "BRECCIA-Volcanic, thrust, and jasperoid breccia..."
-    ("volcanic breccia agglomerate", "breccia"),
+    ("volcanic breccia (agglomerate)", "breccia"),
 ])
 def test_schemify_attributes_uses_known_name_for_igneous_lithology(
     tmp_path, monkeypatch, rocktype, lithology
@@ -122,6 +122,119 @@ def test_schemify_attributes_normalizes_lithology_synonyms(
     row = schemify_row(tmp_path, monkeypatch, ROCKTYPE1=rocktype)
     assert row["lithology"] == lithology
     assert row["rock_type"] == rock_type
+
+
+# Describes how a unit was deposited, not what it's made of (#121)
+LAKE_OR_MARINE = "lake or marine deposit (non-glacial)"
+
+
+@pytest.mark.parametrize("rocktype,title,lithology,rock_type", [
+    # Unknown values never reach the map, whatever they are
+    ("not a real lithology", "Sedimentary rocks", "sedimentary rock", "sedimentary"),
+    # e.g. NV unit QTs
+    (LAKE_OR_MARINE, "Sedimentary rocks", "sedimentary rock", "sedimentary"),
+    # e.g. NC unit Qp
+    (LAKE_OR_MARINE, "Surficial Deposits, Undivided", "surficial deposits", ""),
+    # Double space in the source, e.g. in WA
+    (LAKE_OR_MARINE.replace(" (", "  ("), "Sedimentary rocks", "sedimentary rock", "sedimentary"),
+])
+def test_schemify_attributes_infers_lithology_from_title_for_non_lithology(
+    tmp_path, monkeypatch, rocktype, title, lithology, rock_type
+):
+    row = schemify_row(tmp_path, monkeypatch, ROCKTYPE1=rocktype, UNIT_NAME=title)
+    assert row["lithology"] == lithology
+    assert row["rock_type"] == rock_type
+
+
+def test_schemify_attributes_infers_lithology_from_description_for_non_lithology(
+    tmp_path, monkeypatch
+):
+    row = schemify_row(
+        tmp_path,
+        monkeypatch,
+        ROCKTYPE1=LAKE_OR_MARINE,
+        UNIT_NAME="Quaternary nonmarine deposits",
+        UNITDESC="Interbedded sandstone and shale"
+    )
+    assert row["lithology"] == "sandstone"
+    assert row["rock_type"] == "sedimentary"
+
+
+def test_schemify_attributes_leaves_unknown_lithology_blank_without_text_to_infer_from(
+    tmp_path, monkeypatch
+):
+    # e.g. OK unit UNKNWN
+    row = schemify_row(
+        tmp_path,
+        monkeypatch,
+        ROCKTYPE1="indeterminate",
+        UNIT_NAME="Unknown",
+        UNITDESC="",
+        UNIT_COM=""
+    )
+    assert row["lithology"] == ""
+    assert row["rock_type"] == ""
+
+
+@pytest.mark.parametrize("rocktype,rock_type", [
+    ("amphibolite", "metamorphic"),
+    ("granitic gneiss", "metamorphic"),
+    ("ash-flow tuff", "igneous"),
+    ("trondhjemite", "igneous"),
+    ("black shale", "sedimentary"),
+    ("iron formation", "sedimentary"),
+    ("beach sand", ""),
+    ("peat", ""),
+])
+def test_schemify_attributes_keeps_specific_lithology_and_its_rock_type(
+    tmp_path, monkeypatch, rocktype, rock_type
+):
+    row = schemify_row(tmp_path, monkeypatch, ROCKTYPE1=rocktype)
+    assert row["lithology"] == rocktype
+    assert row["rock_type"] == rock_type
+
+
+@pytest.mark.parametrize("rocktype,lithology", [
+    ("meta-basalt", "metabasalt"),
+    ("meta-conglomerate", "metaconglomerate"),
+    ("meta-rhyolite", "metarhyolite"),
+    ("alkali rhyolite", "alkali-feldspar rhyolite"),
+    ("biogenic sediment", "biogenic material"),
+    ("biotite schist", "mica schist"),
+    ("eolian", "eolian material"),
+    ("outwash", "glacial outwash sediment"),
+    ("pyroclastic", "pyroclastic rock"),
+    ("ultramafic rock", "ultramafitite"),
+    ("ultramafitite (komatiite)", "ultramafitite"),
+])
+def test_schemify_attributes_normalizes_rocktype_to_name_used_by_map(
+    tmp_path, monkeypatch, rocktype, lithology
+):
+    row = schemify_row(tmp_path, monkeypatch, ROCKTYPE1=rocktype)
+    assert row["lithology"] == lithology
+
+
+def test_schemify_attributes_prefers_rocktype_lithology_over_title(tmp_path, monkeypatch):
+    row = schemify_row(
+        tmp_path,
+        monkeypatch,
+        ROCKTYPE1="granitic gneiss",
+        UNIT_NAME="Camp Hill Granite Gneiss"
+    )
+    assert row["lithology"] == "granitic gneiss"
+
+
+def test_schemify_attributes_prefers_override_over_inferred_lithology(tmp_path, monkeypatch):
+    overrides_path = tmp_path / "overrides.csv"
+    overrides_path.write_text("code,lithology\nC1,clay\n", encoding="utf-8")
+    row = schemify_row(
+        tmp_path,
+        monkeypatch,
+        overrides_path=str(overrides_path),
+        ROCKTYPE1=LAKE_OR_MARINE,
+        UNIT_NAME="Sedimentary rocks"
+    )
+    assert row["lithology"] == "clay"
 
 
 def test_schemify_attributes_uses_known_name_for_metamorphic_lithology(
