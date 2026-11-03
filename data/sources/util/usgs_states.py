@@ -3,6 +3,7 @@ Methods for processing state-wide USGS geology files
 """
 
 import csv
+import json
 import os
 import re
 import pandas as pd
@@ -290,14 +291,26 @@ def merge_attributes(paths):
     return merged_path
 
 
-def copy_citation(base_path, work_path):
-    """Copy citation file to the work path"""
+def copy_citation(base_path, work_path, states=None):
+    """Copy citation file to the work path
+
+    The checked-in citation links to one state's section of the report, so
+    when the source covers a single state, point the URL at that state's
+    section.
+    """
     log("COPYING CITATION")
-    call_cmd([
-      "cp",
-      os.path.join(os.path.dirname(base_path), "citation.json"),
-      os.path.join(work_path, "citation.json")
-    ])
+    source_path = os.path.join(os.path.dirname(base_path), "citation.json")
+    with open(source_path, encoding="utf-8") as citation_file:
+        citations = json.load(citation_file)
+    if states and len(states) == 1:
+        for citation in citations:
+            if citation.get("URL"):
+                base_url = citation["URL"].split("#")[0]
+                citation["URL"] = f"{base_url}#{states[0]}"
+    with open(
+        os.path.join(work_path, "citation.json"), "w", encoding="utf-8"
+    ) as citation_file:
+        json.dump(citations, citation_file, indent="\t")
 
 
 def process_usgs_states(
@@ -331,4 +344,4 @@ def process_usgs_states(
       polygons_join_col="UNIT_LINK",
       metadata_join_col="UNIT_LINK",
       output_path="units.geojson")
-    copy_citation(base_path, work_path)
+    copy_citation(base_path, work_path, states)
