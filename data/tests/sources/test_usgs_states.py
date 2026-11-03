@@ -1,6 +1,7 @@
 # pylint: disable=missing-function-docstring
 """Tests for statewide USGS geology processing"""
 
+import json
 import os
 import zipfile
 
@@ -23,6 +24,33 @@ ME_ROW = (
     "Biotite granite,includes: 58 - Biddeford pluton (ME015).,U - Unmetamorphosed,"
     "ME001,granite,,,ME002ME105"
 )
+
+
+def write_shared_citation(tmp_path):
+    base = tmp_path / "of2006_1272" / "__init__.py"
+    base.parent.mkdir()
+    base.write_text("")
+    (base.parent / "citation.json").write_text(
+        '[{"URL": "https://pubs.usgs.gov/of/2006/1272/#NH", "title": "x"}]'
+    )
+    work = tmp_path / "work"
+    work.mkdir()
+    return base, work
+
+
+def test_copy_citation_links_to_the_single_state(tmp_path):
+    base, work = write_shared_citation(tmp_path)
+    usgs_states.copy_citation(str(base), str(work), ["VT"])
+    citation = json.loads((work / "citation.json").read_text())[0]
+    assert citation["URL"] == "https://pubs.usgs.gov/of/2006/1272/#VT"
+    assert citation["title"] == "x"
+
+
+def test_copy_citation_keeps_url_for_multiple_states(tmp_path):
+    base, work = write_shared_citation(tmp_path)
+    usgs_states.copy_citation(str(base), str(work), ["NH", "VT"])
+    citation = json.loads((work / "citation.json").read_text())[0]
+    assert citation["URL"].endswith("#NH")
 
 
 def test_merge_attributes_reads_csv_with_header(tmp_path, monkeypatch):
