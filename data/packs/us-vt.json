@@ -5,7 +5,7 @@
     "admin1": "United States",
     "admin2": "Vermont",
     "rock": [
-        "of2006_1272_vt"
+        "sim3184"
     ],
     "geojson": {
         "$ref": "file://./us-vt.geojson"

@@ -167,6 +167,32 @@ def test_ages_from_span_does_not_infer_ages_when_a_span_excludes_part_of_itself(
     assert rocks.ages_from_span("Quaternary (excluding Holocene)") == (None, None, None)
 
 
+def test_controlled_span_from_span_parses_and_separated_spans():
+    # e.g. in SIM 3184
+    span = rocks.controlled_span_from_span("Upper Silurian and Lower Devonian")
+    assert span is not None
+    assert span == rocks.controlled_span_from_span("Upper Silurian to Lower Devonian")
+
+
+def test_controlled_span_from_span_orders_young_to_old_spans():
+    assert rocks.controlled_span_from_span("Lower Ordovician to Cambrian") == (
+        rocks.controlled_span_from_span("Cambrian to Lower Ordovician")
+    )
+    assert rocks.controlled_span_from_span("Lower Devonian and Upper Silurian") == (
+        rocks.controlled_span_from_span("Upper Silurian to Lower Devonian")
+    )
+
+
+def test_controlled_span_from_span_parses_parts_of_a_span():
+    assert rocks.controlled_span_from_span("Upper to Middle Ordovician") == "ordovician"
+    assert rocks.controlled_span_from_span("Middle and Lower Cambrian") == "cambrian"
+
+
+def test_controlled_span_from_span_ignores_question_marks():
+    assert rocks.controlled_span_from_span("Mesoproterozoic?") == "mesoproterozoic"
+    assert rocks.controlled_span_from_span("Middle? and Early Ordovician") == "ordovician"
+
+
 def test_span_from_usgs_code():
     assert rocks.span_from_usgs_code("Tapl") == "tertiary"
     assert rocks.span_from_usgs_code("Kpaf") == "cretaceous"
