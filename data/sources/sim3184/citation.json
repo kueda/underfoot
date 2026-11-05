@@ -1,0 +1,20 @@
+[
+  {
+    "type": "map",
+    "publisher": "U.S. Geological Survey",
+    "scale": "1:100000",
+    "title": "Bedrock geologic map of Vermont (Scientific Investigations Map 3184)",
+    "URL": "https://pubs.usgs.gov/sim/3184/",
+    "DOI": "10.3133/sim3184",
+    "author": [
+      {"family": "Ratcliffe", "given": "N.M."},
+      {"family": "Stanley", "given": "R.S."},
+      {"family": "Gale", "given": "M.H."},
+      {"family": "Thompson", "given": "P.J."},
+      {"family": "Walsh", "given": "G.J."}
+    ],
+    "issued": {
+      "date-parts": [["2011"]]
+    }
+  }
+]

@@ -24,3 +24,8 @@ STATE_PLANE_CA_ZONE_3 = (
   "+proj=lcc +lat_1=38.43333333333333 +lat_2=37.06666666666667 +lat_0=36.5 "
   "+lon_0=-120.5 +x_0=609601.2192024384 +y_0=0 +datum=NAD27 +units=m +no_defs"
 )
+# EPSG:32145, NAD83 / Vermont
+NAD83_VT_STATE_PLANE = (
+  "+proj=tmerc +lat_0=42.5 +lon_0=-72.5 +k=0.999964286 +x_0=500000 +y_0=0 "
+  "+datum=NAD83 +units=m +no_defs"
+)

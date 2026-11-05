@@ -133,6 +133,8 @@ def controlled_span_from_span(text):
         return
     key = re.sub(r'\(.+?\)', "", text)
     key = re.sub(r'undivided', "", key)
+    # Uncertainty, e.g. "Mesoproterozoic?", doesn't change the span
+    key = key.replace("?", "")
     key = re.sub(r'\s+', " ", key)
     key = key.lower().strip()
     synonyms = {
@@ -143,7 +145,7 @@ def controlled_span_from_span(text):
     if key in WIKI_SPANS:
         return key
     key_sans_x_to_y = re.sub(
-        r'(early|middle|late) to (early|middle|late)', "",
+        r'(early|middle|late|lower|upper) (to|and) (early|middle|late|lower|upper)', "",
         key
     ).strip()
     if key_sans_x_to_y in WIKI_SPANS:
@@ -161,14 +163,16 @@ def controlled_span_from_span(text):
     if key_sans_subspan in WIKI_SPANS:
         return key_sans_subspan
     # Split on (to|\-)
-    matches = re.findall(r'([\s\w]+)\s+(to|\-|or|and\/or)\s+([\s\w]+)', key)
+    matches = re.findall(r'([\s\w]+)\s+(to|\-|or|and\/or|and)\s+([\s\w]+)', key)
     if len(matches) > 0:
         # get controlled_span for each half
         start_span = controlled_span_from_span(matches[0][0])
         end_span = controlled_span_from_span(matches[0][2])
         if start_span and end_span:
-            start_start_age = SPANS[start_span][0]
-            end_end_age = SPANS[end_span][1]
+            # Either half can be the older one, e.g. "Lower Ordovician and
+            # Cambrian"
+            start_start_age = max(SPANS[start_span][0], SPANS[end_span][0])
+            end_end_age = min(SPANS[start_span][1], SPANS[end_span][1])
             # sort wiki spans by start_date asc
             sorted_spans = sorted(
                 [(k, SPANS[k][0], SPANS[k][1]) for k in SPANS],
