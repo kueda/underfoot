@@ -14,6 +14,8 @@
     ],
     "issued": {
       "date-parts": [["2006"]]
-    }
+    },
+    "note": "Modified for Underfoot: reprojected, merged by map unit, and simplified for display, with unit descriptions transcribed from the map plate and lithologies and ages inferred from them",
+    "license": "CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)"
   }
 ]

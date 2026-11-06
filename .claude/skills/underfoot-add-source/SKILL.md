@@ -174,6 +174,18 @@ Lithologies must be known ones (see `LITHOLOGIES` in `sources/util/rocks/constan
 - `issued.date-parts` is `[["YYYY"]]` — a nested array, year as a string.
 - The outer container is a JSON **array** (`[{...}]`), not a bare object.
 
+**Licenses.** U.S. federal works like USGS maps are public domain, so leave `license` out.
+State surveys and other publishers may license their maps, e.g. the Vermont Geological
+Survey under CC BY-SA 4.0. Check the publisher's page or catalog metadata, and when the data
+has a license, add it and say how Underfoot modified the data, as licenses like CC BY-SA ask:
+
+```json
+    "note": "Modified for Underfoot: reprojected, merged by map unit, and simplified for display",
+    "license": "CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)"
+```
+
+Both end up in the citation text the app shows for each unit (`sources/util/citations.py`).
+
 ### 3. `sources/<name>.py` — thin entry-point (REQUIRED, easy to forget)
 
 ```python

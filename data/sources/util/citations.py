@@ -38,7 +38,11 @@ def citation_txt_from_csl_json_path(citation_json_path):
           citation.get("title"),
           citation.get("container-title"),
           citation.get("publisher"),
-          citation.get("URL")
+          citation.get("URL"),
+          # e.g. how we modified the source, which some licenses require us
+          # to say
+          citation.get("note"),
+          f"License: {citation['license']}" if citation.get("license") else None
         ]
         citation_txt = ". ".join([piece for piece in pieces if piece])
         return re.sub(r"\.+", ".", citation_txt)
