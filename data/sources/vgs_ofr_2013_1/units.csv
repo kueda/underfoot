@@ -1,0 +1,22 @@
+code,title,description,lithology,span
+Cm,Monkton Formation,"Dark red, well-bedded, ferruginous quartzite",,Lower Cambrian
+Cdu,Dunham Formation,"Brown-weathering, massive, irregularly-bedded gray to white dolostone",dolostone,Lower Cambrian
+Cc,Cheshire Formation,Gray phyllitic (argillaceous) quartzites east of the Hinesburg Thrust with more massive and bedded quartzites with conspicuous smoky gray quartz pebbles west of this thrust,,Lower Cambrian
+CZfp,Fairfield Pond Formation,Grayish-green phyllites and phyllitic quartzites,,Upper Neoproterozoic to Lower Cambrian
+CZpcl,"Pinnacle Formation, Green chloritic metagreywacke and schist member",Green chloritic metagreywacke and schist,wacke,Upper Neoproterozoic
+CZpuq,"Pinnacle Formation, Quartz-pebble unit",Quartz-pebble unit,conglomerate,Upper Neoproterozoic
+CZpub,"Pinnacle Formation, Biotite-bearing unit",Biotite-bearing unit,wacke,Upper Neoproterozoic
+CZpul,"Pinnacle Formation, Thinly-bedded unit",Thinly-bedded unit,wacke,Upper Neoproterozoic
+CZpuf,"Pinnacle Formation, Forestdale marble member",Brown-weathering dolomitic marble interlayered with green phyllites and phyllitic quartzites,marble,Upper Neoproterozoic
+CZpuc,"Pinnacle Formation, Fine-grained metagreywacke member",Fine-grained metagreywacke,wacke,Upper Neoproterozoic
+CZpw,"Pinnacle Formation, Quartz-albite-sericite metagreywacke member",Quartz-albite-sericite metagreywacke,wacke,Upper Neoproterozoic
+CZpmc,"Pinnacle Formation, Conglomeratic unit",Conglomeratic unit,conglomerate,Upper Neoproterozoic
+CZpmg,"Pinnacle Formation, Graded-bed unit",Graded-bed unit,wacke,Upper Neoproterozoic
+CZpl,"Pinnacle Formation, Quartz-sericite metagreywacke unit",Quartz-sericite metagreywacke,wacke,Upper Neoproterozoic
+CZps,"Pinnacle Formation, Metawacke and phyllite member",Gray massive metawacke and grayish-green schist and phyllite,wacke,Upper Neoproterozoic
+CZpu,"Pinnacle Formation, Undifferentiated member",Micaceous schist and phyllite with interlayers of metawacke,schist,Upper Neoproterozoic
+CZpv,"Pinnacle Formation, Metabasalt and volcaniclastic (greenstone) unit",Metabasalt and volcaniclastic (greenstone) unit,greenstone,Upper Neoproterozoic
+CZun,Underhill Formation,"Silvery-green albitic schist and phyllite; locally with interlayers of dolomite. quartzite, and metawacke",schist,Upper Neoproterozoic
+CZul,"Underhill Formation, Quartz-laminated schist",Quartz-laminated schist,schist,Upper Neoproterozoic
+CZpll,"Underhill Formation, Laminated magnetite schist",Laminated magnetite schist,schist,Upper Neoproterozoic
+CZung,"Underhill Formation, Greenstone (mafic metavolcanic)",Greenstone (mafic metavolcanic),greenstone,Upper Neoproterozoic

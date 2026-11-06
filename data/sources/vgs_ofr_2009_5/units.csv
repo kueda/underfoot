@@ -1,0 +1,19 @@
+code,title,description,lithology,span
+Kd,Barber Hill stock,"Tan-weathering, light brown, fine to coarse grained alkali syenite. (114+/- 2 Ma (Armstrong and Stump, 1971; McHone and McHone, 1999)). Stock is cut by alkalic dikes",alkali-feldspar syenite,Cretaceous
+Osp,Stony Point Formation,"Mud brown-weathering, very fine grained, dark gray shale with interbedded limestone and silty dolomite; gradational contact with underlying Ogf; hornfels at contact with Barber Hill stock. Stony Point and Iberville Formations were not mapped separately in the Charlotte area; all shales were calcareous",shale,Ordovician
+Ogf,Glens Falls Formation,"Gray-weathering, fine grained, thin bedded, fossiliferous, gray, limestone with shaley interbeds; contact with Osp is gradational with percent of shale beds increasing as the contact is approached",,Ordovician
+Oo,Orwell Formation,"Massively bedded, light gray-weathering, fossiliferous gray limestone",,Ordovician
+Ocg,Chazy Group,"Light gray-weathering, fine grained, fossiliferous gray limestone; fabric selective dolomitization produces a ""chicken wire"" appearance on outcrop surface",,Ordovician
+Ocbr,"Chipman Formation, Bridport Member","Buff to light orange-weathering, thickly bedded to massive dolostone; rectangular, steeply dipping fracture pattern give outcrops a distinctive appearance",dolostone,Ordovician
+Ob,Bascom Formation,Interbedded limestone and dolostone; sandy dolostone beds produce a characteristic ribbed appearance in weathered outcrops,,Ordovician
+Oth,Tribes Hill Formation,"Gray weathering, fine to medium grained, light gray dolostone breccia, sandy laminated dolostone, and massive dolostone; chert nodules common. The base of Oth is defined following Landing et.al. (2003) as a debris flow composed of imbricated cross-bedded dolomitic sandstone fragments on Thompson's Point",dolostone,Ordovician
+Clf,Little Falls Formation,"Gray-weathering, fine to medium grained, light gray dolostone breccia and massive dolostone; chert nodules common",dolostone,Cambrian
+Yu,Middle Proterozoic metamorphic rocks exposed in New York,"Undifferentiated gneiss, marble, amphibolite",gneiss,Middle Proterozoic
+Ocu,Cutting Formation,"Gray-weathering, thick bedded to massive, fine to medium grained, equigranular gray dolostone",dolostone,Ordovician
+Os,Shelburne Formation,"White-weathering, mottled gray and white, fine to very fine grained gray limestone and white marble; commonly with thin (<1mm) reticulated rusty-weathering dolomite lines throughout; locally karstic",limestone,Ordovician
+Ccs,Clarendon Springs Formation,"Tan-weathering, massive, cream to light gray dolostone",dolostone,Cambrian
+Cda,Danby Formation,"Orange and punky-weathering, thin to thick bedded, fine to medium grained, gray pebbly quartzite, massive, light gray, vitreous quartzite, and laminated sandy dolomite; cross-beds are common. Contact with Cw is gradational over approximately 20 meters",quartzite,Cambrian
+Cw,Winooski Formation,"Buff-weathering, massive to thick bedded, fine-grained, gray to pink dolostone; interbedded with sandy, laminated dolostone +/- cross-beds; interbedded over approximately 20 meters with Cm at base; contact with Cda is gradational",dolostone,Cambrian
+Cm,Monkton Formation,"Purplish brown-weathering, fine to medium grained, dark red to white, thin (1 - 10 cm) bedded quartzite with interbedded shale and dolostone; mud cracks and ripple marks occur along bedding planes; upper contact with Cw is by interbedding across approximately 20 meters of thickness",quartzite,Cambrian
+Cmd,"Monkton Formation, Dolostone member",Buff-weathering pink to gray dolostone member of the Monkton Fm,dolostone,Cambrian
+w,Water,,water,

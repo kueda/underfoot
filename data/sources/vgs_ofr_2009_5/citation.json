@@ -1,0 +1,22 @@
+[
+  {
+    "type": "map",
+    "publisher": "Vermont Geological Survey",
+    "scale": "1:24000",
+    "title": "Bedrock Geologic Map of Charlotte, Vermont (Open-File Report VG09-5)",
+    "URL": "https://geodata.vermont.gov/documents/60abe03ac51740f3bf8c141c42de47b8/about",
+    "author": [
+      {"family": "Gale", "given": "M."},
+      {"family": "Kim", "given": "J."},
+      {"family": "Earle", "given": "H."},
+      {"family": "Clark", "given": "A."},
+      {"family": "Smith", "given": "T."},
+      {"family": "Petersen", "given": "K."}
+    ],
+    "issued": {
+      "date-parts": [["2009"]]
+    },
+    "note": "Modified for Underfoot: reprojected, merged by map unit, and simplified for display, with unit descriptions transcribed from the map plate and lithologies and ages inferred from them",
+    "license": "CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)"
+  }
+]

@@ -1,0 +1,12 @@
+code,title,description,lithology,span
+Oc,Cutting Formation,"Massively bedded, fine grained gray dolostone",dolostone,Ordovician
+Oba,Bascom Formation,"Inter-layered gray limestone and rusty brown weathering dolomite; gray limestone, and dolostone with layers of calcareous quartzite. In outcrop, the then (0.1 -0.5 cm) dolomite commonly weathers as ribs",,Ordovician
+OCsk,Skeels Corner Formation,Dark gray to gray phyllite and laminated slate with thin (1-5mm) orange-brown weathering dolomite layers,,Lower Ordovician to Lower Cambrian
+OCskp,Skeels Corner Formation,"Gray to black weakly graphitic slate/phyllite and gray slate with thin (1-5mm) brown dolomite layers; interbedded limestone, dolostone and phyllite",,Lower Ordovician to Lower Cambrian
+Csp,Clarendon Springs Formation,"Light to dark gray, massive, granular, recrystallized dolostone and breccia with chert and dolostone clasts",dolostone,Cambrian
+Cda,Danby Formation,"Fine to medium grained, gray dolomitic sandstone, commonly with visible rounded gray quartz sand grains",,Cambrian
+Cdu,Dunham Formation,"Tan to brown weathering, buff to light gray, massively bedded dolostone",dolostone,Cambrian
+Cc,Cheshire Formation,"Light to dark gray, massive, fine to medium grained quartzite and dark gray argillaceous quartzite",,Cambrian
+CZfp,Fairfield Pond Formation,"Tan weathering, thinly foliated to massive, grayish-green to gray quartz-sericite-chlorite phyllitic granofels and phyllite. Cleavage planes may have a pearly sheen. Massive gray granular quartzite and blue quartz pebble conglomerate occurs as layers. Quartz and quartz-calcite veins are common. Contact with overlying Cc is gradational",,Lower Cambrian to Neoproterozoic
+CZp,Pinnacle Formation,"Gray to greenish-gray quartz-plagioclase-chlorite-sericite +/- magnetite and pyrite phyllitic granofels, pinstriped schist and quartz-pebble conglomerate. Quartz veins and quartz-sulfide veins commonly occur parallel to the dominant foliation. Contact with overlying CZfp is gradational",,Lower Cambrian to Neoproterozoic
+CZpq,Pinnacle Formation,"Light gray weathering, fine to coarse-grained, massive quartz pebble conglomerate commonly studded with smoky gray rounded quartz pebbles +/- pyrite and magnetite",conglomerate,Lower Cambrian to Neoproterozoic

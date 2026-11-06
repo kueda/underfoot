@@ -1,0 +1,19 @@
+[
+  {
+    "type": "map",
+    "publisher": "Vermont Geological Survey",
+    "scale": "1:24000",
+    "title": "Bedrock Geologic Map of the Essex Junction Quadrangle, Vermont (Open-File Report VG12-3)",
+    "URL": "https://geodata.vermont.gov/documents/077f13c87e0345bc96b4a575464a4a9c/about",
+    "author": [
+      {"family": "Gale", "given": "M."},
+      {"family": "Kim", "given": "J."},
+      {"family": "Ruksznis", "given": "A."}
+    ],
+    "issued": {
+      "date-parts": [["2012"]]
+    },
+    "note": "Modified for Underfoot: reprojected, merged by map unit, and simplified for display, with unit descriptions transcribed from the map plate and lithologies and ages inferred from them",
+    "license": "CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)"
+  }
+]

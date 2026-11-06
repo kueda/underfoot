@@ -173,10 +173,12 @@ def controlled_span_from_span(text):
             # Cambrian"
             start_start_age = max(SPANS[start_span][0], SPANS[end_span][0])
             end_end_age = min(SPANS[start_span][1], SPANS[end_span][1])
-            # sort wiki spans by start_date asc
+            # sort wiki spans by start_date asc, then the shortest first, so
+            # e.g. the Paleozoic comes before the Phanerozoic, which also
+            # begins with the Cambrian
             sorted_spans = sorted(
                 [(k, SPANS[k][0], SPANS[k][1]) for k in SPANS],
-                key=lambda s: s[1]
+                key=lambda s: (s[1], -s[2])
             )
             # find first span where start_age >= 1st half start age and end_age
             # <= 2nd half end age

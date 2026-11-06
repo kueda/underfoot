@@ -1,0 +1,17 @@
+[
+  {
+    "type": "map",
+    "publisher": "Vermont Geological Survey",
+    "scale": "1:24000",
+    "title": "Compilation bedrock geologic map of the Jay Peak quadrangle, Vermont (Open-File Report VG99-1)",
+    "URL": "https://geodata.vermont.gov/documents/636c1215712b4205af6885398f7be7c5/about",
+    "author": [
+      {"family": "Doolan", "given": "B."}
+    ],
+    "issued": {
+      "date-parts": [["1999"]]
+    },
+    "note": "Modified for Underfoot: reprojected, merged by map unit, and simplified for display, with unit descriptions transcribed from the map plate and lithologies and ages inferred from them",
+    "license": "CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)"
+  }
+]
