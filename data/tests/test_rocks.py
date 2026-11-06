@@ -104,20 +104,64 @@ class InlinePool:
         return [func(*args) for args in iterable]
 
 
-def mask_calls(monkeypatch, sources):
+def mask_calls(monkeypatch, sources, buffers=None):
     calls = []
     monkeypatch.setattr(rocks, "Pool", InlinePool)
     monkeypatch.setattr(rocks.util, "run_sql", lambda *args, **kwargs: None)
     monkeypatch.setattr(rocks, "process_source", lambda *args: None)
     monkeypatch.setattr(rocks, "clip_source_polygons_by_mask", lambda *args: None)
-    monkeypatch.setattr(
-        rocks.util, "initialize_masks_table", lambda _mask, src: calls.append(("init", src))
-    )
-    monkeypatch.setattr(
-        rocks.util, "update_masks_table", lambda _mask, src: calls.append(("update", src))
-    )
+
+    def record(kind):
+        def fake(_mask, src, **kwargs):
+            calls.append((kind, src))
+            if buffers is not None:
+                buffers.append(kwargs.get("buff"))
+        return fake
+    monkeypatch.setattr(rocks.util, "initialize_masks_table", record("init"))
+    monkeypatch.setattr(rocks.util, "update_masks_table", record("update"))
     rocks.load_units(sources, procs=1)
     return calls
+
+
+def test_load_units_masks_with_the_rocks_mask_buffer(monkeypatch):
+    buffers = []
+    mask_calls(monkeypatch, ["first", "second", "third"], buffers=buffers)
+    assert buffers == [rocks.MASK_BUFFER, rocks.MASK_BUFFER]
+
+
+@pytest.fixture(name="mask_table_name")
+def fixture_mask_table_name(table_name):
+    name = f"{table_name}_mask"
+    util.run_sql(f"CREATE TABLE {name} (geom geometry(MultiPolygon, 4326))")
+    yield name
+    util.run_sql(f"DROP TABLE IF EXISTS {name}")
+
+
+def mask_covers(mask_table_name, x, y):
+    return util.run_sql(
+        f"SELECT ST_Intersects(geom, ST_SetSRID(ST_Point({x}, {y}), 4326)) FROM {mask_table_name}"
+    )[0][0]
+
+
+def test_rocks_mask_leaves_holes_in_a_source_for_later_sources(table_name, mask_table_name):
+    # A unit about 5 km across with a hole about 500 m across, like a bay
+    # between islands that a later source maps as water
+    insert_unit(
+        table_name, "island",
+        "ST_Difference(ST_MakeEnvelope(0, 0, 0.05, 0.05, 4326),"
+        " ST_MakeEnvelope(0.0225, 0.0225, 0.0275, 0.0275, 4326))"
+    )
+    util.initialize_masks_table(mask_table_name, table_name, buff=rocks.MASK_BUFFER)
+    assert not mask_covers(mask_table_name, 0.025, 0.025)
+
+
+def test_rocks_mask_closes_slivers_between_units(table_name, mask_table_name):
+    # Units about 1 m apart, which would otherwise let a later source fill the
+    # gap with a sliver
+    insert_unit(table_name, "left", "ST_MakeEnvelope(0, 0, 0.01, 0.01, 4326)")
+    insert_unit(table_name, "right", "ST_MakeEnvelope(0.01001, 0, 0.02, 0.01, 4326)")
+    util.initialize_masks_table(mask_table_name, table_name, buff=rocks.MASK_BUFFER)
+    assert mask_covers(mask_table_name, 0.010005, 0.005)
 
 
 def test_load_units_skips_the_mask_for_a_single_source(monkeypatch):
