@@ -15,7 +15,8 @@
         "vgs_ofr_2006_2",
         "vgs_ofr_2004_2",
         "vgs_ofr_1999_1",
-        "sim3184"
+        "sim3184",
+        "of2006_1272_vt"
     ],
     "geojson": {
         "$ref": "file://./us-vt.geojson"
