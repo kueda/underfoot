@@ -1,0 +1,19 @@
+[
+  {
+    "type": "map",
+    "publisher": "Vermont Geological Survey",
+    "scale": "1:24000",
+    "title": "Bedrock Geologic Map of the Southern Worcester Mountains Watershed, Middlesex and Stowe 7.5 minute quadrangles, Vermont (Open-File Report VG2006-2)",
+    "URL": "https://geodata.vermont.gov/documents/12a2adc6f0c340f0bc9d6e645ccabb81/about",
+    "author": [
+      {"family": "Gale", "given": "M.H."},
+      {"family": "Kim", "given": "J."},
+      {"family": "King", "given": "S."},
+      {"family": "Montane", "given": "P."},
+      {"family": "Orsi", "given": "C."}
+    ],
+    "issued": {
+      "date-parts": [["2006"]]
+    }
+  }
+]
