@@ -1,0 +1,17 @@
+[
+  {
+    "type": "map",
+    "publisher": "Vermont Geological Survey",
+    "scale": "1:24000",
+    "title": "Bedrock geologic map of parts of the Eden, Albany, Lowell, and Irasburg quadrangles, Vermont (Open-File Report VG09-4)",
+    "URL": "https://geodata.vermont.gov/documents/98e803f64fa14f9585e3dbe979939130/about",
+    "author": [
+      {"family": "Kim", "given": "J."}
+    ],
+    "issued": {
+      "date-parts": [["2009"]]
+    },
+    "note": "Modified for Underfoot: reprojected, merged by map unit, and simplified for display, with unit descriptions transcribed from the map plate and lithologies and ages inferred from them",
+    "license": "CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)"
+  }
+]

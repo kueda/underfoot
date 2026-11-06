@@ -1,0 +1,16 @@
+code,title,description,lithology,span
+OCsk,Skeels Corners Slate,Dark gray to gray phyllite and laminated slate with thin (1-5 mm) orange-weathering dolomite layers,,Lower Ordovician to Cambrian
+Csp,Clarendon Springs Formation,"Light to dark gray, massive, granular, recrystallized dolostone and breccia with chert and dolostone clasts",dolostone,Cambrian
+Cda,Danby Formation,"Fine to medium grained, gray dolomitic sandstone, commonly with visible rounded gray quartz sand grains",,Cambrian
+Cdu,Dunham Formation,"Tan to brown weathering, buff to light gray, massively bedded dolostone",dolostone,Cambrian
+Cc,Cheshire Formation,"Light to dark gray, massive, fine to medium grained quartzite and argillaceous quartzite",,Cambrian
+Cca,"Cheshire Formation, Argillaceous quartzite member","Fine to medium grained, gray and rusty weathering, dark gray argillaceous quartzite with abundant quartz veins",,Cambrian
+CZfp,Fairfield Pond Formation,"Silvery tan and rusty weathering, light green to gray, phyllite, schist and phyllitic granofels; locally interbedded with dark gray argillaceous quartzite; interlayered with Pinnacle Formation. Contact with overlying Cheshire Fm. is gradational",,Cambrian to Neoproterozoic
+CZfpqs,"Fairfield Pond Formation, Quartzite member","Rusty weathering, dark gray argillaceous quartzite and dark gray schist, occurs locally north of Christmas Hill Rd",,Cambrian to Neoproterozoic
+CZp,Pinnacle Formation,"Light to medium gray, folaited to massive to pinstriped, muscovite-chlorite-biotite-feldspar-quartz schist, wacke and phyllite; commonly with blue quartz pebble conglomerate beds. Includes thick (up to 3 meters) bedded metawacke and quartzite, banded quartzite and pinstriped (1-2 mm) meatwacke and schist. Bedding is commonly transposed and two generations of pinstripes are evident. Interlayered with metavolcanic rocks and chlorite schist",,Cambrian to Neoproterozoic
+CZpbc,"Pinnacle Formation, Large cobble conglomerate member","Poorly sorted cobble conglomerate in a chaotic dolomitic phyllite matrix. Cobbles include gneiss, quartzite, quartz, limestone, dolostone, slate and felsic igneous rock. Some clasts appear stretched; clasts decrease in size to the west within 5 meters. Occurs locally south of Johnnie Brook Road at east side of quadrangle",conglomerate,Cambrian to Neoproterozoic
+CZps,"Pinnacle Formation, Metawacke and schist member","Light to dark gray and gray-green, fine to medium grained schist and stripeed schist with magnetite",,Cambrian to Neoproterozoic
+CZpc,"Pinnacle Formation, Quartzite member","Coarse- grained, massive conglomerate with rounded blue-quartz pebbles; includes medium grained, massive, thick (1-3 meter) bedded, light and dark gray banded quartzite (CZpq)",conglomerate,Cambrian to Neoproterozoic
+CZpq,"Pinnacle Formation, Quartzite member","Medium grained, massive, thick (1-3 meter) bedded, light and dark gray banded quartzite",quartzite,Cambrian to Neoproterozoic
+CZpcs,"Pinnacle Formation, Chlorite schist","Rusty weathering, fine grained, medium green chlorite schist; interbedded with CZp and CZpv",,Cambrian to Neoproterozoic
+CZpv,"Pinnacle Formation, Greenstone member","Rusty weathering, dark green, fine grained, epidote-albite-chlorite metavolcanic and calcareous greenstone; Interbedded with CZp",,Cambrian to Neoproterozoic

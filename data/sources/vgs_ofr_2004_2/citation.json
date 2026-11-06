@@ -1,0 +1,19 @@
+[
+  {
+    "type": "map",
+    "publisher": "Vermont Geological Survey",
+    "scale": "1:24000",
+    "title": "Bedrock Geologic Map of the Hinesburg Quadrangle, Vermont (Open-File Report VG04-2)",
+    "URL": "https://geodata.vermont.gov/documents/70769fd6bfe64e53a8364f3ee93929e5/about",
+    "author": [
+      {"family": "Thompson", "given": "T.B."},
+      {"family": "Thompson", "given": "P."},
+      {"family": "Doolan", "given": "B."}
+    ],
+    "issued": {
+      "date-parts": [["2004"]]
+    },
+    "note": "Modified for Underfoot: reprojected, merged by map unit, and simplified for display, with unit descriptions transcribed from the map plate and lithologies and ages inferred from them",
+    "license": "CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)"
+  }
+]

@@ -1,0 +1,18 @@
+[
+  {
+    "type": "map",
+    "publisher": "Vermont Geological Survey",
+    "scale": "1:24000",
+    "title": "Bedrock Geologic Map of the Mount Mansfield 7.5 Minute Quadrangle, Vermont (Open-File Report VG2017-2)",
+    "URL": "https://geodata.vermont.gov/documents/08f2d1097d4d41c48a68d05fba5202cc/about",
+    "author": [
+      {"family": "Thompson", "given": "P.J."},
+      {"family": "Thompson", "given": "T.B."}
+    ],
+    "issued": {
+      "date-parts": [["2017"]]
+    },
+    "note": "Modified for Underfoot: reprojected, merged by map unit, and simplified for display, with unit descriptions transcribed from the map plate and lithologies and ages inferred from them",
+    "license": "CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)"
+  }
+]

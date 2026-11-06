@@ -1,0 +1,19 @@
+[
+  {
+    "type": "map",
+    "publisher": "Vermont Geological Survey",
+    "scale": "1:24000",
+    "title": "Bedrock Geologic Map of the Bristol, VT Quadrangle (Open-File Report VG13-1)",
+    "URL": "https://geodata.vermont.gov/documents/3dd75f66ec574fb3bafd14f2b8af906b/about",
+    "author": [
+      {"family": "Kim", "given": "J."},
+      {"family": "Weber", "given": "E."},
+      {"family": "Klepeis", "given": "K."}
+    ],
+    "issued": {
+      "date-parts": [["2013"]]
+    },
+    "note": "Modified for Underfoot: reprojected, merged by map unit, and simplified for display, with unit descriptions transcribed from the map plate and lithologies and ages inferred from them",
+    "license": "CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)"
+  }
+]

@@ -1,0 +1,22 @@
+code,title,description,lithology,span
+OCsk,Skeels Corners Slate,Laminated black slate with thin orange dolostone beds,,Ordovician to Cambrian
+Oba,Bascom Formation,"Dolostone, limestone, and marble; interbedded light gray to weathered dark gray dolostone, limestone, and marble with thin beds of calcareous sandstone",,Ordovician
+Ocu,Cutting Dolostone,Gray massively bedded dolostone,dolostone,Ordovician
+Os,Shelburne Marble,"White, massively bedded, sucrosic marble with gray laminae",,Ordovician
+OCcs,Clarendon Springs Formation,"Dolostone: Mottled light to dark gray, massively bedded dolostone with chert clasts, disseminated quartz grains, vugs, and quartz knots",dolostone,Ordovician to Cambrian
+Cda,Danby Formation,"Dolostone and sandstone: interbedded buff to white cross-bedded dolomitic sandstone and quartzite, and buff to gray dolostone",,Cambrian
+Cw,Winooski Dolostone,Buff to gray medium to massively bedded dolostone,dolostone,Cambrian
+Cm,Monkton Quartzite,"Interbedded red sandstone, red shale, and buff dolostone; lower parts are gray to white sandstone with quartz pebble beds",,Cambrian
+Cdu,Dunham Dolostone,"Buff to light gray to white, thick-bedded dolostone and cyclically-bedded buff to pink dolostone",dolostone,Cambrian
+Cc,Cheshire Quartzite,"White to buff, thin to thick-bedded quartzite with gray to brown argillaceous beds",,Cambrian
+CZfp,Fairfield Pond Formation,Light-gray to light-green quartz-sericite-chlorite phyllite +/- magnetite and biotite,,Cambrian to Neoproterozoic
+CZu,"Underhill Formation, Phyllite and schist member","Silver green quartz-muscovite-chlorite schist and phyllite, commonly with albite and magnetite +/- dolomite. Local lenses of white to pale gray quartzite, quartz-albite granulite and quartz granule chlorite and/or biotite metawacke",,Cambrian to Neoproterozoic
+CZug,"Underhill Formation, Greenstone and Amphibolite member","Thinly bedded, carbonate-albite-epidote greenstone and massive magnetite-albite-amphibole-biotite-spidote amphibolite; light to dark green fine to medium-grained, epidote-chlorite-albite-amphibole schist; dark green, coarse-grained, weakly foliated epidote-biotite-albite-amphibole amphibolite",greenstone,Cambrian to Neoproterozoic
+CZp,"Pinnacle Formation, Metagraywacke, schist and phyllite member","Quartz is commonly blue; local thin conglomeratic horizons; feldspathic biotite metawacke interlayered with lenses of quartz, feldspar, and gneiss pebble to cobble conglomerate",wacke,Cambrian to Neoproterozoic
+CZpw,"Pinnacle Formation, Biotite metagraywacke member","Brown weathering, gray to dark gray, medium-coarse grained, massively bedded, chlorite-muscovite-biotite-feldspar-quartz metawacke with minor carbonate. Locally contains conglomeratic beds <1 m thick with well rounded quartz and gneiss pebbles (<5 cm), gray to green chloritic metawacke +/- biotite and chlorite-magnetite schist; local discontinuous pods of vein quartz and dolomitic interbeds",wacke,Cambrian to Neoproterozoic
+CZps,"Pinnacle Formation, Schistose metagraywacke and phyllite member","Undifferentitated light gray, massive, medium-grained quartz-sericite+/- chlorite, albite, dolomite metagraywacke; fine grained, gray or green epidote-quartz-quartz-chlorite-sericite phyllite and schist",wacke,Cambrian to Neoproterozoic
+CZpv,"Pinnacle Formation, Undifferentiated volcanic and volcaniclastic rock member",,metavolcanic rock,Cambrian to Neoproterozoic
+CZpva,"Pinnacle Formation, Amphibolitic greenstone member","Calcite-biotite-sphene-albite-actinolite-epidote-chlorite greenstone +/- sericite, apatite, pyrite, and magnetite with dark green porphyroblasts of actinolitic hornblende",greenstone,Cambrian to Neoproterozoic
+CZpvc,"Pinnacle Formation, Calcareous greenstone member","Rusy weathering and pitted, dark green greenstone with laminae and splotches of calcareous material; locally interbedded with calcareous metagraywacke",greenstone,Cambrian to Neoproterozoic
+CZpvf,"Pinnacle Formation, Feldspathic greenstone member","Olive drab weathering, dark green, fine grained greenstone with remnant plagioclase feldspar phenocrysts up to 1.5 cm",greenstone,Cambrian to Neoproterozoic
+md,Mesozoic Dike,,lamprophyre,Mesozoic

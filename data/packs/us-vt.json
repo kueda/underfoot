@@ -5,7 +5,16 @@
     "admin1": "United States",
     "admin2": "Vermont",
     "rock": [
+        "vgs_ofr_2017_2",
+        "vgs_ofr_2013_1",
+        "vgs_ofr_2012_3",
+        "vgs_ofr_2009_5",
+        "vgs_ofr_2009_4",
+        "vgs_ofr_2007_4",
+        "vgs_ofr_2006_4",
         "vgs_ofr_2006_2",
+        "vgs_ofr_2004_2",
+        "vgs_ofr_1999_1",
         "sim3184"
     ],
     "geojson": {

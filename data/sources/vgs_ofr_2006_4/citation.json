@@ -1,0 +1,17 @@
+[
+  {
+    "type": "map",
+    "publisher": "Vermont Geological Survey",
+    "scale": "1:24000",
+    "title": "Bedrock Geologic Map of Woodstock, Vermont (Open-File Report VG06-4)",
+    "URL": "https://geodata.vermont.gov/documents/00c5ef5ba1ce49cfa515e4192dd233a5/about",
+    "author": [
+      {"family": "Thompson", "given": "P.J."}
+    ],
+    "issued": {
+      "date-parts": [["2006"]]
+    },
+    "note": "Modified for Underfoot: reprojected, merged by map unit, and simplified for display, with unit descriptions drawn from the report's discussion of stratigraphy and lithologies and ages inferred from them",
+    "license": "CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)"
+  }
+]

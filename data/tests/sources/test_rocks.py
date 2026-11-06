@@ -183,6 +183,12 @@ def test_controlled_span_from_span_orders_young_to_old_spans():
     )
 
 
+def test_controlled_span_from_span_prefers_the_shortest_span_containing_a_range():
+    # The early Paleozoic, the Paleozoic, and the Phanerozoic all begin with
+    # the Cambrian
+    assert rocks.controlled_span_from_span("Cambrian to Lower Ordovician") == "early paleozoic"
+
+
 def test_controlled_span_from_span_parses_parts_of_a_span():
     assert rocks.controlled_span_from_span("Upper to Middle Ordovician") == "ordovician"
     assert rocks.controlled_span_from_span("Middle and Lower Cambrian") == "cambrian"
