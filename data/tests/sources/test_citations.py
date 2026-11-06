@@ -22,6 +22,39 @@ def test_csl_json_files():
             raise parsing_exception
 
 
+def citation_txt_for(tmp_path, **fields):
+    path = tmp_path / "citation.json"
+    path.write_text(json.dumps([{
+        "title": "Bedrock Geologic Map",
+        "author": [{"family": "Gale", "given": "M.H."}],
+        "issued": {"date-parts": [["2006"]]},
+        "URL": "https://example.com/map",
+        **fields
+    }]), encoding="utf-8")
+    return citation_txt_from_csl_json_path(path)
+
+
+def test_citation_txt_includes_license(tmp_path):
+    license_txt = "CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)"
+    citation_txt = citation_txt_for(tmp_path, license=license_txt)
+    assert citation_txt.endswith(f"License: {license_txt}")
+
+
+def test_citation_txt_includes_note_before_license(tmp_path):
+    citation_txt = citation_txt_for(
+        tmp_path,
+        note="Reprojected and simplified for display",
+        license="CC BY-SA 4.0"
+    )
+    assert citation_txt.endswith(
+        "https://example.com/map. Reprojected and simplified for display. License: CC BY-SA 4.0"
+    )
+
+
+def test_citation_txt_without_license_has_no_license(tmp_path):
+    assert "License" not in citation_txt_for(tmp_path)
+
+
 def write_csl_json(dir_path, title):
     dir_path.mkdir(parents=True, exist_ok=True)
     (dir_path / "citation.json").write_text(json.dumps([{
