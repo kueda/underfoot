@@ -32,6 +32,11 @@ MAXZOOM = 14
 # larger piece by just the pieces of it that piece touches instead of by the
 # whole polygon
 MAX_PIECES_TO_CUT_WHOLE = 64
+# How far in degrees the mask of earlier sources is buffered out and back in,
+# which closes slivers between adjacent sources so later ones don't fill them.
+# It also fills holes and inlets in their coverage less than about twice this
+# wide, which later sources then can't fill, so it's only about 10 m
+MASK_BUFFER = 0.0001
 
 
 def remove_polygon_overlaps(source_table_name):
@@ -367,9 +372,9 @@ def load_units(sources, clean=False, procs=NUM_PROCESSES):
         util.log(f"Updating {MASK_TABLE_NAME}...")
         # Remove slivers and make it valid
         if idx == 0:
-            util.initialize_masks_table(MASK_TABLE_NAME, source_table_name)
+            util.initialize_masks_table(MASK_TABLE_NAME, source_table_name, buff=MASK_BUFFER)
         else:
-            util.update_masks_table(MASK_TABLE_NAME, source_table_name)
+            util.update_masks_table(MASK_TABLE_NAME, source_table_name, buff=MASK_BUFFER)
     util.log(f"Database {DBNAME} created with table {FINAL_TABLE_NAME}")
 
 
