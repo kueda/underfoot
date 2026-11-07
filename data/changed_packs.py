@@ -38,7 +38,9 @@ DATA_DIR = pathlib.Path(__file__).parent.absolute()
 LAYERS = ["rocks", "water", "contours", "ways", "context"]
 
 # Layers affected by changes to files or dirs in sources/util/. Changes to anything else
-# in it rebuild every layer
+# in it rebuild every layer. Rebuilding a layer reuses cached source output in CI, so a
+# change to how these process data may also need the cache version bumped; see the comments
+# on the source work cache keys in .github/workflows/build-pack.yml
 UTIL_LAYERS = {
     "citations.py": ["rocks", "water"],
     # Scripts run by util.met2xml() and util.polygonize_arcs(), which only util.rocks calls

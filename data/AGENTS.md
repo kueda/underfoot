@@ -145,3 +145,10 @@ layers a push affects, and `build-pack.yml` builds only those, taking the other 
 the published `<pack>.pmtiles.zip`. It builds every layer instead if the pack isn't published
 or the `definition_hash` in its `pack.json` doesn't match its definition. Keep `UTIL_LAYERS` in `changed_packs.py` up to date when
 a `sources/util/` module starts or stops being used by a layer.
+
+`build-pack.yml` caches `sources/work-*` per pack, and the NHD, TIGER, and
+`polygonize_arcs.py` processing skips steps whose output is already there, so a
+change to how `sources/util/` processes data has no effect in CI until the cache
+is gone, even when it triggers a rebuild. To force reprocessing, bump the version
+in the `cache-source-work-rocks-<n>-` or `cache-source-work-water-<n>-` cache
+keys; the comments on those keys say when.

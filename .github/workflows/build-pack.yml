@@ -119,6 +119,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Bump the version in this key (the 4 in rocks-4) when a change to
+      # sources/util/ needs cached rocks output rebuilt, like a change to
+      # polygonize_arcs.py, whose output is reused when it exists. Rock source
+      # modules rerun on every build, so changes to them don't need a bump.
       - name: Cache source work for rocks
         uses: actions/cache@v5
         with:
@@ -167,6 +171,13 @@ jobs:
       # cache keys can't be overwritten, and restores the latest one for the
       # same pack definition, falling back to the latest one for the pack.
       # Slashes delimit the pack ID, so us-ca doesn't match us-ca-oakland.
+      #
+      # The cache holds processed NHD and TIGER output, not downloads, and
+      # util/water.py and util/tiger_water.py skip any step whose output is
+      # already there. Bump the version in these keys (the 4 in water-4) when
+      # a change to them needs that output rebuilt. That means downloading NHD
+      # again, which gets throttled, so don't bump it for changes to steps
+      # that rerun anyway, like the waterways flow step.
       - name: Restore source work for water
         id: restore-water-cache
         uses: actions/cache/restore@v5
