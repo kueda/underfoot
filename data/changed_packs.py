@@ -3,11 +3,12 @@
 Reads paths relative to the repo root from stdin, one per line, like the output of
 `git diff --name-only`, and prints the affected packs as a JSON array of objects with the
 pack ID and the layers to rebuild, like `{"pack": "us-ca-oakland", "layers": ["rocks"]}`.
-A pack is affected if its definition changed, which rebuilds every layer, or if it uses a
-source whose module or files changed, including shared modules the source imports, like
-of2005_1305, which rebuilds the layer it uses the source for. With --before, a pack
-definition is compared with its version in that commit, and a pack whose descriptive
-attributes are all that changed is listed with no layers, so only its pack.json is rebuilt.
+A pack is affected if its definition or boundary GeoJSON changed, which rebuilds every
+layer, or if it uses a source whose module or files changed, including shared modules the
+source imports, like of2005_1305, which rebuilds the layer it uses the source for. With
+--before, a pack definition is compared with its version in that commit, and a pack whose
+descriptive attributes are all that changed is listed with no layers, so only its pack.json
+is rebuilt.
 
 Changes to sources/util/ affect nearly every pack, so the Build all packs workflow
 rebuilds every pack when they happen. To avoid building packs twice, this prints an
@@ -158,7 +159,7 @@ def layers_by_pack(data_paths, data_dir, before=None):
     """Map of the IDs of the packs affected by changes to paths relative to the data dir to
     the sets of their layers that need rebuilding, ignoring changes to sources/util/. With
     before, a pack whose definition only changed descriptive attributes since that commit
-    maps to an empty set"""
+    and whose boundary didn't change maps to an empty set"""
     layers = {}
     for path in data_paths:
         if path.parent.as_posix() == "packs" and path.suffix == ".json":
@@ -169,6 +170,12 @@ def layers_by_pack(data_paths, data_dir, before=None):
                     new = json.loads((data_dir / path).read_text(encoding="utf-8"))
                     if old is not None and build_definition(old) == build_definition(new):
                         layers[path.stem] = set()
+    # Every layer is clipped to the pack's boundary, which create_pack.py always writes
+    # next to its definition as <pack>.geojson
+    for path in data_paths:
+        if path.parent.as_posix() == "packs" and path.suffix == ".geojson":
+            if (data_dir / path.with_suffix(".json")).exists():
+                layers[path.stem] = set(LAYERS)
     # Nearly every source imports util, so util/__init__.py doesn't trigger a build,
     # same as in Build all packs
     modules = {changed_module(path) for path in data_paths} - {None, "util"}

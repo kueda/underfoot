@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - data/packs/*.json
+      - data/packs/*.geojson
       - data/sources/**
       # Build all packs builds every pack when these change, and data/changed_packs.py
       # ignores util/__init__.py
@@ -32,7 +33,7 @@ jobs:
         with:
           fetch-depth: 0  # for the diff against the commit before the push
 
-      # List the packs whose definitions or sources changed with the layers to build,
+      # List the packs whose definitions, boundaries, or sources changed with the layers to build,
       # or none if the Build all packs workflow will build them
       - id: set-matrix
         name: Set matrix with IDs and layers of changed packs

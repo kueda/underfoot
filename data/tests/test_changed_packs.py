@@ -115,6 +115,33 @@ def test_excludes_deleted_packs(data_dir):
     assert changed_packs.changed_packs(["data/packs/deleted.json"], data_dir) == []
 
 
+def test_includes_every_layer_of_packs_with_changed_boundaries(data_dir):
+    write(data_dir / "packs" / "nv.geojson", "{}")
+    assert changed_packs.changed_packs(["data/packs/nv.geojson"], data_dir) == [
+        {"pack": "nv", "layers": changed_packs.LAYERS}
+    ]
+
+
+def test_excludes_boundaries_of_deleted_packs(data_dir):
+    assert changed_packs.changed_packs(["data/packs/deleted.geojson"], data_dir) == []
+
+
+def test_includes_every_layer_of_packs_with_changed_boundaries_and_descriptive_changes(
+    data_dir
+):
+    write(data_dir / "packs" / "nv.geojson", "{}")
+    before = commit_all(data_dir.parent)
+    write_pack(data_dir, "nv", rock=["shared_nv"], name="Nevada")
+    write(data_dir / "packs" / "nv.geojson", '{"type": "Polygon"}')
+    for paths in (
+        ["data/packs/nv.json", "data/packs/nv.geojson"],
+        ["data/packs/nv.geojson", "data/packs/nv.json"],
+    ):
+        assert changed_packs.changed_packs(paths, data_dir, before=before) == [
+            {"pack": "nv", "layers": changed_packs.LAYERS}
+        ]
+
+
 def test_excludes_packs_for_unrelated_changes(data_dir):
     assert changed_packs.changed_packs(
         ["web/src/App.tsx", "data/tests/test_rocks.py", "data/rocks.py", "README.md"],
